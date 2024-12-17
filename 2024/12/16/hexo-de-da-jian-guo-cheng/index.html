@@ -9,8 +9,7 @@
 使用ubuntu22 进行安装，然后关联github，选择主题Matery
 
 安装Nodejs 和 Hexo-cli1.卸载旧版本的 Node.js:
-sudo apt remove nodejs
-
+1sudo apt remove nodejs
 2.安装最新版本">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -420,31 +419,17 @@ sudo apt remove nodejs
 <p>使用ubuntu22 进行安装，然后关联github，选择主题Matery</p>
 </blockquote>
 <h3 id="安装Nodejs-和-Hexo-cli"><a href="#安装Nodejs-和-Hexo-cli" class="headerlink" title="安装Nodejs 和 Hexo-cli"></a>安装Nodejs 和 Hexo-cli</h3><p>1.卸载旧版本的 Node.js:</p>
-<pre class="line-numbers language-bash"><code class="language-bash"><span class="token function">sudo</span> apt remove nodejs
-<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">sudo</span> apt remove nodejs</span><br></pre></td></tr></table></figure>
 <p>2.安装最新版本的Node.js(如v18 LTS)</p>
-<pre class="line-numbers language-bash"><code class="language-bash">curl -fsSL https://deb.nodesource.com/setup_18.x <span class="token operator">|</span> <span class="token function">sudo</span> -E <span class="token function">bash</span> -
-
-<span class="token function">sudo</span> apt <span class="token function">install</span> -y nodejs
-<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">curl -fsSL https://deb.nodesource.com/setup_18.x | <span class="built_in">sudo</span> -E bash -</span><br><span class="line"></span><br><span class="line"><span class="built_in">sudo</span> apt install -y nodejs</span><br></pre></td></tr></table></figure>
 <p>3.验证安装版本</p>
-<pre class="line-numbers language-bash"><code class="language-bash">node -v
-<span class="token function">npm</span> -v
-<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">node -v</span><br><span class="line">npm -v</span><br></pre></td></tr></table></figure>
 <p>4.安装Hexo-cli</p>
-<pre class="line-numbers language-bash"><code class="language-bash"><span class="token function">sudo</span> <span class="token function">npm</span> <span class="token function">install</span> -g hexo-cli
-
-hexo -v     <span class="token comment" spellcheck="true">#查看安装是否成功</span>
-<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">sudo</span> npm install -g hexo-cli</span><br><span class="line"></span><br><span class="line">hexo -v     <span class="comment">#查看安装是否成功</span></span><br></pre></td></tr></table></figure>
 <h3 id="创建和运行Hexo博客"><a href="#创建和运行Hexo博客" class="headerlink" title="创建和运行Hexo博客"></a>创建和运行Hexo博客</h3><p>1.创建博客项目</p>
-<pre class="line-numbers language-bash"><code class="language-bash"><span class="token function">mkdir</span> my-blog   <span class="token comment" spellcheck="true"># 创建博客目录</span>
-<span class="token function">cd</span> my-blog      <span class="token comment" spellcheck="true"># 进入目录</span>
-hexo init       <span class="token comment" spellcheck="true"># 初始化 Hexo 博客</span>
-<span class="token function">npm</span> <span class="token function">install</span>     <span class="token comment" spellcheck="true"># 安装依赖</span>
-<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">mkdir</span> my-blog   <span class="comment"># 创建博客目录</span></span><br><span class="line"><span class="built_in">cd</span> my-blog      <span class="comment"># 进入目录</span></span><br><span class="line">hexo init       <span class="comment"># 初始化 Hexo 博客</span></span><br><span class="line">npm install     <span class="comment"># 安装依赖</span></span><br></pre></td></tr></table></figure>
 <p>2.启动本地服务器</p>
-<pre class="line-numbers language-bash"><code class="language-bash">hexo server    <span class="token comment" spellcheck="true"># 本地运行</span>
-<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">hexo server    <span class="comment"># 本地运行</span></span><br></pre></td></tr></table></figure>
 <ul>
 <li><p>打开浏览器，访问：<code>http://localhost:4000</code></p>
 </li>
@@ -452,48 +437,26 @@ hexo init       <span class="token comment" spellcheck="true"># 初始化 Hexo �
 </li>
 </ul>
 <p>3.创建新文章</p>
-<pre class="line-numbers language-bash"><code class="language-bash">hexo new <span class="token string">"我的第一篇文章"</span>
-<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">hexo new <span class="string">&quot;我的第一篇文章&quot;</span></span><br></pre></td></tr></table></figure>
 <ul>
 <li>打开<code>source/_posts</code> 文件夹，找到新建的 .md 文件。</li>
-<li>使用文本编辑器编辑文件，添加内容：<pre class="line-numbers language-yaml"><code class="language-yaml">\<span class="token punctuation">---</span>     <span class="token comment" spellcheck="true"># 会影响解析就多加了一个\</span>
-<span class="token key atrule">title</span><span class="token punctuation">:</span> 我的第一篇文章
-<span class="token key atrule">date</span><span class="token punctuation">:</span> <span class="token datetime number">2024-12-16 12:00:00</span>
-<span class="token key atrule">tags</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>Hexo<span class="token punctuation">,</span> 博客<span class="token punctuation">]</span>
-\<span class="token punctuation">---</span>
-这是我的第一篇 Hexo 博客文章！
-<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-</li>
+<li>使用文本编辑器编辑文件，添加内容：  <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">\---</span>     <span class="comment"># 会影响解析就多加了一个\</span></span><br><span class="line"><span class="attr">title:</span> <span class="string">我的第一篇文章</span></span><br><span class="line"><span class="attr">date:</span> <span class="number">2024-12-16 12:00:00</span></span><br><span class="line"><span class="attr">tags:</span> [<span class="string">Hexo</span>, <span class="string">博客</span>]</span><br><span class="line"><span class="string">\---</span></span><br><span class="line"><span class="string">这是我的第一篇</span> <span class="string">Hexo</span> <span class="string">博客文章！</span></span><br></pre></td></tr></table></figure></li>
 </ul>
 <p>4.生成静态文件</p>
-<pre class="line-numbers language-bash"><code class="language-bash">hexo generate
-<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">hexo generate</span><br></pre></td></tr></table></figure>
 <p>5.部署到 <strong>GitHub Pages</strong></p>
 <ol>
 <li><p>安装部署插件</p>
-<pre class="line-numbers language-bash"><code class="language-bash"><span class="token function">npm</span> <span class="token function">install</span> hexo-deployer-git --save
-<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
-</li>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">npm install hexo-deployer-git --save</span><br></pre></td></tr></table></figure></li>
 <li><p>配置<code>_config.yml</code>文件</p>
-<pre class="line-numbers language-yaml"><code class="language-yaml"><span class="token key atrule">deploy</span><span class="token punctuation">:</span>
-<span class="token key atrule">type</span><span class="token punctuation">:</span> git
-<span class="token key atrule">repo</span><span class="token punctuation">:</span> https<span class="token punctuation">:</span>//github.com/你的用户名/你的仓库.git  
-<span class="token comment" spellcheck="true"># git@github.com:404djl/404djl.github.io.git </span>
-<span class="token comment" spellcheck="true"># 仓库名一定是 用户名.github.io</span>
-<span class="token key atrule">branch</span><span class="token punctuation">:</span> main     <span class="token comment" spellcheck="true"># 仓库的分支名</span>
-<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-</li>
+ <figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">deploy:</span></span><br><span class="line"><span class="attr">type:</span> <span class="string">git</span></span><br><span class="line"><span class="attr">repo:</span> <span class="string">https://github.com/你的用户名/你的仓库.git</span>  </span><br><span class="line"><span class="comment"># git@github.com:404djl/404djl.github.io.git </span></span><br><span class="line"><span class="comment"># 仓库名一定是 用户名.github.io</span></span><br><span class="line"><span class="attr">branch:</span> <span class="string">main</span>     <span class="comment"># 仓库的分支名</span></span><br></pre></td></tr></table></figure></li>
 <li><p>向github配置ssh密钥</p>
 <p> 使用<code>ssh-keygen -t rsa -b 4096 -C &quot;your_email@example.com&quot;</code>命令生成SSH密钥对</p>
 <p> 默认情况下，密钥会存储在~&#x2F;.ssh&#x2F;目录下，私钥文件名为id_rsa，公钥文件名为id_rsa.pub</p>
 <p> 复制id_rsa.pub文件的内容，打开github，设置里的SSH，进行添加<br> <img src="https://pic.imgdb.cn/item/67603a72d0e0a243d4e4f8b7.png"></p>
 </li>
 <li><p>部署博客：</p>
-<pre class="line-numbers language-bash"><code class="language-bash">hexo clean          <span class="token comment" spellcheck="true"># 清理缓存与静态文件</span>
-hexo generate       <span class="token comment" spellcheck="true"># 也可以 hexo g 生成静态文件</span>
-hexo deploy         <span class="token comment" spellcheck="true"># 也可以 hexo d 部署到远程仓库</span>
-<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
-</li>
+ <figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">hexo clean          <span class="comment"># 清理缓存与静态文件</span></span><br><span class="line">hexo generate       <span class="comment"># 也可以 hexo g 生成静态文件</span></span><br><span class="line">hexo deploy         <span class="comment"># 也可以 hexo d 部署到远程仓库</span></span><br></pre></td></tr></table></figure></li>
 </ol>
 
                 
