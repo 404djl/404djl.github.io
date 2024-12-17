@@ -6,7 +6,7 @@
   <link href="https://404djl.github.io/atom.xml" rel="self"/>
   
   <link href="https://404djl.github.io/"/>
-  <updated>2024-12-17T03:51:16.347Z</updated>
+  <updated>2024-12-17T14:47:56.207Z</updated>
   <id>https://404djl.github.io/</id>
   
   <author>
@@ -15,6 +15,31 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>STM32 环境配置和GPIO</title>
+    <link href="https://404djl.github.io/2024/12/17/stm32-huan-jing-pei-zhi-he-gpio/"/>
+    <id>https://404djl.github.io/2024/12/17/stm32-huan-jing-pei-zhi-he-gpio/</id>
+    <published>2024-12-17T14:47:03.000Z</published>
+    <updated>2024-12-17T14:47:56.207Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;h1 id=&quot;STM32入门教程（江协）&quot;&gt;&lt;a href=&quot;#STM32入门教程（江协）&quot; class=&quot;headerlink&quot; title=&quot;STM32入门教程（江协）&quot;&gt;&lt;/a&gt;STM32入门教程（江协）&lt;/h1&gt;&lt;h2 id=&quot;1-1-课程简介&quot;&gt;&lt;a</summary>
+        
+      
+    
+    
+    
+    
+    <category term="STM32" scheme="https://404djl.github.io/tags/STM32/"/>
+    
+    <category term="GPIO" scheme="https://404djl.github.io/tags/GPIO/"/>
+    
+  </entry>
   
   <entry>
     <title>hexo的搭建过程</title>
