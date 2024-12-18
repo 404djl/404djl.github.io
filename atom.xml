@@ -6,7 +6,7 @@
   <link href="https://404djl.github.io/atom.xml" rel="self"/>
   
   <link href="https://404djl.github.io/"/>
-  <updated>2024-12-17T14:56:25.224Z</updated>
+  <updated>2024-12-18T06:43:30.160Z</updated>
   <id>https://404djl.github.io/</id>
   
   <author>
@@ -17,11 +17,11 @@
   <generator uri="https://hexo.io/">Hexo</generator>
   
   <entry>
-    <title>STM32 环境配置和GPIO</title>
-    <link href="https://404djl.github.io/2024/12/17/stm32-huan-jing-pei-zhi-he-gpio/"/>
-    <id>https://404djl.github.io/2024/12/17/stm32-huan-jing-pei-zhi-he-gpio/</id>
+    <title>STM32介绍和工程环境配置</title>
+    <link href="https://404djl.github.io/2024/12/17/stm32-jie-shao-he-gong-cheng-huan-jing-pei-zhi/"/>
+    <id>https://404djl.github.io/2024/12/17/stm32-jie-shao-he-gong-cheng-huan-jing-pei-zhi/</id>
     <published>2024-12-17T14:47:03.000Z</published>
-    <updated>2024-12-17T14:56:25.224Z</updated>
+    <updated>2024-12-18T06:43:30.160Z</updated>
     
     
       
@@ -37,7 +37,7 @@
     
     <category term="STM32" scheme="https://404djl.github.io/tags/STM32/"/>
     
-    <category term="GPIO" scheme="https://404djl.github.io/tags/GPIO/"/>
+    <category term="环境搭建" scheme="https://404djl.github.io/tags/%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA/"/>
     
   </entry>
   

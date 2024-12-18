@@ -4,7 +4,7 @@
 
 <head>
     <meta charset="utf-8">
-    <meta name="keywords" content="STM32 环境配置和GPIO, 404djlのblog">
+    <meta name="keywords" content="STM32介绍和工程环境配置, 404djlのblog">
     <meta name="description" content="STM32入门教程（江协）1-1 课程简介硬件平台：STM32最小系统板+面包板硬件平台
 软件设备：Keil5 MDK(给ARM系列的单片机编程的)
 1-2 STM32简介
@@ -22,7 +22,7 @@ STM32是ST公司基于ARM Cortex-M">
     <!-- Global site tag (gtag.js) - Google Analytics -->
 
 
-    <title>STM32 环境配置和GPIO | 404djlのblog</title>
+    <title>STM32介绍和工程环境配置 | 404djlのblog</title>
     <link rel="icon" type="image/png" href="/favicon.png">
     
 
@@ -341,12 +341,12 @@ STM32是ST公司基于ARM Cortex-M">
 
 
 
-<div class="bg-cover pd-header post-cover" style="background-image: url('/medias/featureimages/9.jpg')">
+<div class="bg-cover pd-header post-cover" style="background-image: url('/medias/featureimages/10.jpg')">
     <div class="container" style="right: 0px;left: 0px;">
         <div class="row">
             <div class="col s12 m12 l12">
                 <div class="brand">
-                    <h1 class="description center-align post-title">STM32 环境配置和GPIO</h1>
+                    <h1 class="description center-align post-title">STM32介绍和工程环境配置</h1>
                 </div>
             </div>
         </div>
@@ -374,8 +374,8 @@ STM32是ST公司基于ARM Cortex-M">
                                 <span class="chip bg-color">STM32</span>
                             </a>
                         
-                            <a href="/tags/GPIO/">
-                                <span class="chip bg-color">GPIO</span>
+                            <a href="/tags/%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA/">
+                                <span class="chip bg-color">环境搭建</span>
                             </a>
                         
                     </div>
@@ -682,101 +682,6 @@ STM32是ST公司基于ARM Cortex-M">
 <p><img src="https://pic.imgdb.cn/item/6761738ed0e0a243d4e5829d.png"></p>
 </li>
 </ol>
-<h2 id="3-1-GPIO输出"><a href="#3-1-GPIO输出" class="headerlink" title="3-1 GPIO输出"></a>3-1 GPIO输出</h2><ol>
-<li><p>GPIO 简介</p>
-<ul>
-<li>GPIO（General Purpose Input Output）通用输入输出口</li>
-<li>可配置为8种输入输出模式</li>
-<li>引脚电平：0V~3.3V，部分引脚可容忍5V</li>
-<li>输出模式下可控制端口输出高低电平，用以驱动LED、控制蜂鸣器、模拟通信协议输出时序等</li>
-<li>输入模式下可读取端口的高低电平或电压，用于读取按键输入、外接模块电平信号输入、ADC电压采集、模拟通信协议接收数据等</li>
-</ul>
-</li>
-<li><p>GPIO基本结构</p>
-<p>全都挂载在APB2总线上，每个GPI&#x2F;O端口有两个32位配置寄存器(GPIOx_CRL，GPIOx_CRH，<strong>4位配置一个端口</strong>)，两个32位数据寄存器(GPIOx_IDR和GPIOx_ODR，<strong>低16位有效</strong>)，一个32位置位&#x2F;复位寄存器(GPIOx_BSRR，<strong>高16位进行位清除，低16位进行位设置</strong>)，一个16位复位寄存器(GPIOx_BRR，<strong>相当于GPIOx_BSRR的高16位</strong>，<strong>同步性要求不高的话可以使用</strong>)和一个32位锁定寄存器(GPIOx_LCKR)。</p>
-<p><img src="https://pic.imgdb.cn/item/67617a2fd0e0a243d4e5843d.png"></p>
-</li>
-<li><p>GPIO位结构</p>
-<p><img src="https://pic.imgdb.cn/item/67617b8ad0e0a243d4e584b2.png"></p>
-<ul>
-<li>保护二极管使得输入电压在0~3.3v之间</li>
-<li>上拉（高电平）、下拉（低电平）、浮空</li>
-<li>施密特触发器对输入电压进行整形：如果输入电压大于某一上阈值，输出就会瞬间升为高电平；如果输入电压小于某一下阈值，输出就会瞬间降为低电平；在两个阈值之间的会维持原有输出电压。能有效的避免信号产生的抖动。</li>
-<li>经过施密特触发器整形的波形就可以直接写入输入数据寄存器了，再用程序读取输入数据寄存器对应某一位的数据，就能知道端口的输入电平了</li>
-<li>模拟输入（连接到ADC上）；复用功能输入，可以接到其他需要读取端口的外设上的，比如串口的输入引脚等，这个线接收的是数字量，所以在施密特触发器后面</li>
-<li>输出数字部分可以由输出数据寄存器或片上外设控制；位设置&#x2F;清除寄存器可以用来单独操作输出数据寄存器的某一位，而不影响其它位。</li>
-<li>在推挽输出模式下，P-MOS和N-MOS均有效，数据寄存器为1时，上管导通，下管断开，输出直接接到VDD，就是输出高电平；数据寄存器为0时，输出低电平；这种模式下，高低电平均有较强的驱动能力。</li>
-<li>在开漏输出模式下，P-MOS是无效的，只有N-MOS在工作，数据寄存器为1时，下管断开，这时输出相当于断开，也就是高阻模式（开路）；数据寄存器为0时，下管导通，输出直接接到VSS，也就是输出低电平。这种模式下只有低电平有驱动能力，高电平是没有驱动能力的。I2C通信的引脚，就是使用的开漏模式，在多机通信的情况下，这个模式可以避免各个设备的相互干扰。该模式还可以输出5V的电平信号。</li>
-<li>输出关闭时，用于输入。</li>
-</ul>
-</li>
-<li><p>GPIO模式</p>
-<table>
-<thead>
-<tr>
-<th><strong>模式名称</strong></th>
-<th><strong>性质</strong></th>
-<th><strong>特征</strong></th>
-</tr>
-</thead>
-<tbody><tr>
-<td>浮空输入</td>
-<td>数字输入</td>
-<td>可读取引脚电平，若引脚悬空，则电平不确定</td>
-</tr>
-<tr>
-<td>上拉输入</td>
-<td>数字输入</td>
-<td>可读取引脚电平，内部连接上拉电阻，悬空时默认高电平</td>
-</tr>
-<tr>
-<td>下拉输入</td>
-<td>数字输入</td>
-<td>可读取引脚电平，内部连接下拉电阻，悬空时默认低电平</td>
-</tr>
-<tr>
-<td>模拟输入</td>
-<td>模拟输入</td>
-<td>GPIO无效，引脚直接接入内部ADC</td>
-</tr>
-<tr>
-<td>开漏输出</td>
-<td>数字输出</td>
-<td>可输出引脚电平，高电平为高阻态，低电平接VSS</td>
-</tr>
-<tr>
-<td>推挽输出</td>
-<td>数字输出</td>
-<td>可输出引脚电平，高电平接VDD，低电平接VSS</td>
-</tr>
-<tr>
-<td>复用开漏输出</td>
-<td>数字输出</td>
-<td>由片上外设控制，高电平为高阻态，低电平接VSS</td>
-</tr>
-<tr>
-<td>复用推挽输出</td>
-<td>数字输出</td>
-<td>由片上外设控制，高电平接VDD，低电平接VSS</td>
-</tr>
-</tbody></table>
-<blockquote>
-<p>输入时，输出是断开的；输出时，也可以输入</p>
-<p>GPIO的这8种模式中，出了模拟输入这个模式会关闭数字寄存器的输入功能，其他7个模式中，所有的输入都是有效的</p>
-</blockquote>
-</li>
-<li><p>LED和蜂鸣器介绍</p>
-<ul>
-<li><p>LED：发光二极管，正向通电点亮，反向通电不亮；长引脚为正</p>
-</li>
-<li><p>有源蜂鸣器：内部自带振荡源，将正负极接上直流电压即可持续发声，频率固定。</p>
-<p>2引脚接低电平，蜂鸣器发声，接高电平，蜂鸣器关闭。</p>
-<p><img src="https://pic.imgdb.cn/item/676187e5d0e0a243d4e5882d.png"></p>
-<p>高电平弱驱动、低电平强驱动</p>
-</li>
-</ul>
-</li>
-</ol>
 
                 
             </div>
@@ -803,7 +708,7 @@ STM32是ST公司基于ARM Cortex-M">
                     </i>
                 </span>
                 <span class="reprint-info">
-                    <a href="https://404djl.github.io/2024/12/17/stm32-huan-jing-pei-zhi-he-gpio/">https://404djl.github.io/2024/12/17/stm32-huan-jing-pei-zhi-he-gpio/</a>
+                    <a href="https://404djl.github.io/2024/12/17/stm32-jie-shao-he-gong-cheng-huan-jing-pei-zhi/">https://404djl.github.io/2024/12/17/stm32-jie-shao-he-gong-cheng-huan-jing-pei-zhi/</a>
                 </span>
             </div>
             <div class="reprint__notice">
@@ -845,8 +750,8 @@ STM32是ST公司基于ARM Cortex-M">
                                     <span class="chip bg-color">STM32</span>
                                 </a>
                             
-                                <a href="/tags/GPIO/">
-                                    <span class="chip bg-color">GPIO</span>
+                                <a href="/tags/%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA/">
+                                    <span class="chip bg-color">环境搭建</span>
                                 </a>
                             
                         </div>
@@ -930,13 +835,13 @@ STM32是ST公司基于ARM Cortex-M">
                 <i class="far fa-dot-circle"></i>&nbsp;本篇
             </div>
             <div class="card">
-                <a href="/2024/12/17/stm32-huan-jing-pei-zhi-he-gpio/">
+                <a href="/2024/12/17/stm32-jie-shao-he-gong-cheng-huan-jing-pei-zhi/">
                     <div class="card-image">
                         
                         
-                        <img src="/medias/featureimages/9.jpg" class="responsive-img" alt="STM32 环境配置和GPIO">
+                        <img src="/medias/featureimages/10.jpg" class="responsive-img" alt="STM32介绍和工程环境配置">
                         
-                        <span class="card-title">STM32 环境配置和GPIO</span>
+                        <span class="card-title">STM32介绍和工程环境配置</span>
                     </div>
                 </a>
                 <div class="card-content article-content">
@@ -965,8 +870,8 @@ STM32是ST公司基于ARM Cortex-M">
                         <span class="chip bg-color">STM32</span>
                     </a>
                     
-                    <a href="/tags/GPIO/">
-                        <span class="chip bg-color">GPIO</span>
+                    <a href="/tags/%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA/">
+                        <span class="chip bg-color">环境搭建</span>
                     </a>
                     
                 </div>
