@@ -1083,21 +1083,20 @@ STM32是ST公司基于ARM Cortex-M">
         <p>📚 站点总字数: <span id="site-word-count"></span> 字</p> |
         <span id="runtime"></span>
       </p>
-      <div style="margin-top: 10px;">
-        <!-- 社交图标 -->
-        <a href="https://github.com/404djl" target="_blank" style="margin: 0 10px; color: #fff;">
-          <i class="fab fa-github"></i>
-        </a>
-        <a href="mailto:3490002122@qq.com" target="_blank" style="margin: 0 10px; color: #fff;">
-          <i class="fas fa-envelope"></i>
-        </a>
-        <a href="/rss.xml" target="_blank" style="margin: 0 10px; color: #fff;">
-          <i class="fas fa-rss"></i>
-        </a>
-        <!-- 添加更多图标 -->
-      </div>
     </div>
 </footer>
+
+<div class="footer-contact">
+    <a href="javascript:void(0);" class="tooltipped" target="_blank" data-tooltip="邮箱：3490002122@qq.com" data-position="top" data-delay="50">
+      <i class="fas fa-envelope"></i>
+    </a>
+    <a href="https://github.com/404djl" class="tooltipped" target="_blank" data-tooltip="GitHub：404djl" data-position="top" data-delay="50">
+      <i class="fab fa-github"></i>
+    </a>
+    <a href="javascript:void(0);" class="tooltipped" data-tooltip="微信：djl123456404" data-position="top" data-delay="50">
+      <i class="fab fa-weixin"></i>
+    </a>
+</div>
 
 
 <script>
@@ -1129,6 +1128,14 @@ STM32是ST公司基于ARM Cortex-M">
           document.getElementById('site-word-count').innerText = match[1];
         }
       });
+  </script>
+  
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var tooltips = document.querySelectorAll('.tooltipped');
+      M.Tooltip.init(tooltips);
+    });
   </script>
   
 

@@ -21,3 +21,23 @@
     margin: 0 10px;
   }
   
+
+  .footer-contact {
+    float: right; /* 将联系方式图标放在页脚右侧 */
+  }
+  
+  .footer-contact a {
+    margin-left: 10px;
+    color: #fff;
+    font-size: 18px;
+    text-decoration: none;
+  }
+  
+  .footer-contact a:hover {
+    color: #f1c40f; /* 鼠标悬停时图标变色 */
+  }
+  
+  .footer-contact i {
+    transition: color 0.3s ease-in-out;
+  }
+  
