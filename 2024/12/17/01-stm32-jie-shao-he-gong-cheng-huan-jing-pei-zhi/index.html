@@ -58,10 +58,10 @@ STM32是ST公司基于ARM Cortex-M">
     <script src="/libs/jquery/jquery-3.6.0.min.js"></script>
 
 <meta name="generator" content="Hexo 4.2.0"><link rel="alternate" href="/atom.xml" title="404djlのblog" type="application/atom+xml">
-
-<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
 <link rel="stylesheet" href="/css/prism-tomorrow.css" type="text/css">
 <link rel="stylesheet" href="/css/prism-line-numbers.css" type="text/css">
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+
 <style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
 </head>
 
@@ -460,7 +460,7 @@ STM32是ST公司基于ARM Cortex-M">
 <li>封装：LQFP48</li>
 </ul>
 </li>
-<li><p>片上资源&#x2F;外设</p>
+<li><p>片上资源/外设</p>
 <table>
 <thead>
 <tr>
@@ -526,7 +526,7 @@ STM32是ST公司基于ARM Cortex-M">
 </tr>
 <tr>
 <td align="center">USART</td>
-<td align="center">同步&#x2F;异步串口通信</td>
+<td align="center">同步/异步串口通信</td>
 <td align="center">SDIO</td>
 <td align="center">SD卡接口</td>
 </tr>
@@ -560,7 +560,7 @@ STM32是ST公司基于ARM Cortex-M">
 <p><img src="https://pic.imgdb.cn/item/67612c0cd0e0a243d4e528d2.png"></p>
 </li>
 </ol>
-<h2 id="2-1-软件安装"><a href="#2-1-软件安装" class="headerlink" title="2-1 软件安装"></a>2-1 软件安装</h2><p><a href="https://www.bilibili.com/video/BV1th411z7sn?spm_id_from=333.788.videopod.episodes&vd_source=6c74875e4fc2627ae811a62db47bf683&p=3" target="_blank" rel="noopener">https://www.bilibili.com/video/BV1th411z7sn?spm_id_from=333.788.videopod.episodes&amp;vd_source=6c74875e4fc2627ae811a62db47bf683&amp;p=3</a></p>
+<h2 id="2-1-软件安装"><a href="#2-1-软件安装" class="headerlink" title="2-1 软件安装"></a>2-1 软件安装</h2><p><a href="https://www.bilibili.com/video/BV1th411z7sn?spm_id_from=333.788.videopod.episodes&amp;vd_source=6c74875e4fc2627ae811a62db47bf683&amp;p=3" target="_blank" rel="noopener">https://www.bilibili.com/video/BV1th411z7sn?spm_id_from=333.788.videopod.episodes&amp;vd_source=6c74875e4fc2627ae811a62db47bf683&amp;p=3</a></p>
 <h2 id="2-2-新建工程"><a href="#2-2-新建工程" class="headerlink" title="2-2 新建工程"></a>2-2 新建工程</h2><h3 id="操作寄存器构建STM32"><a href="#操作寄存器构建STM32" class="headerlink" title="操作寄存器构建STM32"></a>操作寄存器构建STM32</h3><ul>
 <li><p>打开Keil5，点击Project中的New uVision Project，选择项目文件夹，给工程文件命名</p>
 </li>
@@ -576,7 +576,7 @@ STM32是ST公司基于ARM Cortex-M">
 </li>
 <li><p>回到Keil软件，将刚刚复制的那些文件添加到工程里来，创建一个Start文件夹，右击添加已经存在的文件，选择All files，添加一个启动文件（后缀名md.s)，所有的.c，.h文件，按住Ctr 进行选择，Add添加</p>
 </li>
-<li><p>在工程选项里添加上这个文件夹的头文件路径。点击魔术棒按键，打开工程选项，在<strong>C&#x2F;C++<strong>里找到</strong>Include Paths</strong>栏点击三个点的按钮，把Start的路径添加进来</p>
+<li><p>在工程选项里添加上这个文件夹的头文件路径。点击魔术棒按键，打开工程选项，在<strong>C/C++<strong>里找到</strong>Include Paths</strong>栏点击三个点的按钮，把Start的路径添加进来</p>
 </li>
 <li><p>打开工程文件夹创建User文件夹，该文件夹存放main函数。回到Keil软件右击Target增加组，改名为User，右击User添加新文件main.c，路径选择工程文件夹下的User。</p>
 </li>
@@ -586,9 +586,9 @@ STM32是ST公司基于ARM Cortex-M">
 <pre class="line-numbers language-c"><code class="language-c"><span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"stm32f10x.h"</span></span>
 
 <span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
-    RCC<span class="token operator">-></span>APB2ENR <span class="token operator">=</span> <span class="token number">0x00000010</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 打开GPIOC的时钟了  </span>
-    GPIOC<span class="token operator">-></span>CRH <span class="token operator">=</span> <span class="token number">0x00300000</span><span class="token punctuation">;</span>	 <span class="token comment" spellcheck="true">// 配置CNF13、MODE13   0011 推挽输出模式</span>
-    GPIOC<span class="token operator">-></span>ODR <span class="token operator">=</span> <span class="token number">0x00000000</span><span class="token punctuation">;</span>	 <span class="token comment" spellcheck="true">// 低电平点亮  0x00002000  熄灭</span>
+    RCC<span class="token operator">-&gt;</span>APB2ENR <span class="token operator">=</span> <span class="token number">0x00000010</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 打开GPIOC的时钟了  </span>
+    GPIOC<span class="token operator">-&gt;</span>CRH <span class="token operator">=</span> <span class="token number">0x00300000</span><span class="token punctuation">;</span>	 <span class="token comment" spellcheck="true">// 配置CNF13、MODE13   0011 推挽输出模式</span>
+    GPIOC<span class="token operator">-&gt;</span>ODR <span class="token operator">=</span> <span class="token number">0x00000000</span><span class="token punctuation">;</span>	 <span class="token comment" spellcheck="true">// 低电平点亮  0x00002000  熄灭</span>
     <span class="token keyword">while</span> <span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
         
     <span class="token punctuation">}</span>
@@ -606,7 +606,7 @@ STM32是ST公司基于ARM Cortex-M">
   <span class="token comment" spellcheck="true">#include "stm32f10x_conf.h"</span>
 <span class="token comment" spellcheck="true">#endif</span>
 <span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
-<p>打开魔术棒，找到C&#x2F;C++，然后定义该字符串。在头文件路径下，还要增加User和Library目录的路径。</p>
+<p>打开魔术棒，找到C/C++，然后定义该字符串。在头文件路径下，还要增加User和Library目录的路径。</p>
 </li>
 <li><p>编译后没问题，开始编写main函数</p>
 <pre class="line-numbers language-c"><code class="language-c"><span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"stm32f10x.h"</span>     </span><span class="token comment" spellcheck="true">// Device Header</span>
@@ -659,31 +659,31 @@ STM32是ST公司基于ARM Cortex-M">
 <td align="left">LD</td>
 <td align="center">小容量产品</td>
 <td align="left">16~32K</td>
-<td>STM32F101&#x2F;102&#x2F;103</td>
+<td>STM32F101/102/103</td>
 </tr>
 <tr>
 <td align="left">MD</td>
 <td align="center">中容量产品</td>
 <td align="left">64~128K</td>
-<td>STM32F101&#x2F;102&#x2F;103</td>
+<td>STM32F101/102/103</td>
 </tr>
 <tr>
 <td align="left">HD</td>
 <td align="center">大容量产品</td>
 <td align="left">256~512K</td>
-<td>STM32F101&#x2F;102&#x2F;103</td>
+<td>STM32F101/102/103</td>
 </tr>
 <tr>
 <td align="left">XL</td>
 <td align="center">加大容量产品</td>
 <td align="left">大于512K</td>
-<td>STM32F101&#x2F;102&#x2F;103</td>
+<td>STM32F101/102/103</td>
 </tr>
 <tr>
 <td align="left">CL</td>
 <td align="center">互联型产品</td>
 <td align="left">-</td>
-<td>STM32F105&#x2F;107</td>
+<td>STM32F105/107</td>
 </tr>
 </tbody></table>
 </li>
@@ -692,8 +692,8 @@ STM32是ST公司基于ARM Cortex-M">
 <li>建立工程文件夹，Keil中新建工程，选择型号</li>
 <li>工程文件夹里建立Start、Library、User等文件夹，复制固件库里面的文件到工程文件夹</li>
 <li>工程里对应建立Start、Library、User等同名称的分组，然后将文件夹内的文件添加到工程分组里</li>
-<li>工程选项，C&#x2F;C++，Include Paths内声明所有包含头文件的文件夹</li>
-<li>工程选项，C&#x2F;C++，Define内定义USE_STDPERIPH_DRIVER</li>
+<li>工程选项，C/C++，Include Paths内声明所有包含头文件的文件夹</li>
+<li>工程选项，C/C++，Define内定义USE_STDPERIPH_DRIVER</li>
 <li>工程选项，Debug，下拉列表选择对应调试器，Settings，Flash Download里勾选Reset and Run</li>
 </ul>
 </li>
@@ -1131,11 +1131,11 @@ STM32是ST公司基于ARM Cortex-M">
     
 
     <div class="container row center-align"
-         style="margin-bottom: 0px !important;">
+         style="margin-bottom: 15px !important;">
         <div class="col s12 m8 l8 copy-right">
             Copyright&nbsp;&copy;
             
-                <span id="year">2019-2024</span>
+                <span id="year">2024</span>
             
             <a href="/about" target="_blank">404djl</a>
             |&nbsp;Powered by&nbsp;<a href="https://hexo.io/" target="_blank">Hexo</a>
@@ -1162,6 +1162,60 @@ STM32是ST公司基于ARM Cortex-M">
             <br>
 
             <!-- 运行天数提醒. -->
+            
+                <span id="sitetime"> Loading ...</span>
+                <script>
+                    var calcSiteTime = function () {
+                        var seconds = 1000;
+                        var minutes = seconds * 60;
+                        var hours = minutes * 60;
+                        var days = hours * 24;
+                        var years = days * 365;
+                        var today = new Date();
+                        var startYear = "2024";
+                        var startMonth = "12";
+                        var startDate = "16";
+                        var startHour = "17";
+                        var startMinute = "12";
+                        var startSecond = "0";
+                        var todayYear = today.getFullYear();
+                        var todayMonth = today.getMonth() + 1;
+                        var todayDate = today.getDate();
+                        var todayHour = today.getHours();
+                        var todayMinute = today.getMinutes();
+                        var todaySecond = today.getSeconds();
+                        var t1 = Date.UTC(startYear, startMonth, startDate, startHour, startMinute, startSecond);
+                        var t2 = Date.UTC(todayYear, todayMonth, todayDate, todayHour, todayMinute, todaySecond);
+                        var diff = t2 - t1;
+                        var diffYears = Math.floor(diff / years);
+                        var diffDays = Math.floor((diff / days) - diffYears * 365);
+
+                        // 区分是否有年份.
+                        var language = 'zh-CN';
+                        if (startYear === String(todayYear)) {
+                            document.getElementById("year").innerHTML = todayYear;
+                            var daysTip = 'This site has been running for ' + diffDays + ' days';
+                            if (language === 'zh-CN') {
+                                daysTip = '本站已运行 ' + diffDays + ' 天';
+                            } else if (language === 'zh-HK') {
+                                daysTip = '本站已運行 ' + diffDays + ' 天';
+                            }
+                            document.getElementById("sitetime").innerHTML = daysTip;
+                        } else {
+                            document.getElementById("year").innerHTML = startYear + " - " + todayYear;
+                            var yearsAndDaysTip = 'This site has been running for ' + diffYears + ' years and '
+                                + diffDays + ' days';
+                            if (language === 'zh-CN') {
+                                yearsAndDaysTip = '本站已运行 ' + diffYears + ' 年 ' + diffDays + ' 天';
+                            } else if (language === 'zh-HK') {
+                                yearsAndDaysTip = '本站已運行 ' + diffYears + ' 年 ' + diffDays + ' 天';
+                            }
+                            document.getElementById("sitetime").innerHTML = yearsAndDaysTip;
+                        }
+                    }
+
+                    calcSiteTime();
+                </script>
             
             <br>
             

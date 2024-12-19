@@ -59,10 +59,10 @@ GPIO（General Purpose Input Output）通用输入输出口
     <script src="/libs/jquery/jquery-3.6.0.min.js"></script>
 
 <meta name="generator" content="Hexo 4.2.0"><link rel="alternate" href="/atom.xml" title="404djlのblog" type="application/atom+xml">
-
-<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
 <link rel="stylesheet" href="/css/prism-tomorrow.css" type="text/css">
 <link rel="stylesheet" href="/css/prism-line-numbers.css" type="text/css">
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+
 <style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
 </head>
 
@@ -450,7 +450,7 @@ GPIO（General Purpose Input Output）通用输入输出口
 </ul>
 </li>
 <li><p>GPIO基本结构</p>
-<p>全都挂载在APB2总线上，每个GPI&#x2F;O端口有两个32位配置寄存器(GPIOx_CRL，GPIOx_CRH，<strong>4位配置一个端口</strong>)，两个32位数据寄存器(GPIOx_IDR和GPIOx_ODR，<strong>低16位有效</strong>)，一个32位置位&#x2F;复位寄存器(GPIOx_BSRR，<strong>高16位进行位清除，低16位进行位设置</strong>)，一个16位复位寄存器(GPIOx_BRR，<strong>相当于GPIOx_BSRR的高16位</strong>，<strong>同步性要求不高的话可以使用</strong>)和一个32位锁定寄存器(GPIOx_LCKR)。</p>
+<p>全都挂载在APB2总线上，每个GPI/O端口有两个32位配置寄存器(GPIOx_CRL，GPIOx_CRH，<strong>4位配置一个端口</strong>)，两个32位数据寄存器(GPIOx_IDR和GPIOx_ODR，<strong>低16位有效</strong>)，一个32位置位/复位寄存器(GPIOx_BSRR，<strong>高16位进行位清除，低16位进行位设置</strong>)，一个16位复位寄存器(GPIOx_BRR，<strong>相当于GPIOx_BSRR的高16位</strong>，<strong>同步性要求不高的话可以使用</strong>)和一个32位锁定寄存器(GPIOx_LCKR)。</p>
 <p><img src="https://pic.imgdb.cn/item/67617a2fd0e0a243d4e5843d.png"></p>
 </li>
 <li><p>GPIO位结构</p>
@@ -461,7 +461,7 @@ GPIO（General Purpose Input Output）通用输入输出口
 <li>施密特触发器对输入电压进行整形：如果输入电压大于某一上阈值，输出就会瞬间升为高电平；如果输入电压小于某一下阈值，输出就会瞬间降为低电平；在两个阈值之间的会维持原有输出电压。能有效的避免信号产生的抖动。</li>
 <li>经过施密特触发器整形的波形就可以直接写入输入数据寄存器了，再用程序读取输入数据寄存器对应某一位的数据，就能知道端口的输入电平了</li>
 <li>模拟输入（连接到ADC上）；复用功能输入，可以接到其他需要读取端口的外设上的，比如串口的输入引脚等，这个线接收的是数字量，所以在施密特触发器后面</li>
-<li>输出数字部分可以由输出数据寄存器或片上外设控制；位设置&#x2F;清除寄存器可以用来单独操作输出数据寄存器的某一位，而不影响其它位。</li>
+<li>输出数字部分可以由输出数据寄存器或片上外设控制；位设置/清除寄存器可以用来单独操作输出数据寄存器的某一位，而不影响其它位。</li>
 <li>在推挽输出模式下，P-MOS和N-MOS均有效，数据寄存器为1时，上管导通，下管断开，输出直接接到VDD，就是输出高电平；数据寄存器为0时，输出低电平；这种模式下，高低电平均有较强的驱动能力。</li>
 <li>在开漏输出模式下，P-MOS是无效的，只有N-MOS在工作，数据寄存器为1时，下管断开，这时输出相当于断开，也就是高阻模式（开路）；数据寄存器为0时，下管导通，输出直接接到VSS，也就是输出低电平。这种模式下只有低电平有驱动能力，高电平是没有驱动能力的。I2C通信的引脚，就是使用的开漏模式，在多机通信的情况下，这个模式可以避免各个设备的相互干扰。该模式还可以输出5V的电平信号。</li>
 <li>输出关闭时，用于输入。</li>
@@ -678,7 +678,7 @@ GPIO（General Purpose Input Output）通用输入输出口
 </ul>
 </li>
 <li><p>传感器模块简介</p>
-<p>传感器模块：传感器元件（光敏电阻&#x2F;热敏电阻&#x2F;红外接收管等）的电阻会随外界模拟量的变化而变化，通过与定值电阻分压即可得到模拟电压输出，再通过电压比较器进行二值化即可得到数字电压输出。</p>
+<p>传感器模块：传感器元件（光敏电阻/热敏电阻/红外接收管等）的电阻会随外界模拟量的变化而变化，通过与定值电阻分压即可得到模拟电压输出，再通过电压比较器进行二值化即可得到数字电压输出。</p>
 <p><img src="https://pic.imgdb.cn/item/67622d02d0e0a243d4e5982d.png"></p>
 </li>
 <li><p>硬件电路</p>
@@ -754,7 +754,7 @@ GPIO（General Purpose Input Output）通用输入输出口
 <tr>
 <td>long long</td>
 <td>64</td>
-<td>-(2^64)&#x2F;2 ~ (2^64)&#x2F;2-1</td>
+<td>-(2^64)/2 ~ (2^64)/2-1</td>
 <td>int64_t</td>
 <td></td>
 </tr>
@@ -786,7 +786,7 @@ GPIO（General Purpose Input Output）通用输入输出口
 <li>关键字：#define</li>
 <li>用途：用一个字符串代替一个数字，便于理解，防止出错；提取程序中经常出现的参数，便于快速修改</li>
 <li>定义宏定义：	#define ABC 12345</li>
-<li>引用宏定义：	int a &#x3D; ABC;	&#x2F;&#x2F;等效于int a &#x3D; 12345;</li>
+<li>引用宏定义：	int a = ABC;	//等效于int a = 12345;</li>
 </ul>
 </li>
 <li><p>C语言typedef</p>
@@ -794,7 +794,7 @@ GPIO（General Purpose Input Output）通用输入输出口
 <li>关键字：typedef</li>
 <li>用途：将一个比较长的变量类型名换个名字，便于使用</li>
 <li>定义typedef：	typedef unsigned char uint8_t;</li>
-<li>引用typedef：	 uint8_t a;	&#x2F;&#x2F;等效于unsigned char a;</li>
+<li>引用typedef：	 uint8_t a;	//等效于unsigned char a;</li>
 </ul>
 </li>
 <li><p>C语言结构体</p>
@@ -807,8 +807,8 @@ GPIO（General Purpose Input Output）通用输入输出口
     StructName<span class="token punctuation">.</span>x <span class="token operator">=</span> <span class="token string">'A'</span><span class="token punctuation">;</span>
     StructName<span class="token punctuation">.</span>y <span class="token operator">=</span> <span class="token number">66</span><span class="token punctuation">;</span>
     StructName<span class="token punctuation">.</span>z <span class="token operator">=</span> <span class="token number">1.23</span><span class="token punctuation">;</span>
-或	pStructName<span class="token operator">-></span>x <span class="token operator">=</span> <span class="token string">'A'</span><span class="token punctuation">;</span>	<span class="token comment" spellcheck="true">//pStructName为结构体的地址	pStructName->y = 66;</span>
-    pStructName<span class="token operator">-></span>z <span class="token operator">=</span> <span class="token number">1.23</span><span class="token punctuation">;</span>
+或	pStructName<span class="token operator">-&gt;</span>x <span class="token operator">=</span> <span class="token string">'A'</span><span class="token punctuation">;</span>	<span class="token comment" spellcheck="true">//pStructName为结构体的地址	pStructName-&gt;y = 66;</span>
+    pStructName<span class="token operator">-&gt;</span>z <span class="token operator">=</span> <span class="token number">1.23</span><span class="token punctuation">;</span>
 <span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 </li>
 <li><p>C语言枚举</p>
@@ -1608,11 +1608,11 @@ uint8_t <span class="token function">LightSensor_Get</span><span class="token pu
     
 
     <div class="container row center-align"
-         style="margin-bottom: 0px !important;">
+         style="margin-bottom: 15px !important;">
         <div class="col s12 m8 l8 copy-right">
             Copyright&nbsp;&copy;
             
-                <span id="year">2019-2024</span>
+                <span id="year">2024</span>
             
             <a href="/about" target="_blank">404djl</a>
             |&nbsp;Powered by&nbsp;<a href="https://hexo.io/" target="_blank">Hexo</a>
@@ -1639,6 +1639,60 @@ uint8_t <span class="token function">LightSensor_Get</span><span class="token pu
             <br>
 
             <!-- 运行天数提醒. -->
+            
+                <span id="sitetime"> Loading ...</span>
+                <script>
+                    var calcSiteTime = function () {
+                        var seconds = 1000;
+                        var minutes = seconds * 60;
+                        var hours = minutes * 60;
+                        var days = hours * 24;
+                        var years = days * 365;
+                        var today = new Date();
+                        var startYear = "2024";
+                        var startMonth = "12";
+                        var startDate = "16";
+                        var startHour = "17";
+                        var startMinute = "12";
+                        var startSecond = "0";
+                        var todayYear = today.getFullYear();
+                        var todayMonth = today.getMonth() + 1;
+                        var todayDate = today.getDate();
+                        var todayHour = today.getHours();
+                        var todayMinute = today.getMinutes();
+                        var todaySecond = today.getSeconds();
+                        var t1 = Date.UTC(startYear, startMonth, startDate, startHour, startMinute, startSecond);
+                        var t2 = Date.UTC(todayYear, todayMonth, todayDate, todayHour, todayMinute, todaySecond);
+                        var diff = t2 - t1;
+                        var diffYears = Math.floor(diff / years);
+                        var diffDays = Math.floor((diff / days) - diffYears * 365);
+
+                        // 区分是否有年份.
+                        var language = 'zh-CN';
+                        if (startYear === String(todayYear)) {
+                            document.getElementById("year").innerHTML = todayYear;
+                            var daysTip = 'This site has been running for ' + diffDays + ' days';
+                            if (language === 'zh-CN') {
+                                daysTip = '本站已运行 ' + diffDays + ' 天';
+                            } else if (language === 'zh-HK') {
+                                daysTip = '本站已運行 ' + diffDays + ' 天';
+                            }
+                            document.getElementById("sitetime").innerHTML = daysTip;
+                        } else {
+                            document.getElementById("year").innerHTML = startYear + " - " + todayYear;
+                            var yearsAndDaysTip = 'This site has been running for ' + diffYears + ' years and '
+                                + diffDays + ' days';
+                            if (language === 'zh-CN') {
+                                yearsAndDaysTip = '本站已运行 ' + diffYears + ' 年 ' + diffDays + ' 天';
+                            } else if (language === 'zh-HK') {
+                                yearsAndDaysTip = '本站已運行 ' + diffYears + ' 年 ' + diffDays + ' 天';
+                            }
+                            document.getElementById("sitetime").innerHTML = yearsAndDaysTip;
+                        }
+                    }
+
+                    calcSiteTime();
+                </script>
             
             <br>
             
