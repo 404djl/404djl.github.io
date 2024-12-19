@@ -4,7 +4,7 @@
 
 <head>
     <meta charset="utf-8">
-    <meta name="keywords" content="404djlのblog">
+    <meta name="keywords" content="标签: 光敏传感器, 404djlのblog">
     <meta name="description" content="Never really desperate, only the lost of the soul">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -17,53 +17,12 @@
     <!-- Global site tag (gtag.js) - Google Analytics -->
 
 
-    <title>404djlのblog</title>
+    <title>标签: 光敏传感器 | 404djlのblog</title>
     <link rel="icon" type="image/png" href="/favicon.png">
     
 
 
-    <!-- index cover -->
-    <!-- <link rel="stylesheet preload" type="text/css" href="/css/indexcover.css"> -->
-    <style>
-        .carousel-control {
-            width: 45px;
-            height: 45px;
-            line-height: 55px;
-            border-radius: 45px;
-            background: transparent;
-            cursor: pointer;
-            z-index: 100;
-        }
-        
-        #prev-cover {
-            position: absolute;
-            top: 48%;
-            left: 8px;
-        }
-        
-        #next-cover {
-            position: absolute;
-            top: 48%;
-            right: 8px;;
-        }
-        
-        #prev-cover i {
-            margin-right: 3px;
-        }
-        
-        #next-cover i {
-            margin-left: 3px;
-        }
-        
-        .carousel-control:hover {
-            background-color: rgba(0, 0, 0, .4);
-        }
-        
-        .carousel-control i {
-            color: #fff;
-            font-size: 2.4rem;
-        }
-    </style>
+    <!-- bg-cover style     -->
 
 
 
@@ -84,6 +43,10 @@
 
 
 
+
+    
+        <link rel="stylesheet" type="text/css" href="/css/reward.css">
+    
 
 
 
@@ -369,15 +332,9 @@
 
 </header>
 
-    
-
-
-<div class="carousel carousel-slider center index-cover" data-indicators="true" style="margin-top: -64px;">
-    
-
-    <div class="carousel-item  white-text bg-cover about-cover">
-        <div class="container">
-            <div class="row">
+    <div class="bg-cover pd-header about-cover">
+    <div class="container">
+    <div class="row">
     <div class="col s10 offset-s1 m8 offset-m2 l8 offset-l2">
         <div class="brand">
             <div class="title center-align">
@@ -427,232 +384,144 @@
 </script>
 
 
-
-            <div class="cover-btns">
-                <a href="#indexCard" class="waves-effect waves-light btn">
-                    <i class="fa fa-angle-double-down"></i>开始阅读
-                </a>
-
-                
-                    <a href="https://github.com/blinkfox/hexo-theme-matery" class="waves-effect waves-light btn" target="_blank">
-                        <i class="fab fa-github-alt"></i>Github
-                    </a>
-                
-            </div>
-            <div class="cover-social-link">
-    <a href="https://github.com/404djl" class="tooltipped" target="_blank" data-tooltip="访问我的GitHub" data-position="top" data-delay="50">
-        <i class="fab fa-github"></i>
-    </a>
-
-
-
-    <a href="mailto:1181062873@qq.com" class="tooltipped" target="_blank" data-tooltip="邮件联系我" data-position="top" data-delay="50">
-        <i class="fas fa-envelope-open"></i>
-    </a>
-
-
-
-
-
-
-
-    <a href="tencent://AddContact/?fromId=50&fromSubId=1&subcmd=all&uin=1181062873" class="tooltipped" target="_blank" data-tooltip="QQ联系我: 1181062873" data-position="top" data-delay="50">
-        <i class="fab fa-qq"></i>
-    </a>
-
-
-
-
-
-
-
-    <a href="/atom.xml" class="tooltipped" target="_blank" data-tooltip="RSS 订阅" data-position="top" data-delay="50">
-        <i class="fas fa-rss"></i>
-    </a>
-
-</div>
-        </div>
     </div>
-
-    
 </div>
-
-<script>
-    $(function () {
-        let coverSlider = $('.carousel');
-
-        //用户触摸轮播自动 restartPlay 是否生效
-        let initUserPressedOrDraggedActive = false
-
-        //用户触摸轮播自动 restartPlay
-        function initUserPressedOrDragged(instance) {
-            setInterval(() => {
-                if (instance.pressed || instance.dragged) {
-                    // console.log('initUserPressedOrDragged: ',instance.pressed,instance.dragged)
-                    restartPlay()
-                }
-            }, 1000)
-        }
-
-        coverSlider.carousel({
-            duration: Number('120'),
-            fullWidth: true,
-            indicators: 'true' === 'true',
-            onCycleTo() {
-                if (!initUserPressedOrDraggedActive) {
-                    // console.log('initUserPressedOrDraggedActive')
-                    initUserPressedOrDragged(this)
-                    initUserPressedOrDraggedActive = true
-                }
-            },
-        })
-
-        let carouselIntervalId;
-        
-        // Loop to call the next cover article picture.
-        let autoCarousel = function () {
-            carouselIntervalId = setInterval(function () {
-                coverSlider.carousel('next');
-            }, 5000);
-        };
-        autoCarousel();
-        
-
-        function restartPlay() {
-            
-            clearInterval(carouselIntervalId);
-            autoCarousel();
-            
-        };
-
-        
-        // prev and next cover post.
-        $('#prev-cover').click(function () {
-            coverSlider.carousel('prev');
-            restartPlay();
-        });
-        $('#next-cover').click(function () {
-            coverSlider.carousel('next');
-            restartPlay();
-        });
-        
-    });
-</script>
-
-
 
 <main class="content">
 
     
-    <div id="indexCard" class="index-card">
-        <div class="container ">
-            <div class="card">
-                <div class="card-content">
-                    
-                        <div class="dream">
-    
-    <div class="title center-align">
-        <i class="far fa-lightbulb"></i>&nbsp;&nbsp;我的梦想
-    </div>
-    
-    <div class="row">
-        <div class="col l8 offset-l2 m10 offset-m1 s10 offset-s1 center-align text">
-            不是每个人都应该像我这样去建造一座水晶大教堂，但是每个人都应该拥有自己的梦想，设计自己的梦想，追求自己的梦想，实现自己的梦想。梦想是生命的灵魂，是心灵的灯塔，是引导人走向成功的信仰。有了崇高的梦想，只要矢志不渝地追求，梦想就会成为现实，奋斗就会变成壮举，生命就会创造奇迹。——罗伯·舒乐
+
+<div id="tags" class="container chip-container">
+    <div class="card">
+        <div class="card-content">
+            <div class="tag-title center-align">
+                <i class="fas fa-tags"></i>&nbsp;&nbsp;文章标签
+            </div>
+            <div class="tag-chips">
+                
+                
+                <a href="/tags/STM32/" title="STM32: 2">
+                    <span class="chip center-align waves-effect waves-light
+                             chip-default "
+                            data-tagname="STM32" style="background-color: #F9EBEA;">STM32
+                        <span class="tag-length">2</span>
+                    </span>
+                </a>
+                
+                
+                <a href="/tags/%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA/" title="环境搭建: 1">
+                    <span class="chip center-align waves-effect waves-light
+                             chip-default "
+                            data-tagname="环境搭建" style="background-color: #F5EEF8;">环境搭建
+                        <span class="tag-length">1</span>
+                    </span>
+                </a>
+                
+                
+                <a href="/tags/GPIO/" title="GPIO: 1">
+                    <span class="chip center-align waves-effect waves-light
+                             chip-default "
+                            data-tagname="GPIO" style="background-color: #D5F5E3;">GPIO
+                        <span class="tag-length">1</span>
+                    </span>
+                </a>
+                
+                
+                <a href="/tags/%E8%9C%82%E9%B8%A3%E5%99%A8/" title="蜂鸣器: 1">
+                    <span class="chip center-align waves-effect waves-light
+                             chip-default "
+                            data-tagname="蜂鸣器" style="background-color: #E8F8F5;">蜂鸣器
+                        <span class="tag-length">1</span>
+                    </span>
+                </a>
+                
+                
+                <a href="/tags/%E5%85%89%E6%95%8F%E4%BC%A0%E6%84%9F%E5%99%A8/" title="光敏传感器: 1">
+                    <span class="chip center-align waves-effect waves-light
+                             chip-active "
+                            data-tagname="光敏传感器" style="background-color: #FEF9E7;">光敏传感器
+                        <span class="tag-length">1</span>
+                    </span>
+                </a>
+                
+                
+                <a href="/tags/OLED/" title="OLED: 1">
+                    <span class="chip center-align waves-effect waves-light
+                             chip-default "
+                            data-tagname="OLED" style="background-color: #F8F9F9;">OLED
+                        <span class="tag-length">1</span>
+                    </span>
+                </a>
+                
+                
+                <a href="/tags/%E4%B8%AD%E6%96%AD/" title="中断: 1">
+                    <span class="chip center-align waves-effect waves-light
+                             chip-default "
+                            data-tagname="中断" style="background-color: #82E0AA;">中断
+                        <span class="tag-length">1</span>
+                    </span>
+                </a>
+                
+                
+                <a href="/tags/%E6%97%8B%E8%BD%AC%E7%BC%96%E7%A0%81%E5%99%A8/" title="旋转编码器: 1">
+                    <span class="chip center-align waves-effect waves-light
+                             chip-default "
+                            data-tagname="旋转编码器" style="background-color: #D7BDE2;">旋转编码器
+                        <span class="tag-length">1</span>
+                    </span>
+                </a>
+                
+                
+                <a href="/tags/%E5%AF%B9%E5%B0%84%E5%BC%8F%E7%BA%A2%E5%A4%96%E4%BC%A0%E6%84%9F%E5%99%A8/" title="对射式红外传感器: 1">
+                    <span class="chip center-align waves-effect waves-light
+                             chip-default "
+                            data-tagname="对射式红外传感器" style="background-color: #A3E4D7;">对射式红外传感器
+                        <span class="tag-length">1</span>
+                    </span>
+                </a>
+                
+                
+                <a href="/tags/Hexo/" title="Hexo: 1">
+                    <span class="chip center-align waves-effect waves-light
+                             chip-default "
+                            data-tagname="Hexo" style="background-color: #85C1E9;">Hexo
+                        <span class="tag-length">1</span>
+                    </span>
+                </a>
+                
+                
+                <a href="/tags/blog/" title="blog: 1">
+                    <span class="chip center-align waves-effect waves-light
+                             chip-default "
+                            data-tagname="blog" style="background-color: #F8C471;">blog
+                        <span class="tag-length">1</span>
+                    </span>
+                </a>
+                
+                
+                <a href="/tags/Matery/" title="Matery: 1">
+                    <span class="chip center-align waves-effect waves-light
+                             chip-default "
+                            data-tagname="Matery" style="background-color: #F9E79F;">Matery
+                        <span class="tag-length">1</span>
+                    </span>
+                </a>
+                
+            </div>
         </div>
     </div>
 </div>
 
-                    
-
-                    
-
-                    
-
-                    
-                    <div id="recommend-sections" class="recommend">
-                        
-
-
-
-                    </div>
-                    
-                </div>
-            </div>
-        </div>
-    </div>
     
 
-    
-
-    <!-- 所有文章卡片 -->
     <article id="articles" class="container articles">
-        <div class="row article-row">
+        <div class="row tags-posts">
             
-             <!-- 隐藏某个文章 -->
-            <div class="article col s12 m6 l4" data-aos="zoom-in">
-                <div class="card">
-                    <a href="/2024/12/19/03-oled-he-zhong-duan/">
-                        <div class="card-image">
-                            
-                            
-                            <img src="/medias/featureimages/14.jpg" class="responsive-img" alt="03-OLED和中断">
-                            
-                            <span class="card-title">03-OLED和中断</span>
-                        </div>
-                    </a>
-
-                    <div class="card-content article-content">
-                        <div class="summary block-with-text">
-                            
-                                STM32入门教程（江协）4-1 OLED调试工具调试方法
-串口调试：通过串口通信，将调试信息发送到电脑端，电脑使用串口助手显示调试信息
-显示屏调试：直接将显示屏连接到单片机，将调试信息打印在显示屏上
-Keil调试模式：借助Keil软件的调
-                            
-                        </div>
-                        <div class="publish-info">
-                            <span class="publish-date">
-                                <i class="far fa-clock fa-fw icon-date"></i>2024-12-19
-                            </span>
-                            <span class="publish-author">
-                                
-                                <i class="fas fa-user fa-fw"></i>
-                                404djl
-                                
-                            </span>
-                        </div>
-                    </div>
-
-                    
-                    <div class="card-action article-tags">
-                        
-                        <a href="/tags/OLED/">
-                            <span class="chip bg-color">OLED</span>
-                        </a>
-                        
-                        <a href="/tags/%E4%B8%AD%E6%96%AD/">
-                            <span class="chip bg-color">中断</span>
-                        </a>
-                        
-                        <a href="/tags/%E6%97%8B%E8%BD%AC%E7%BC%96%E7%A0%81%E5%99%A8/">
-                            <span class="chip bg-color">旋转编码器</span>
-                        </a>
-                        
-                        <a href="/tags/%E5%AF%B9%E5%B0%84%E5%BC%8F%E7%BA%A2%E5%A4%96%E4%BC%A0%E6%84%9F%E5%99%A8/">
-                            <span class="chip bg-color">对射式红外传感器</span>
-                        </a>
-                        
-                    </div>
-                    
-                </div>
-            </div>
-              <!-- 隐藏某个文章 -->
             
-             <!-- 隐藏某个文章 -->
-            <div class="article col s12 m6 l4" data-aos="zoom-in">
+            <div class="article tag-post col s12 m6 l4" data-tags="STM32, GPIO, 蜂鸣器, 光敏传感器" data-aos="fade-up">
                 <div class="card">
                     <a href="/2024/12/18/02-gpio-shu-chu-he-shu-ru/">
-                        <div class="card-image">
+                        <div class="card-image tag-image">
                             
                             
                             <img src="/medias/featureimages/3.jpg" class="responsive-img" alt="02-GPIO输出和输入">
@@ -660,19 +529,7 @@ Keil调试模式：借助Keil软件的调
                             <span class="card-title">02-GPIO输出和输入</span>
                         </div>
                     </a>
-
                     <div class="card-content article-content">
-                        <div class="summary block-with-text">
-                            
-                                STM32入门教程（江协）3-1 GPIO输出
-GPIO 简介
-
-GPIO（General Purpose Input Output）通用输入输出口
-可配置为8种输入输出模式
-引脚电平：0V~3.3V，部分引脚可容忍5V
-输出模式下可控制端
-                            
-                        </div>
                         <div class="publish-info">
                             <span class="publish-date">
                                 <i class="far fa-clock fa-fw icon-date"></i>2024-12-18
@@ -685,148 +542,11 @@ GPIO（General Purpose Input Output）通用输入输出口
                             </span>
                         </div>
                     </div>
-
-                    
-                    <div class="card-action article-tags">
-                        
-                        <a href="/tags/STM32/">
-                            <span class="chip bg-color">STM32</span>
-                        </a>
-                        
-                        <a href="/tags/GPIO/">
-                            <span class="chip bg-color">GPIO</span>
-                        </a>
-                        
-                        <a href="/tags/%E8%9C%82%E9%B8%A3%E5%99%A8/">
-                            <span class="chip bg-color">蜂鸣器</span>
-                        </a>
-                        
-                        <a href="/tags/%E5%85%89%E6%95%8F%E4%BC%A0%E6%84%9F%E5%99%A8/">
-                            <span class="chip bg-color">光敏传感器</span>
-                        </a>
-                        
-                    </div>
-                    
                 </div>
             </div>
-              <!-- 隐藏某个文章 -->
-            
-             <!-- 隐藏某个文章 -->
-            <div class="article col s12 m6 l4" data-aos="zoom-in">
-                <div class="card">
-                    <a href="/2024/12/17/01-stm32-jie-shao-he-gong-cheng-huan-jing-pei-zhi/">
-                        <div class="card-image">
-                            
-                            
-                            <img src="/medias/featureimages/6.jpg" class="responsive-img" alt="01-STM32介绍和工程环境配置">
-                            
-                            <span class="card-title">01-STM32介绍和工程环境配置</span>
-                        </div>
-                    </a>
-
-                    <div class="card-content article-content">
-                        <div class="summary block-with-text">
-                            
-                                STM32入门教程（江协）1-1 课程简介硬件平台：STM32最小系统板+面包板硬件平台
-软件设备：Keil5 MDK(给ARM系列的单片机编程的)
-1-2 STM32简介
-STM32简介
-
-STM32是ST公司基于ARM Cortex-M
-                            
-                        </div>
-                        <div class="publish-info">
-                            <span class="publish-date">
-                                <i class="far fa-clock fa-fw icon-date"></i>2024-12-17
-                            </span>
-                            <span class="publish-author">
-                                
-                                <i class="fas fa-user fa-fw"></i>
-                                404djl
-                                
-                            </span>
-                        </div>
-                    </div>
-
-                    
-                    <div class="card-action article-tags">
-                        
-                        <a href="/tags/STM32/">
-                            <span class="chip bg-color">STM32</span>
-                        </a>
-                        
-                        <a href="/tags/%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA/">
-                            <span class="chip bg-color">环境搭建</span>
-                        </a>
-                        
-                    </div>
-                    
-                </div>
-            </div>
-              <!-- 隐藏某个文章 -->
-            
-             <!-- 隐藏某个文章 -->
-            <div class="article col s12 m6 l4" data-aos="zoom-in">
-                <div class="card">
-                    <a href="/2024/12/16/hexo-de-da-jian-guo-cheng/">
-                        <div class="card-image">
-                            
-                            
-                            <img src="/medias/featureimages/17.jpg" class="responsive-img" alt="hexo的搭建过程">
-                            
-                            <span class="card-title">hexo的搭建过程</span>
-                        </div>
-                    </a>
-
-                    <div class="card-content article-content">
-                        <div class="summary block-with-text">
-                            
-                                hexo博客的安装过程
-使用ubuntu22 进行安装，然后关联github，选择主题Matery
-
-安装Nodejs 和 Hexo-cli1.卸载旧版本的 Node.js:
-sudo apt remove nodejs
-
-2.安装最新版本
-                            
-                        </div>
-                        <div class="publish-info">
-                            <span class="publish-date">
-                                <i class="far fa-clock fa-fw icon-date"></i>2024-12-16
-                            </span>
-                            <span class="publish-author">
-                                
-                                <i class="fas fa-user fa-fw"></i>
-                                404djl
-                                
-                            </span>
-                        </div>
-                    </div>
-
-                    
-                    <div class="card-action article-tags">
-                        
-                        <a href="/tags/Hexo/">
-                            <span class="chip bg-color">Hexo</span>
-                        </a>
-                        
-                        <a href="/tags/blog/">
-                            <span class="chip bg-color">blog</span>
-                        </a>
-                        
-                        <a href="/tags/Matery/">
-                            <span class="chip bg-color">Matery</span>
-                        </a>
-                        
-                    </div>
-                    
-                </div>
-            </div>
-              <!-- 隐藏某个文章 -->
             
         </div>
     </article>
-
 </main>
 
 
