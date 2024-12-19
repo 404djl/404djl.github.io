@@ -1,1 +1,23 @@
 /* Here is your custom css styles. */
+.page-footer {
+    background: linear-gradient(to right, #ff5f6d, #ffc371); /* 渐变背景色 */
+    color: #fff;
+    padding: 20px 0;
+    text-align: center;
+    font-size: 14px;
+  }
+  
+  .page-footer a {
+    color: #fff;
+    text-decoration: none;
+  }
+  
+  .page-footer a:hover {
+    text-decoration: underline;
+  }
+  
+  .page-footer i {
+    font-size: 20px;
+    margin: 0 10px;
+  }
+  
