@@ -1,0 +1,1346 @@
+<!DOCTYPE HTML>
+<html lang="zh-CN">
+
+
+<head>
+    <meta charset="utf-8">
+    <meta name="keywords" content="01-STM32介绍和工程环境配置, 404djlのblog">
+    <meta name="description" content="STM32入门教程（江协）1-1 课程简介硬件平台：STM32最小系统板+面包板硬件平台
+软件设备：Keil5 MDK(给ARM系列的单片机编程的)
+1-2 STM32简介
+STM32简介
+
+STM32是ST公司基于ARM Cortex-M">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="renderer" content="webkit|ie-stand|ie-comp">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="referrer" content="no-referrer-when-downgrade">
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+
+
+    <title>01-STM32介绍和工程环境配置 | 404djlのblog</title>
+    <link rel="icon" type="image/png" href="/favicon.png">
+    
+
+
+    <!-- bg-cover style     -->
+
+
+
+<link rel="stylesheet" type="text/css" href="/libs/awesome/css/all.min.css">
+<link rel="stylesheet" type="text/css" href="/libs/materialize/materialize.min.css">
+<link rel="stylesheet" type="text/css" href="/libs/aos/aos.css">
+<link rel="stylesheet" type="text/css" href="/libs/animate/animate.min.css">
+<link rel="stylesheet" type="text/css" href="/libs/lightGallery/css/lightgallery.min.css">
+<link rel="stylesheet" type="text/css" href="/css/matery.css">
+<link rel="stylesheet" type="text/css" href="/css/my.css">
+<link rel="stylesheet" type="text/css" href="/css/dark.css" media="none" onload="if(media!='all')media='all'">
+
+
+
+
+    <link rel="stylesheet" href="/libs/tocbot/tocbot.css">
+    <link rel="stylesheet" href="/css/post.css">
+
+
+
+
+    
+        <link rel="stylesheet" type="text/css" href="/css/reward.css">
+    
+
+
+
+    <script src="/libs/jquery/jquery-3.6.0.min.js"></script>
+
+<meta name="generator" content="Hexo 4.2.0"><link rel="alternate" href="/atom.xml" title="404djlのblog" type="application/atom+xml">
+
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+<link rel="stylesheet" href="/css/prism-tomorrow.css" type="text/css">
+<link rel="stylesheet" href="/css/prism-line-numbers.css" type="text/css">
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+</head>
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+
+
+
+<body>
+    <header class="navbar-fixed">
+    <nav id="headNav" class="bg-color nav-transparent">
+        <div id="navContainer" class="nav-wrapper container">
+            <div class="brand-logo">
+                <a href="/" class="waves-effect waves-light">
+                    
+                    <img src="/medias/logo.png" class="logo-img" alt="LOGO">
+                    
+                    <span class="logo-span">404djlのblog</span>
+                </a>
+            </div>
+            
+
+<a href="#" data-target="mobile-nav" class="sidenav-trigger button-collapse"><i class="fas fa-bars"></i></a>
+<ul class="right nav-menu">
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/" class="waves-effect waves-light">
+      
+      <i class="fas fa-home" style="zoom: 0.6;"></i>
+      
+      <span>首页</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/tags" class="waves-effect waves-light">
+      
+      <i class="fas fa-tags" style="zoom: 0.6;"></i>
+      
+      <span>标签</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/categories" class="waves-effect waves-light">
+      
+      <i class="fas fa-bookmark" style="zoom: 0.6;"></i>
+      
+      <span>分类</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/archives" class="waves-effect waves-light">
+      
+      <i class="fas fa-archive" style="zoom: 0.6;"></i>
+      
+      <span>归档</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/about" class="waves-effect waves-light">
+      
+      <i class="fas fa-user-circle" style="zoom: 0.6;"></i>
+      
+      <span>关于</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/contact" class="waves-effect waves-light">
+      
+      <i class="fas fa-comments" style="zoom: 0.6;"></i>
+      
+      <span>留言板</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/friends" class="waves-effect waves-light">
+      
+      <i class="fas fa-address-book" style="zoom: 0.6;"></i>
+      
+      <span>友情链接</span>
+    </a>
+    
+  </li>
+  
+  <li>
+    <a href="#searchModal" class="modal-trigger waves-effect waves-light">
+      <i id="searchIcon" class="fas fa-search" title="搜索" style="zoom: 0.85;"></i>
+    </a>
+  </li>
+  <li>
+    <a href="javascript:;" class="waves-effect waves-light" onclick="switchNightMode()" title="深色/浅色模式" >
+      <i id="sum-moon-icon" class="fas fa-sun" style="zoom: 0.85;"></i>
+    </a>
+  </li>
+</ul>
+
+
+<div id="mobile-nav" class="side-nav sidenav">
+
+    <div class="mobile-head bg-color">
+        
+        <img src="/medias/logo.png" class="logo-img circle responsive-img">
+        
+        <div class="logo-name">404djlのblog</div>
+        <div class="logo-desc">
+            
+            Never really desperate, only the lost of the soul
+            
+        </div>
+    </div>
+
+    <ul class="menu-list mobile-menu-list">
+        
+        <li class="m-nav-item">
+	  
+		<a href="/" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-home"></i>
+			
+			首页
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/tags" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-tags"></i>
+			
+			标签
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/categories" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-bookmark"></i>
+			
+			分类
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/archives" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-archive"></i>
+			
+			归档
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/about" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-user-circle"></i>
+			
+			关于
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/contact" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-comments"></i>
+			
+			留言板
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/friends" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-address-book"></i>
+			
+			友情链接
+		</a>
+          
+        </li>
+        
+        
+        <li><div class="divider"></div></li>
+        <li>
+            <a href="https://github.com/blinkfox/hexo-theme-matery" class="waves-effect waves-light" target="_blank">
+                <i class="fab fa-github-square fa-fw"></i>Fork Me
+            </a>
+        </li>
+        
+    </ul>
+</div>
+
+
+        </div>
+
+        
+            <style>
+    .nav-transparent .github-corner {
+        display: none !important;
+    }
+
+    .github-corner {
+        position: absolute;
+        z-index: 10;
+        top: 0;
+        right: 0;
+        border: 0;
+        transform: scale(1.1);
+    }
+
+    .github-corner svg {
+        color: #0f9d58;
+        fill: #fff;
+        height: 64px;
+        width: 64px;
+    }
+
+    .github-corner:hover .octo-arm {
+        animation: a 0.56s ease-in-out;
+    }
+
+    .github-corner .octo-arm {
+        animation: none;
+    }
+
+    @keyframes a {
+        0%,
+        to {
+            transform: rotate(0);
+        }
+        20%,
+        60% {
+            transform: rotate(-25deg);
+        }
+        40%,
+        80% {
+            transform: rotate(10deg);
+        }
+    }
+</style>
+
+<a href="https://github.com/blinkfox/hexo-theme-matery" class="github-corner tooltipped hide-on-med-and-down" target="_blank"
+   data-tooltip="Fork Me" data-position="left" data-delay="50">
+    <svg viewBox="0 0 250 250" aria-hidden="true">
+        <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+        <path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2"
+              fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+        <path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z"
+              fill="currentColor" class="octo-body"></path>
+    </svg>
+</a>
+        
+    </nav>
+
+</header>
+
+    
+
+
+
+<div class="bg-cover pd-header post-cover" style="background-image: url('/medias/featureimages/6.jpg')">
+    <div class="container" style="right: 0px;left: 0px;">
+        <div class="row">
+            <div class="col s12 m12 l12">
+                <div class="brand">
+                    <h1 class="description center-align post-title">01-STM32介绍和工程环境配置</h1>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+<main class="post-container content">
+
+    
+    <div class="row">
+    <div id="main-content" class="col s12 m12 l9">
+        <!-- 文章内容详情 -->
+<div id="artDetail">
+    <div class="card">
+        <div class="card-content article-info">
+            <div class="row tag-cate">
+                <div class="col s7">
+                    
+                    <div class="article-tag">
+                        
+                            <a href="/tags/STM32/">
+                                <span class="chip bg-color">STM32</span>
+                            </a>
+                        
+                            <a href="/tags/%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA/">
+                                <span class="chip bg-color">环境搭建</span>
+                            </a>
+                        
+                    </div>
+                    
+                </div>
+                <div class="col s5 right-align">
+                    
+                </div>
+            </div>
+
+            <div class="post-info">
+                
+                <div class="post-date info-break-policy">
+                    <i class="far fa-calendar-minus fa-fw"></i>发布日期:&nbsp;&nbsp;
+                    2024-12-17
+                </div>
+                
+
+                
+                <div class="post-date info-break-policy">
+                    <i class="far fa-calendar-check fa-fw"></i>更新日期:&nbsp;&nbsp;
+                    2024-12-19
+                </div>
+                
+
+                
+                <div class="info-break-policy">
+                    <i class="far fa-file-word fa-fw"></i>文章字数:&nbsp;&nbsp;
+                    1.7k
+                </div>
+                
+
+                
+                <div class="info-break-policy">
+                    <i class="far fa-clock fa-fw"></i>阅读时长:&nbsp;&nbsp;
+                    6 分
+                </div>
+                
+
+                
+            </div>
+        </div>
+        <hr class="clearfix">
+
+        
+
+        
+
+        <div class="card-content article-card-content">
+            <div id="articleContent">
+                <h1 id="STM32入门教程（江协）"><a href="#STM32入门教程（江协）" class="headerlink" title="STM32入门教程（江协）"></a>STM32入门教程（江协）</h1><h2 id="1-1-课程简介"><a href="#1-1-课程简介" class="headerlink" title="1-1 课程简介"></a>1-1 课程简介</h2><p>硬件平台：STM32最小系统板+面包板硬件平台</p>
+<p>软件设备：Keil5 MDK(给ARM系列的单片机编程的)</p>
+<h2 id="1-2-STM32简介"><a href="#1-2-STM32简介" class="headerlink" title="1-2 STM32简介"></a>1-2 STM32简介</h2><ol>
+<li><p>STM32简介</p>
+<ul>
+<li>STM32是ST公司基于ARM Cortex-M内核开发的32位微控制器</li>
+<li>STM32常应用在嵌入式领域，如智能车、无人机、机器人、无线通信、物联网、工业控制、娱乐电子产品等</li>
+<li>STM32功能强大、性能优异、片上资源丰富、功耗低，是一款经典的嵌入式微控制器</li>
+</ul>
+<p><img src="https://www.st.com.cn/content/dam/category-pages/stm32-32-bit-arm-cortex-mcus/arm_cortex_mcu_portfolio_new.jpg"></p>
+</li>
+<li><p>ARM</p>
+<ul>
+<li>ARM既指ARM公司，也指ARM处理器内核</li>
+<li>ARM公司是全球领先的半导体知识产权（IP）提供商，全世界超过95%的智能手机和平板电脑都采用ARM架构</li>
+<li>ARM公司设计ARM内核，半导体厂商完善内核周边电路并生产芯片</li>
+</ul>
+<p><img src="https://pic.imgdb.cn/item/67612b42d0e0a243d4e52734.png"></p>
+</li>
+<li><p>STM32F103C8T6</p>
+<ul>
+<li>系列：主流系列STM32F1</li>
+<li>内核：ARM Cortex-M3</li>
+<li>主频：72MHz</li>
+<li>RAM：20K(SRAM)</li>
+<li>ROM: 64K(Flash)</li>
+<li>供电：2.0~3.6V（标准3.3V)</li>
+<li>封装：LQFP48</li>
+</ul>
+</li>
+<li><p>片上资源/外设</p>
+<table>
+<thead>
+<tr>
+<th align="center">英文缩写</th>
+<th align="center">名称</th>
+<th align="center">英文缩写</th>
+<th align="center">名称</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center"><strong>NVIC</strong></td>
+<td align="center"><strong>嵌套向量中断控制器</strong></td>
+<td align="center">CAN</td>
+<td align="center">CAN通信</td>
+</tr>
+<tr>
+<td align="center"><strong>SysTick</strong></td>
+<td align="center"><strong>系统滴答定时器</strong></td>
+<td align="center">USB</td>
+<td align="center">USB通信</td>
+</tr>
+<tr>
+<td align="center">RCC</td>
+<td align="center">复位和时钟控制</td>
+<td align="center">RTC</td>
+<td align="center">实时时钟</td>
+</tr>
+<tr>
+<td align="center">GPIO</td>
+<td align="center">通用IO口</td>
+<td align="center">CRC</td>
+<td align="center">CRC校验</td>
+</tr>
+<tr>
+<td align="center">AFIO</td>
+<td align="center">复用IO口</td>
+<td align="center">PWR</td>
+<td align="center">电源控制</td>
+</tr>
+<tr>
+<td align="center">EXTI</td>
+<td align="center">外部中断</td>
+<td align="center">BKP</td>
+<td align="center">备份寄存器</td>
+</tr>
+<tr>
+<td align="center">TIM</td>
+<td align="center">定时器</td>
+<td align="center">IWDG</td>
+<td align="center">独立看门狗</td>
+</tr>
+<tr>
+<td align="center">ADC</td>
+<td align="center">模数转换器</td>
+<td align="center">WWDG</td>
+<td align="center">窗口看门狗</td>
+</tr>
+<tr>
+<td align="center">DMA</td>
+<td align="center">直接内存访问</td>
+<td align="center">DAC</td>
+<td align="center">数模转换器</td>
+</tr>
+<tr>
+<td align="center">USART</td>
+<td align="center">同步/异步串口通信</td>
+<td align="center">SDIO</td>
+<td align="center">SD卡接口</td>
+</tr>
+<tr>
+<td align="center">I2C</td>
+<td align="center">I2C通信</td>
+<td align="center">FSMC</td>
+<td align="center">可变静态存储控制器</td>
+</tr>
+<tr>
+<td align="center">SPI</td>
+<td align="center">SPI通信</td>
+<td align="center">USB OTG</td>
+<td align="center">USB主机接口</td>
+</tr>
+</tbody></table>
+</li>
+<li><p>命名规则</p>
+<p><img src="https://shequ.stmicroelectronics.cn/data/attachment/forum/201709/16/151144mewf6r62wppxpefe.jpg"></p>
+</li>
+<li><p>系统结构</p>
+<p><img src="https://raw.githubusercontent.com/flyingBridzz/flyingBridzz.github.io/master/_posts/image/STM32%E7%B3%BB%E7%BB%9F%E6%9E%84%E6%9E%B6/1.png"></p>
+</li>
+<li><p>引脚定义</p>
+<p><img src="https://pic.imgdb.cn/item/67619080d0e0a243d4e589df.png"></p>
+</li>
+<li><p>启动配置</p>
+<p><img src="https://pic.imgdb.cn/item/676128ecd0e0a243d4e5227a.png"></p>
+</li>
+<li><p>最小系统电路</p>
+<p><img src="https://pic.imgdb.cn/item/67612c0cd0e0a243d4e528d2.png"></p>
+</li>
+</ol>
+<h2 id="2-1-软件安装"><a href="#2-1-软件安装" class="headerlink" title="2-1 软件安装"></a>2-1 软件安装</h2><p><a href="https://www.bilibili.com/video/BV1th411z7sn?spm_id_from=333.788.videopod.episodes&amp;vd_source=6c74875e4fc2627ae811a62db47bf683&amp;p=3" target="_blank" rel="noopener">https://www.bilibili.com/video/BV1th411z7sn?spm_id_from=333.788.videopod.episodes&amp;vd_source=6c74875e4fc2627ae811a62db47bf683&amp;p=3</a></p>
+<h2 id="2-2-新建工程"><a href="#2-2-新建工程" class="headerlink" title="2-2 新建工程"></a>2-2 新建工程</h2><h3 id="操作寄存器构建STM32"><a href="#操作寄存器构建STM32" class="headerlink" title="操作寄存器构建STM32"></a>操作寄存器构建STM32</h3><ul>
+<li><p>打开Keil5，点击Project中的New uVision Project，选择项目文件夹，给工程文件命名</p>
+</li>
+<li><p>选择芯片型号STM32F103C8T6，之后会弹出Keil软件新建功能小助手，叉掉</p>
+</li>
+<li><p>添加工程的必要文件</p>
+<ul>
+<li>找到启动文件：<code>固件库\STM32F10x_StdPeriph_Lib_V3.5.0\Libraries\CMSIS\CM3\DeviceSupport\ST\STM32F10x\startup\arm</code>下的所有启动文件<code>ctr+a</code>、<code>ctr+c</code></li>
+<li>回到工程文件夹下，新建文件夹<code>Start</code>，将复制的内容粘贴到里面</li>
+<li>回到固件库的<code>STM32F10x</code>的文件夹下，有<code>stm32f10x.h文件</code>（<strong>STM32的外设寄存器描述文件，用来描述STM32有哪些寄存器和它对应的地址的</strong>）、<code>system_stm32f10x.c</code>和<code>system_stm32f10x.h</code>文件（<strong>用来配置时钟的，STM32主频72MHz，就是system文件里的函数配置的</strong>），将这三个文件复制下来，也粘贴到Start文件夹下</li>
+<li>STM32是内核和内核外围的设备组成的，但是内核的寄存器描述和外围设备的描述文件不是在一起的，还需要添加一个内核寄存器的描述文件。找到<code>\CM3\CoreSupport\</code>下的两个cm3（Cortex-M3)(core_cm3.c和core_cm3.h)，粘贴到Start文件夹下。</li>
+</ul>
+</li>
+<li><p>回到Keil软件，将刚刚复制的那些文件添加到工程里来，创建一个Start文件夹，右击添加已经存在的文件，选择All files，添加一个启动文件（后缀名md.s)，所有的.c，.h文件，按住Ctr 进行选择，Add添加</p>
+</li>
+<li><p>在工程选项里添加上这个文件夹的头文件路径。点击魔术棒按键，打开工程选项，在<strong>C/C++<strong>里找到</strong>Include Paths</strong>栏点击三个点的按钮，把Start的路径添加进来</p>
+</li>
+<li><p>打开工程文件夹创建User文件夹，该文件夹存放main函数。回到Keil软件右击Target增加组，改名为User，右击User添加新文件main.c，路径选择工程文件夹下的User。</p>
+</li>
+<li><p>在main.c文件里，右击添加<code>stm32f10x.h</code>，创建一个main.c，编译并建立工程。目前这是一个寄存器工程。</p>
+<p>选择魔术棒找到Debug，使用<code>ST-Link Debugger</code>调试器，点击Setting，找到Flash Download，勾上Reset and Run(下载程序后会立马复位执行，不需要按Reset)</p>
+<p>查看STM32F10xxx参考手册，找到RCC寄存器下的APB2外设时钟使能寄存器(<strong>RCC_APB2ENR</strong>)</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"stm32f10x.h"</span></span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    RCC<span class="token operator">-></span>APB2ENR <span class="token operator">=</span> <span class="token number">0x00000010</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 打开GPIOC的时钟了  </span>
+    GPIOC<span class="token operator">-></span>CRH <span class="token operator">=</span> <span class="token number">0x00300000</span><span class="token punctuation">;</span>	 <span class="token comment" spellcheck="true">// 配置CNF13、MODE13   0011 推挽输出模式</span>
+    GPIOC<span class="token operator">-></span>ODR <span class="token operator">=</span> <span class="token number">0x00000000</span><span class="token punctuation">;</span>	 <span class="token comment" spellcheck="true">// 低电平点亮  0x00002000  熄灭</span>
+    <span class="token keyword">while</span> <span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span> <span class="token comment" spellcheck="true">//最后一行要为空，否则会报警告</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+</ul>
+<h3 id="操作库函数构建STM32"><a href="#操作库函数构建STM32" class="headerlink" title="操作库函数构建STM32"></a>操作库函数构建STM32</h3><ul>
+<li><p>在原有的工程文件夹下建立Library文件夹，打开固件库的文件夹，<code>STM32F10x_StdPeriph_Lib_V3.5.0\Libraries\STM32F10x_StdPeriph_Driver</code>下有库函数的源文件和头文件，其中misc.c是内核的库函数，将其复制到Library文件夹下。</p>
+</li>
+<li><p>在Keil下建立Library组，将库函数添加进去。还需要一些文件，打开固件库中的<code>\STM32F10x_StdPeriph_Lib_V3.5.0\Project\STM32F10x_StdPeriph_Template</code>下的<code>stm32f10x_conf.h</code>(<strong>用来配置库函数头文件的包含关系的、还有用来参数检查的函数定义</strong>)、<code>stm32f10x_it.c、stm32f10x_it.h</code>(<strong>中断处理</strong>)，将其复制到工程下的User目录下，在Keil软件的User组下进行添加。</p>
+</li>
+<li><p>还需要一个宏定义。打开<code>stm32f10x.h</code>文件，发现最后一段有这几条语句，只有定义了<strong>USE_STDPERIPH_DRIVER</strong>字符串，才能包含<strong>stm32f10x_conf.h</strong>这个文件。</p>
+<pre class="line-numbers language-bash"><code class="language-bash"><span class="token comment" spellcheck="true">#ifdef USE_STDPERIPH_DRIVER</span>
+  <span class="token comment" spellcheck="true">#include "stm32f10x_conf.h"</span>
+<span class="token comment" spellcheck="true">#endif</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<p>打开魔术棒，找到C/C++，然后定义该字符串。在头文件路径下，还要增加User和Library目录的路径。</p>
+</li>
+<li><p>编译后没问题，开始编写main函数</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"stm32f10x.h"</span>     </span><span class="token comment" spellcheck="true">// Device Header</span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token function">RCC_APB2PeriphClockCmd</span><span class="token punctuation">(</span>RCC_APB2Periph_GPIOC<span class="token punctuation">,</span> ENABLE<span class="token punctuation">)</span><span class="token punctuation">;</span>		<span class="token comment" spellcheck="true">// 开启GPIOC的时钟</span>
+    
+    GPIO_InitTypeDef GPIO_InitStructure<span class="token punctuation">;</span>		<span class="token comment" spellcheck="true">// 配置模式  端口  速度</span>
+    GPIO_InitStructure<span class="token punctuation">.</span>GPIO_Mode <span class="token operator">=</span> GPIO_Mode_Out_PP<span class="token punctuation">;</span>
+    GPIO_InitStructure<span class="token punctuation">.</span>GPIO_Pin <span class="token operator">=</span> GPIO_Pin_13<span class="token punctuation">;</span>
+    GPIO_InitStructure<span class="token punctuation">.</span>GPIO_Speed <span class="token operator">=</span> GPIO_Speed_50MHz<span class="token punctuation">;</span>
+    <span class="token function">GPIO_Init</span><span class="token punctuation">(</span>GPIOC<span class="token punctuation">,</span> <span class="token operator">&amp;</span>GPIO_InitStructure<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token function">GPIO_SetBits</span><span class="token punctuation">(</span>GPIOC<span class="token punctuation">,</span> GPIO_Pin_13<span class="token punctuation">)</span><span class="token punctuation">;</span>     <span class="token comment" spellcheck="true">// 输出高电平</span>
+    <span class="token function">GPIO_ResetBits</span><span class="token punctuation">(</span>GPIOC<span class="token punctuation">,</span> GPIO_Pin_13<span class="token punctuation">)</span><span class="token punctuation">;</span>	  <span class="token comment" spellcheck="true">// 输出低电平</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+</li>
+</ul>
+<h3 id="补充"><a href="#补充" class="headerlink" title="补充"></a>补充</h3><ol>
+<li><p>启动类型选择</p>
+<table>
+<thead>
+<tr>
+<th align="left">缩写</th>
+<th align="center">释义</th>
+<th align="left">Flash容量</th>
+<th>型号</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="left">LD_VL</td>
+<td align="center">小容量产品超值系列</td>
+<td align="left">16~32K</td>
+<td>STM32F100</td>
+</tr>
+<tr>
+<td align="left">MD_VL</td>
+<td align="center">中容量产品超值系列</td>
+<td align="left">64~128K</td>
+<td>STM32F100</td>
+</tr>
+<tr>
+<td align="left">HD_VL</td>
+<td align="center">大容量产品超值系列</td>
+<td align="left">256~512K</td>
+<td>STM32F100</td>
+</tr>
+<tr>
+<td align="left">LD</td>
+<td align="center">小容量产品</td>
+<td align="left">16~32K</td>
+<td>STM32F101/102/103</td>
+</tr>
+<tr>
+<td align="left">MD</td>
+<td align="center">中容量产品</td>
+<td align="left">64~128K</td>
+<td>STM32F101/102/103</td>
+</tr>
+<tr>
+<td align="left">HD</td>
+<td align="center">大容量产品</td>
+<td align="left">256~512K</td>
+<td>STM32F101/102/103</td>
+</tr>
+<tr>
+<td align="left">XL</td>
+<td align="center">加大容量产品</td>
+<td align="left">大于512K</td>
+<td>STM32F101/102/103</td>
+</tr>
+<tr>
+<td align="left">CL</td>
+<td align="center">互联型产品</td>
+<td align="left">-</td>
+<td>STM32F105/107</td>
+</tr>
+</tbody></table>
+</li>
+<li><p>新建工程步骤</p>
+<ul>
+<li>建立工程文件夹，Keil中新建工程，选择型号</li>
+<li>工程文件夹里建立Start、Library、User等文件夹，复制固件库里面的文件到工程文件夹</li>
+<li>工程里对应建立Start、Library、User等同名称的分组，然后将文件夹内的文件添加到工程分组里</li>
+<li>工程选项，C/C++，Include Paths内声明所有包含头文件的文件夹</li>
+<li>工程选项，C/C++，Define内定义USE_STDPERIPH_DRIVER</li>
+<li>工程选项，Debug，下拉列表选择对应调试器，Settings，Flash Download里勾选Reset and Run</li>
+</ul>
+</li>
+<li><p>工程架构</p>
+<p><img src="https://pic.imgdb.cn/item/6761738ed0e0a243d4e5829d.png"></p>
+</li>
+</ol>
+
+                
+            </div>
+            <hr/>
+
+            
+
+    <div class="reprint" id="reprint-statement">
+        
+            <div class="reprint__author">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-user">
+                        文章作者:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    <a href="/about" rel="external nofollow noreferrer">404djl</a>
+                </span>
+            </div>
+            <div class="reprint__type">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-link">
+                        文章链接:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    <a href="https://404djl.github.io/2024/12/17/01-stm32-jie-shao-he-gong-cheng-huan-jing-pei-zhi/">https://404djl.github.io/2024/12/17/01-stm32-jie-shao-he-gong-cheng-huan-jing-pei-zhi/</a>
+                </span>
+            </div>
+            <div class="reprint__notice">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-copyright">
+                        版权声明:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    本博客所有文章除特別声明外，均采用
+                    <a href="https://creativecommons.org/licenses/by/4.0/deed.zh" rel="external nofollow noreferrer" target="_blank">CC BY 4.0</a>
+                    许可协议。转载请注明来源
+                    <a href="/about" target="_blank">404djl</a>
+                    !
+                </span>
+            </div>
+        
+    </div>
+
+    <script async defer>
+      document.addEventListener("copy", function (e) {
+        let toastHTML = '<span>复制成功，请遵循本文的转载规则</span><button class="btn-flat toast-action" onclick="navToReprintStatement()" style="font-size: smaller">查看</a>';
+        M.toast({html: toastHTML})
+      });
+
+      function navToReprintStatement() {
+        $("html, body").animate({scrollTop: $("#reprint-statement").offset().top - 80}, 800);
+      }
+    </script>
+
+
+
+            <div class="tag_share" style="display: block;">
+                <div class="post-meta__tag-list" style="display: inline-block;">
+                    
+                        <div class="article-tag">
+                            
+                                <a href="/tags/STM32/">
+                                    <span class="chip bg-color">STM32</span>
+                                </a>
+                            
+                                <a href="/tags/%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA/">
+                                    <span class="chip bg-color">环境搭建</span>
+                                </a>
+                            
+                        </div>
+                    
+                </div>
+                <div class="post_share" style="zoom: 80%; width: fit-content; display: inline-block; float: right; margin: -0.15rem 0;">
+                    <link rel="stylesheet" type="text/css" href="/libs/share/css/share.min.css">
+<div id="article-share">
+
+    
+    <div class="social-share" data-sites="twitter,facebook,google,qq,qzone,wechat,weibo,douban,linkedin" data-wechat-qrcode-helper="<p>微信扫一扫即可分享！</p>"></div>
+    <script src="/libs/share/js/social-share.min.js"></script>
+    
+
+    
+
+</div>
+
+                </div>
+            </div>
+            
+                <div id="reward">
+    <a href="#rewardModal" class="reward-link modal-trigger btn-floating btn-medium waves-effect waves-light red">赏</a>
+
+    <!-- Modal Structure -->
+    <div id="rewardModal" class="modal">
+        <div class="modal-content">
+            <a class="close modal-close"><i class="fas fa-times"></i></a>
+            <h4 class="reward-title">你的赏识是我前进的动力</h4>
+            <div class="reward-content">
+                <div class="reward-tabs">
+                    <ul class="tabs row">
+                        <li class="tab col s6 alipay-tab waves-effect waves-light"><a href="#alipay">支付宝</a></li>
+                        <li class="tab col s6 wechat-tab waves-effect waves-light"><a href="#wechat">微 信</a></li>
+                    </ul>
+                    <div id="alipay">
+                        <img src="/medias/reward/alipay.jpg" class="reward-img" alt="支付宝打赏二维码">
+                    </div>
+                    <div id="wechat">
+                        <img src="/medias/reward/wechat.png" class="reward-img" alt="微信打赏二维码">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(function () {
+        $('.tabs').tabs();
+    });
+</script>
+
+            
+        </div>
+    </div>
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+<article id="prenext-posts" class="prev-next articles">
+    <div class="row article-row">
+        
+        <div class="article col s12 m6" data-aos="fade-up">
+            <div class="article-badge left-badge text-color">
+                <i class="fas fa-chevron-left"></i>&nbsp;上一篇</div>
+            <div class="card">
+                <a href="/2024/12/18/02-gpio-shu-chu-he-shu-ru/">
+                    <div class="card-image">
+                        
+                        
+                        <img src="/medias/featureimages/3.jpg" class="responsive-img" alt="02-GPIO输出和输入">
+                        
+                        <span class="card-title">02-GPIO输出和输入</span>
+                    </div>
+                </a>
+                <div class="card-content article-content">
+                    <div class="summary block-with-text">
+                        
+                            
+                        
+                    </div>
+                    <div class="publish-info">
+                        <span class="publish-date">
+                            <i class="far fa-clock fa-fw icon-date"></i>2024-12-18
+                        </span>
+                        <span class="publish-author">
+                            
+                            <i class="fas fa-user fa-fw"></i>
+                            404djl
+                            
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="card-action article-tags">
+                    
+                    <a href="/tags/STM32/">
+                        <span class="chip bg-color">STM32</span>
+                    </a>
+                    
+                    <a href="/tags/GPIO/">
+                        <span class="chip bg-color">GPIO</span>
+                    </a>
+                    
+                    <a href="/tags/%E8%9C%82%E9%B8%A3%E5%99%A8/">
+                        <span class="chip bg-color">蜂鸣器</span>
+                    </a>
+                    
+                    <a href="/tags/%E5%85%89%E6%95%8F%E4%BC%A0%E6%84%9F%E5%99%A8/">
+                        <span class="chip bg-color">光敏传感器</span>
+                    </a>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+        
+        <div class="article col s12 m6" data-aos="fade-up">
+            <div class="article-badge right-badge text-color">
+                下一篇&nbsp;<i class="fas fa-chevron-right"></i>
+            </div>
+            <div class="card">
+                <a href="/2024/12/16/hexo-de-da-jian-guo-cheng/">
+                    <div class="card-image">
+                        
+                        
+                        <img src="/medias/featureimages/17.jpg" class="responsive-img" alt="hexo的搭建过程">
+                        
+                        <span class="card-title">hexo的搭建过程</span>
+                    </div>
+                </a>
+                <div class="card-content article-content">
+                    <div class="summary block-with-text">
+                        
+                            
+                        
+                    </div>
+                    <div class="publish-info">
+                            <span class="publish-date">
+                                <i class="far fa-clock fa-fw icon-date"></i>2024-12-16
+                            </span>
+                        <span class="publish-author">
+                            
+                            <i class="fas fa-user fa-fw"></i>
+                            404djl
+                            
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="card-action article-tags">
+                    
+                    <a href="/tags/Hexo/">
+                        <span class="chip bg-color">Hexo</span>
+                    </a>
+                    
+                    <a href="/tags/blog/">
+                        <span class="chip bg-color">blog</span>
+                    </a>
+                    
+                    <a href="/tags/Matery/">
+                        <span class="chip bg-color">Matery</span>
+                    </a>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+    </div>
+</article>
+
+</div>
+
+
+
+<!-- 代码块功能依赖 -->
+<script type="text/javascript" src="/libs/codeBlock/codeBlockFuction.js"></script>
+
+
+
+<!-- 代码语言 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeLang.js"></script>
+
+
+<!-- 代码块复制 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeCopy.js"></script>
+
+
+<!-- 代码块收缩 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeShrink.js"></script>
+
+
+
+    </div>
+    <div id="toc-aside" class="expanded col l3 hide-on-med-and-down">
+        <div class="toc-widget card" style="background-color: white;">
+            <div class="toc-title"><i class="far fa-list-alt"></i>&nbsp;&nbsp;目录</div>
+            <div id="toc-content"></div>
+        </div>
+    </div>
+</div>
+
+<!-- TOC 悬浮按钮. -->
+
+<div id="floating-toc-btn" class="hide-on-med-and-down">
+    <a class="btn-floating btn-large bg-color">
+        <i class="fas fa-list-ul"></i>
+    </a>
+</div>
+
+
+<script src="/libs/tocbot/tocbot.min.js"></script>
+<script>
+    $(function () {
+        tocbot.init({
+            tocSelector: '#toc-content',
+            contentSelector: '#articleContent',
+            headingsOffset: -($(window).height() * 0.4 - 45),
+            collapseDepth: Number('0'),
+            headingSelector: 'h2, h3, h4'
+        });
+
+        // Set scroll toc fixed.
+        let tocHeight = parseInt($(window).height() * 0.4 - 64);
+        let $tocWidget = $('.toc-widget');
+        $(window).scroll(function () {
+            let scroll = $(window).scrollTop();
+            /* add post toc fixed. */
+            if (scroll > tocHeight) {
+                $tocWidget.addClass('toc-fixed');
+            } else {
+                $tocWidget.removeClass('toc-fixed');
+            }
+        });
+
+        
+        /* 修复文章卡片 div 的宽度. */
+        let fixPostCardWidth = function (srcId, targetId) {
+            let srcDiv = $('#' + srcId);
+            if (srcDiv.length === 0) {
+                return;
+            }
+
+            let w = srcDiv.width();
+            if (w >= 450) {
+                w = w + 21;
+            } else if (w >= 350 && w < 450) {
+                w = w + 18;
+            } else if (w >= 300 && w < 350) {
+                w = w + 16;
+            } else {
+                w = w + 14;
+            }
+            $('#' + targetId).width(w);
+        };
+
+        // 切换TOC目录展开收缩的相关操作.
+        const expandedClass = 'expanded';
+        let $tocAside = $('#toc-aside');
+        let $mainContent = $('#main-content');
+        $('#floating-toc-btn .btn-floating').click(function () {
+            if ($tocAside.hasClass(expandedClass)) {
+                $tocAside.removeClass(expandedClass).hide();
+                $mainContent.removeClass('l9');
+            } else {
+                $tocAside.addClass(expandedClass).show();
+                $mainContent.addClass('l9');
+            }
+            fixPostCardWidth('artDetail', 'prenext-posts');
+        });
+        
+    });
+</script>
+
+    
+
+</main>
+
+
+
+
+    <footer class="page-footer" style="background: linear-gradient(to right, #ff5f6d, #ffc371); color: #fff;">
+    <div class="container" style="text-align: center; padding: 20px;">
+      <p>Copyright © 2024 - 2025 <a href="https://404djl.github.io" style="color: #fff; text-decoration: underline;">404djl</a> | Powered by <a href="https://hexo.io" target="_blank" style="color: #fff; text-decoration: underline;">Hexo</a> | Theme by <a href="https://github.com/blinkfox/hexo-theme-matery" target="_blank" style="color: #fff; text-decoration: underline;">Matery</a></p>
+      <p>
+        <p>📚 站点总字数: <span id="site-word-count"></span> 字</p> |
+        <span id="runtime"></span>
+      </p>
+    </div>
+</footer>
+
+<div class="footer-contact">
+    <a href="javascript:void(0);" class="tooltipped" target="_blank" data-tooltip="邮箱：3490002122@qq.com" data-position="top" data-delay="50">
+      <i class="fas fa-envelope"></i>
+    </a>
+    <a href="https://github.com/404djl" class="tooltipped" target="_blank" data-tooltip="GitHub：404djl" data-position="top" data-delay="50">
+      <i class="fab fa-github"></i>
+    </a>
+    <a href="javascript:void(0);" class="tooltipped" data-tooltip="微信：djl123456404" data-position="top" data-delay="50">
+      <i class="fab fa-weixin"></i>
+    </a>
+</div>
+
+
+<script>
+    const blogStartDate = new Date("2024-12-16T00:00:00Z"); // 修改为你的博客起始日期
+  
+    function updateRuntime() {
+      const now = new Date();
+      const diff = now - blogStartDate;
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((diff / (1000 * 60)) % 60);
+      const seconds = Math.floor((diff / 1000) % 60);
+  
+      const runtimeText = `本站已安全运行 ${days} 天 ${hours} 小时 ${minutes} 分钟 ${seconds} 秒`;
+      document.getElementById("runtime").innerText = runtimeText;
+    }
+  
+    updateRuntime();
+    setInterval(updateRuntime, 1000);
+  </script>
+  
+  <script>
+    fetch('/index.html')
+      .then(response => response.text())
+      .then(html => {
+        const wordCountRegex = /<meta name="wordCount" content="(\d+)">/;
+        const match = wordCountRegex.exec(html);
+        if (match) {
+          document.getElementById('site-word-count').innerText = match[1];
+        }
+      });
+  </script>
+  
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var tooltips = document.querySelectorAll('.tooltipped');
+      M.Tooltip.init(tooltips);
+    });
+  </script>
+  
+
+    <!-- 搜索遮罩框 -->
+<div id="searchModal" class="modal">
+    <div class="modal-content">
+        <div class="search-header">
+            <span class="title"><i class="fas fa-search"></i>&nbsp;&nbsp;搜索</span>
+            <input type="search" id="searchInput" name="s" placeholder="请输入搜索的关键字"
+                   class="search-input">
+        </div>
+        <div id="searchResult"></div>
+    </div>
+</div>
+
+<script type="text/javascript">
+$(function () {
+    var searchFunc = function (path, search_id, content_id) {
+        'use strict';
+        $.ajax({
+            url: path,
+            dataType: "xml",
+            success: function (xmlResponse) {
+                // get the contents from search data
+                var datas = $("entry", xmlResponse).map(function () {
+                    return {
+                        title: $("title", this).text(),
+                        content: $("content", this).text(),
+                        url: $("url", this).text()
+                    };
+                }).get();
+                var $input = document.getElementById(search_id);
+                var $resultContent = document.getElementById(content_id);
+                $input.addEventListener('input', function () {
+                    var str = '<ul class=\"search-result-list\">';
+                    var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+                    $resultContent.innerHTML = "";
+                    if (this.value.trim().length <= 0) {
+                        return;
+                    }
+                    // perform local searching
+                    datas.forEach(function (data) {
+                        var isMatch = true;
+                        var data_title = data.title.trim().toLowerCase();
+                        var data_content = data.content.trim().replace(/<[^>]+>/g, "").toLowerCase();
+                        var data_url = data.url;
+                        data_url = data_url.indexOf('/') === 0 ? data.url : '/' + data_url;
+                        var index_title = -1;
+                        var index_content = -1;
+                        var first_occur = -1;
+                        // only match artiles with not empty titles and contents
+                        if (data_title !== '' && data_content !== '') {
+                            keywords.forEach(function (keyword, i) {
+                                index_title = data_title.indexOf(keyword);
+                                index_content = data_content.indexOf(keyword);
+                                if (index_title < 0 && index_content < 0) {
+                                    isMatch = false;
+                                } else {
+                                    if (index_content < 0) {
+                                        index_content = 0;
+                                    }
+                                    if (i === 0) {
+                                        first_occur = index_content;
+                                    }
+                                }
+                            });
+                        }
+                        // show search results
+                        if (isMatch) {
+                            str += "<li><a href='" + data_url + "' class='search-result-title'>" + data_title + "</a>";
+                            var content = data.content.trim().replace(/<[^>]+>/g, "");
+                            if (first_occur >= 0) {
+                                // cut out 100 characters
+                                var start = first_occur - 20;
+                                var end = first_occur + 80;
+                                if (start < 0) {
+                                    start = 0;
+                                }
+                                if (start === 0) {
+                                    end = 100;
+                                }
+                                if (end > content.length) {
+                                    end = content.length;
+                                }
+                                var match_content = content.substr(start, end);
+                                // highlight all keywords
+                                keywords.forEach(function (keyword) {
+                                    var regS = new RegExp(keyword, "gi");
+                                    match_content = match_content.replace(regS, "<em class=\"search-keyword\">" + keyword + "</em>");
+                                });
+
+                                str += "<p class=\"search-result\">" + match_content + "...</p>"
+                            }
+                            str += "</li>";
+                        }
+                    });
+                    str += "</ul>";
+                    $resultContent.innerHTML = str;
+                });
+            }
+        });
+    };
+
+    searchFunc('/search.xml', 'searchInput', 'searchResult');
+});
+</script>
+
+    <!-- 白天和黑夜主题 -->
+<div class="stars-con">
+    <div id="stars"></div>
+    <div id="stars2"></div>
+    <div id="stars3"></div>  
+</div>
+
+<script>
+    function switchNightMode() {
+        $('<div class="Cuteen_DarkSky"><div class="Cuteen_DarkPlanet"></div></div>').appendTo($('body')),
+        setTimeout(function () {
+            $('body').hasClass('DarkMode') 
+            ? ($('body').removeClass('DarkMode'), localStorage.setItem('isDark', '0'), $('#sum-moon-icon').removeClass("fa-sun").addClass('fa-moon')) 
+            : ($('body').addClass('DarkMode'), localStorage.setItem('isDark', '1'), $('#sum-moon-icon').addClass("fa-sun").removeClass('fa-moon')),
+            
+            setTimeout(function () {
+            $('.Cuteen_DarkSky').fadeOut(1e3, function () {
+                $(this).remove()
+            })
+            }, 2e3)
+        })
+    }
+</script>
+
+    <!-- 回到顶部按钮 -->
+<div id="backTop" class="top-scroll">
+    <a class="btn-floating btn-large waves-effect waves-light" href="#!">
+        <i class="fas fa-arrow-up"></i>
+    </a>
+</div>
+
+
+    <script src="/libs/materialize/materialize.min.js"></script>
+    <script src="/libs/masonry/masonry.pkgd.min.js"></script>
+    <script src="/libs/aos/aos.js"></script>
+    <script src="/libs/scrollprogress/scrollProgress.min.js"></script>
+    <script src="/libs/lightGallery/js/lightgallery-all.min.js"></script>
+    <script src="/js/matery.js"></script>
+
+    
+
+    
+    
+    
+
+    <!-- 雪花特效 -->
+    
+
+    <!-- 鼠标星星特效 -->
+    
+
+     
+        <script src="https://ssl.captcha.qq.com/TCaptcha.js"></script>
+        <script src="/libs/others/TencentCaptcha.js"></script>
+        <button id="TencentCaptcha" data-appid="xxxxxxxxxx" data-cbfn="callback" type="button" hidden></button>
+    
+
+    <!-- Baidu Analytics -->
+
+    <!-- Baidu Push -->
+
+<script>
+    (function () {
+        var bp = document.createElement('script');
+        var curProtocol = window.location.protocol.split(':')[0];
+        if (curProtocol === 'https') {
+            bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+        } else {
+            bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+        }
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(bp, s);
+    })();
+</script>
+
+    
+    <script src="/libs/others/clicklove.js" async="async"></script>
+    
+    
+    <script async src="/libs/others/busuanzi.pure.mini.js"></script>
+    
+
+    
+
+    
+
+    <!--腾讯兔小巢-->
+    
+    
+
+    
+
+    
+
+    
+    <script src="/libs/instantpage/instantpage.js" type="module"></script>
+    
+
+</body>
+
+</html>
