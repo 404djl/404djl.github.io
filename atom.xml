@@ -6,7 +6,7 @@
   <link href="https://404djl.github.io/atom.xml" rel="self"/>
   
   <link href="https://404djl.github.io/"/>
-  <updated>2025-03-05T06:32:33.560Z</updated>
+  <updated>2025-03-05T06:44:02.034Z</updated>
   <id>https://404djl.github.io/</id>
   
   <author>
@@ -17,32 +17,11 @@
   <generator uri="https://hexo.io/">Hexo</generator>
   
   <entry>
-    <title>gcc编译和Makefile</title>
-    <link href="https://404djl.github.io/2025/03/05/gcc-bian-yi-he-makefile/"/>
-    <id>https://404djl.github.io/2025/03/05/gcc-bian-yi-he-makefile/</id>
-    <published>2025-03-05T06:14:09.454Z</published>
-    <updated>2025-03-05T06:32:33.560Z</updated>
-    
-    
-      
-      
-        
-        
-    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
-        
-      
-    
-    
-    
-    
-  </entry>
-  
-  <entry>
     <title>03-OLED和中断</title>
     <link href="https://404djl.github.io/2024/12/19/03-oled-he-zhong-duan/"/>
     <id>https://404djl.github.io/2024/12/19/03-oled-he-zhong-duan/</id>
     <published>2024-12-19T06:20:36.000Z</published>
-    <updated>2024-12-19T06:58:59.660Z</updated>
+    <updated>2025-03-05T06:44:02.034Z</updated>
     
     
       
@@ -54,6 +33,8 @@
       
     
     
+    
+    <category term="STM32" scheme="https://404djl.github.io/categories/STM32/"/>
     
     
     <category term="STM32" scheme="https://404djl.github.io/tags/STM32/"/>
@@ -73,7 +54,7 @@
     <link href="https://404djl.github.io/2024/12/18/02-gpio-shu-chu-he-shu-ru/"/>
     <id>https://404djl.github.io/2024/12/18/02-gpio-shu-chu-he-shu-ru/</id>
     <published>2024-12-18T06:47:36.000Z</published>
-    <updated>2024-12-19T06:26:43.209Z</updated>
+    <updated>2025-03-05T06:44:23.433Z</updated>
     
     
       
@@ -85,6 +66,8 @@
       
     
     
+    
+    <category term="STM32" scheme="https://404djl.github.io/categories/STM32/"/>
     
     
     <category term="STM32" scheme="https://404djl.github.io/tags/STM32/"/>
@@ -102,7 +85,7 @@
     <link href="https://404djl.github.io/2024/12/17/01-stm32-jie-shao-he-gong-cheng-huan-jing-pei-zhi/"/>
     <id>https://404djl.github.io/2024/12/17/01-stm32-jie-shao-he-gong-cheng-huan-jing-pei-zhi/</id>
     <published>2024-12-17T14:47:03.000Z</published>
-    <updated>2024-12-19T06:22:29.633Z</updated>
+    <updated>2025-03-05T06:44:48.111Z</updated>
     
     
       
@@ -114,6 +97,8 @@
       
     
     
+    
+    <category term="STM32" scheme="https://404djl.github.io/categories/STM32/"/>
     
     
     <category term="STM32" scheme="https://404djl.github.io/tags/STM32/"/>
@@ -146,6 +131,31 @@
     <category term="blog" scheme="https://404djl.github.io/tags/blog/"/>
     
     <category term="Matery" scheme="https://404djl.github.io/tags/Matery/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>GCC编译和Makefile</title>
+    <link href="https://404djl.github.io/2024/03/04/gcc-bian-yi-he-makefile/"/>
+    <id>https://404djl.github.io/2024/03/04/gcc-bian-yi-he-makefile/</id>
+    <published>2024-03-04T06:20:36.000Z</published>
+    <updated>2025-03-05T06:43:42.041Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
+        
+      
+    
+    
+    
+    <category term="基础语法" scheme="https://404djl.github.io/categories/%E5%9F%BA%E7%A1%80%E8%AF%AD%E6%B3%95/"/>
+    
+    
+    <category term="GCC，Makefile" scheme="https://404djl.github.io/tags/GCC%EF%BC%8CMakefile/"/>
     
   </entry>
   
