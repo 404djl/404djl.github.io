@@ -438,47 +438,47 @@
 <p>在现代软件开发中，版本控制工具 Git 已经成为了不可或缺的一部分。它能够帮助开发者高效地管理代码版本、追踪代码变更、协同团队开发等。本文将详细介绍一些 Git 的常用命令及其使用场景，帮助你更好地掌握 Git 的使用。</p>
 </blockquote>
 <h3 id="一、基本的提交操作"><a href="#一、基本的提交操作" class="headerlink" title="一、基本的提交操作"></a>一、基本的提交操作</h3><ol>
-<li>**<code>git add .</code>**：这个命令用于将工作区中所有的修改文件添加到暂存区。在你对代码进行修改后，需要先使用这个命令告诉 Git 你想要将这些修改包含在下一次提交中。</li>
-<li>**<code>git commit -m "备注"</code>**：提交暂存区的内容到本地仓库，并添加一条描述本次提交的备注信息。备注信息应该清晰地说明本次提交所做的更改，以便日后查看提交历史时能够快速了解。</li>
-<li>**<code>git log</code>**：查看提交历史记录。通过这个命令，你可以看到每次提交的时间、作者、提交哈希值以及备注信息等。</li>
+<li><code>git add .</code>：这个命令用于将工作区中所有的修改文件添加到暂存区。在你对代码进行修改后，需要先使用这个命令告诉 Git 你想要将这些修改包含在下一次提交中。</li>
+<li><code>git commit -m "备注"</code>：提交暂存区的内容到本地仓库，并添加一条描述本次提交的备注信息。备注信息应该清晰地说明本次提交所做的更改，以便日后查看提交历史时能够快速了解。</li>
+<li><code>git log</code>：查看提交历史记录。通过这个命令，你可以看到每次提交的时间、作者、提交哈希值以及备注信息等。</li>
 </ol>
 <h3 id="二、查看状态与差异"><a href="#二、查看状态与差异" class="headerlink" title="二、查看状态与差异"></a>二、查看状态与差异</h3><ol>
-<li>**<code>git status</code>**：查看工作区的状态，它会显示哪些文件被修改了、哪些文件被添加到暂存区了、哪些文件还未被追踪等信息。这对于了解当前项目的状态非常有帮助。</li>
-<li>**<code>git diff</code>**：查看修改后的文件与之前版本的区别。你可以通过这个命令查看具体的代码修改内容，比如新增的代码行、删除的代码行等。</li>
+<li><code>git status</code>：查看工作区的状态，它会显示哪些文件被修改了、哪些文件被添加到暂存区了、哪些文件还未被追踪等信息。这对于了解当前项目的状态非常有帮助。</li>
+<li><code>git diff</code>：查看修改后的文件与之前版本的区别。你可以通过这个命令查看具体的代码修改内容，比如新增的代码行、删除的代码行等。</li>
 </ol>
 <h3 id="三、分支操作"><a href="#三、分支操作" class="headerlink" title="三、分支操作"></a>三、分支操作</h3><ol>
-<li>**<code>git branch</code>**：显示当前处于哪个分支，同时列出所有的本地分支。</li>
-<li>**<code>git branch &lt;分支名&gt;</code>**：创建一个新的分支，例如 <code>git branch 404djl</code> 会创建一个名为 <code>404djl</code> 的分支。</li>
-<li>**<code>git branch -d &lt;分支名&gt;</code>**：删除指定的分支，如 <code>git branch -d 404djl</code> 会删除名为 <code>404djl</code> 的分支。但需要注意，如果该分支上还有未合并的更改，删除操作可能会失败。</li>
-<li>**<code>git checkout &lt;分支名&gt;</code>**：切换到指定的分支，比如 <code>git checkout 404djl</code> 会切换到 <code>404djl</code> 分支。</li>
-<li>**<code>git checkout -b &lt;分支名&gt;</code>**：创建一个新的分支并立即切换到该分支上，例如 <code>git checkout -b djl</code> 会创建名为 <code>djl</code> 的分支并切换到该分支。</li>
+<li><code>git branch</code>：显示当前处于哪个分支，同时列出所有的本地分支。</li>
+<li><code>git branch &lt;分支名&gt;</code>：创建一个新的分支，例如 <code>git branch 404djl</code> 会创建一个名为 <code>404djl</code> 的分支。</li>
+<li><code>git branch -d &lt;分支名&gt;</code>：删除指定的分支，如 <code>git branch -d 404djl</code> 会删除名为 <code>404djl</code> 的分支。但需要注意，如果该分支上还有未合并的更改，删除操作可能会失败。</li>
+<li><code>git checkout &lt;分支名&gt;</code>：切换到指定的分支，比如 <code>git checkout 404djl</code> 会切换到 <code>404djl</code> 分支。</li>
+<li><code>git checkout -b &lt;分支名&gt;</code>：创建一个新的分支并立即切换到该分支上，例如 <code>git checkout -b djl</code> 会创建名为 <code>djl</code> 的分支并切换到该分支。</li>
 </ol>
 <h3 id="四、版本回退操作"><a href="#四、版本回退操作" class="headerlink" title="四、版本回退操作"></a>四、版本回退操作</h3><p>假设你有三次提交 A、B、C，当前处于提交 C，以下是不同的回退方式：</p>
 <ol>
-<li>**<code>git reset --soft HEAD~1/HEAD^/HEAD^^</code>**：将 HEAD 指针移动到提交 B，暂存区和工作区的内容保持不变。这就好像你刚刚撤销了提交 C，但更改仍然准备好再次提交。</li>
-<li>**<code>git reset --mix HEAD~1/HEAD^/HEAD^^</code>**：移动 HEAD 指针到指定的提交，并重置暂存区的内容，使其与指定提交的内容一致，但工作区的文件不会改变。之前暂存的更改会被取消暂存，需要再次使用 <code>git add</code> 命令将这些更改添加到暂存区（这是 <code>git reset</code> 的默认模式）。</li>
-<li>**<code>git reset --hard HEAD~1/HEAD^/HEAD^^</code>**：移动 HEAD 指针到指定的提交，同时重置暂存区和工作区的内容，使其与指定提交的内容完全一致。这种方式会丢弃所有未提交的更改，包括工作区和暂存区的修改，使用时要格外谨慎。</li>
+<li><code>git reset --soft HEAD~1/HEAD^/HEAD^^</code>：将 HEAD 指针移动到提交 B，暂存区和工作区的内容保持不变。这就好像你刚刚撤销了提交 C，但更改仍然准备好再次提交。</li>
+<li><code>git reset --mix HEAD~1/HEAD^/HEAD^^</code>：移动 HEAD 指针到指定的提交，并重置暂存区的内容，使其与指定提交的内容一致，但工作区的文件不会改变。之前暂存的更改会被取消暂存，需要再次使用 <code>git add</code> 命令将这些更改添加到暂存区（这是 <code>git reset</code> 的默认模式）。</li>
+<li><code>git reset --hard HEAD~1/HEAD^/HEAD^^</code>：移动 HEAD 指针到指定的提交，同时重置暂存区和工作区的内容，使其与指定提交的内容完全一致。这种方式会丢弃所有未提交的更改，包括工作区和暂存区的修改，使用时要格外谨慎。</li>
 </ol>
-<h3 id="五、撤销提交的另一种方式"><a href="#五、撤销提交的另一种方式" class="headerlink" title="五、撤销提交的另一种方式"></a>五、撤销提交的另一种方式</h3><p>**<code>git revert</code>**：Git 里一个重要的命令，主要用于撤销指定提交所做的更改。与 <code>git reset</code> 不同，<code>git revert</code> 不会改变提交历史，而是通过创建一个新的提交来抵消之前提交的修改。</p>
-<h3 id="六、合并分支"><a href="#六、合并分支" class="headerlink" title="六、合并分支"></a>六、合并分支</h3><p>**<code>git merge &lt;分支名&gt;</code>**：将指定的分支合并到当前分支上，例如 <code>git merge 404djl</code> 会将 <code>404djl</code> 分支合并到当前所在的分支。</p>
-<h3 id="七、变基操作"><a href="#七、变基操作" class="headerlink" title="七、变基操作"></a>七、变基操作</h3><p>**<code>git rebase &lt;分支名&gt;</code>**：如 <code>git rebase master</code>，它能将一系列提交应用到另一个基础提交之上。变基操作可以使提交历史更加整洁，避免不必要的合并提交。</p>
+<h3 id="五、撤销提交的另一种方式"><a href="#五、撤销提交的另一种方式" class="headerlink" title="五、撤销提交的另一种方式"></a>五、撤销提交的另一种方式</h3><p><code>git revert</code>：Git 里一个重要的命令，主要用于撤销指定提交所做的更改。与 <code>git reset</code> 不同，<code>git revert</code> 不会改变提交历史，而是通过创建一个新的提交来抵消之前提交的修改。</p>
+<h3 id="六、合并分支"><a href="#六、合并分支" class="headerlink" title="六、合并分支"></a>六、合并分支</h3><p><code>git merge &lt;分支名&gt;</code>：将指定的分支合并到当前分支上，例如 <code>git merge 404djl</code> 会将 <code>404djl</code> 分支合并到当前所在的分支。</p>
+<h3 id="七、变基操作"><a href="#七、变基操作" class="headerlink" title="七、变基操作"></a>七、变基操作</h3><p><code>git rebase &lt;分支名&gt;</code>：如 <code>git rebase master</code>，它能将一系列提交应用到另一个基础提交之上。变基操作可以使提交历史更加整洁，避免不必要的合并提交。</p>
 <h3 id="八、远程仓库操作"><a href="#八、远程仓库操作" class="headerlink" title="八、远程仓库操作"></a>八、远程仓库操作</h3><ol>
-<li>**<code>git fetch</code>**：从当前本地仓库关联的默认远程仓库（通常命名为 <code>origin</code>）中获取所有分支的更新。</li>
-<li>**<code>git fetch &lt;remote&gt;</code>**：从指定的远程仓库获取更新，例如 <code>git fetch upstream</code> 从名为 <code>upstream</code> 的远程仓库获取更新。</li>
-<li>**<code>git fetch &lt;remote&gt; &lt;branch&gt;</code>**：从指定远程仓库获取特定分支的更新，比如 <code>git fetch origin main</code> 从 <code>origin</code> 远程仓库获取 <code>main</code> 分支的更新。</li>
-<li>**<code>git pull</code>**：实际上是 <code>git fetch</code> 和 <code>git merge</code> 两个命令的组合，它会先从远程仓库获取更新，然后将更新合并到本地分支。</li>
-<li>**<code>git pull --rebase</code>**：与 <code>git pull</code> 类似，但它会使用 <code>rebase</code> 的方式进行合并，这样可以使提交历史更加线性。</li>
+<li><code>git fetch</code>：从当前本地仓库关联的默认远程仓库（通常命名为 <code>origin</code>）中获取所有分支的更新。</li>
+<li><code>git fetch &lt;remote&gt;</code>：从指定的远程仓库获取更新，例如 <code>git fetch upstream</code> 从名为 <code>upstream</code> 的远程仓库获取更新。</li>
+<li><code>git fetch &lt;remote&gt; &lt;branch&gt;</code>：从指定远程仓库获取特定分支的更新，比如 <code>git fetch origin main</code> 从 <code>origin</code> 远程仓库获取 <code>main</code> 分支的更新。</li>
+<li><code>git pull</code>：实际上是 <code>git fetch</code> 和 <code>git merge</code> 两个命令的组合，它会先从远程仓库获取更新，然后将更新合并到本地分支。</li>
+<li><code>git pull --rebase</code>：与 <code>git pull</code> 类似，但它会使用 <code>rebase</code> 的方式进行合并，这样可以使提交历史更加线性。</li>
 </ol>
 <h3 id="九、推送操作"><a href="#九、推送操作" class="headerlink" title="九、推送操作"></a>九、推送操作</h3><ol>
-<li>**<code>git push</code>**：将本地分支的更改推送到远程仓库的对应分支上。如果本地分支和远程分支的名称相同，可以直接使用这个命令。</li>
-<li>**<code>git push &lt;远程仓库名&gt; &lt;本地分支名&gt;:&lt;远程分支名&gt;</code>**：将本地分支推送到远程仓库的指定分支，例如 <code>git push origin feature:new-feature</code> 会将本地的 <code>feature</code> 分支推送到远程仓库 <code>origin</code> 的 <code>new-feature</code> 分支。</li>
+<li><code>git push</code>：将本地分支的更改推送到远程仓库的对应分支上。如果本地分支和远程分支的名称相同，可以直接使用这个命令。</li>
+<li><code>git push &lt;远程仓库名&gt; &lt;本地分支名&gt;:&lt;远程分支名&gt;</code>：将本地分支推送到远程仓库的指定分支，例如 <code>git push origin feature:new-feature</code> 会将本地的 <code>feature</code> 分支推送到远程仓库 <code>origin</code> 的 <code>new-feature</code> 分支。</li>
 </ol>
 <p>在推送之前，如果远程仓库已经有了新的提交，本地分支和远程分支的历史记录不一致，直接推送可能会失败。此时需要先使用 <code>git pull</code> 将远程仓库的更新合并到本地分支，解决可能出现的冲突后，再进行推送。例如：</p>
 <pre class="line-numbers language-bash"><code class="language-bash"><span class="token function">git</span> pull origin main
 <span class="token comment" spellcheck="true"># 解决冲突</span>
 <span class="token function">git</span> push origin main
 <span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
-<h3 id="十、标签操作"><a href="#十、标签操作" class="headerlink" title="十、标签操作"></a>十、标签操作</h3><p>**<code>git tag &lt;标签名&gt;</code>**：为当前提交创建一个标签，标签通常用于标记某个重要的版本，比如发布版本等。</p>
+<h3 id="十、标签操作"><a href="#十、标签操作" class="headerlink" title="十、标签操作"></a>十、标签操作</h3><p><code>git tag &lt;标签名&gt;</code>：为当前提交创建一个标签，标签通常用于标记某个重要的版本，比如发布版本等。</p>
 
                 
             </div>
