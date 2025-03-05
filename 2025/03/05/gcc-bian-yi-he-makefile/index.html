@@ -372,21 +372,9 @@
             <div class="row tag-cate">
                 <div class="col s7">
                     
-                    <div class="article-tag">
-                        
-                            <a href="/tags/gcc/">
-                                <span class="chip bg-color">gcc</span>
-                            </a>
-                        
-                            <a href="/tags/Makefile/">
-                                <span class="chip bg-color">Makefile</span>
-                            </a>
-                        
-                            <a href="/tags/%E9%93%BE%E6%8E%A5/">
-                                <span class="chip bg-color">链接</span>
-                            </a>
-                        
-                    </div>
+                          <div class="article-tag">
+                            <span class="chip bg-color">无标签</span>
+                          </div>
                     
                 </div>
                 <div class="col s5 right-align">
@@ -658,8 +646,8 @@ OBJ <span class="token operator">=</span> main.o add.o sub.o
 <span class="token symbol">clean</span><span class="token punctuation">:</span>
     rm <span class="token variable">$</span><span class="token punctuation">(</span>OBJ<span class="token punctuation">)</span> output
 <span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-<p>我们分析一下上面简化过的 Makefile，第一行是注释，Makefile 的注释采用‘#’，而且不支持像 C 语言中的多行注释。第二行我们定义了变量 OBJ，并赋值字符串<code>"main.o，add.o，sub.o"</code>。其中第三，四，十三行，使用这个变量。这样用到用一个字符串的地方直接调用这个变量，无需重复写一大段字符串。 Makefile 除了使用‘=’进行赋值，还有其他赋值方式，比如‘:=’和‘?=’，接下来我们来对比一下这几种的区别：</p>
-<p>赋值符‘=’ 我们使用一个例子来说明赋值符‘=’的用法。Makefile 内容如下：</p>
+<p>我们分析一下上面简化过的 Makefile，第一行是注释，Makefile 的注释采用‘#’，而且不支持像 C 语言中的多行注释。第二行我们定义了变量 OBJ，并赋值字符串<code>"main.o，add.o，sub.o"</code>。其中第三，四，十三行，使用这个变量。这样用到用一个字符串的地方直接调用这个变量，无需重复写一大段字符串。 Makefile 除了使用<code>=</code>进行赋值，还有其他赋值方式，比如<code>:=</code>和<code>?=</code>，接下来我们来对比一下这几种的区别：</p>
+<p>赋值符<code>=</code> 我们使用一个例子来说明赋值符<code>=</code>的用法。Makefile 内容如下：</p>
 <pre class="line-numbers language-makefile"><code class="language-makefile">PARA <span class="token operator">=</span> 100
 CURPARA <span class="token operator">=</span> <span class="token variable">$</span><span class="token punctuation">(</span>PARA<span class="token punctuation">)</span>
 PARA <span class="token operator">=</span> ask
@@ -667,22 +655,22 @@ PARA <span class="token operator">=</span> ask
 <span class="token symbol">print</span><span class="token punctuation">:</span>
     <span class="token operator">@</span>echo <span class="token variable">$</span><span class="token punctuation">(</span>CURPARA<span class="token punctuation">)</span>
 <span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-<p>分析代码：第一行定义变量 PARA，并赋值为“100”，第二行定义变量 CURPARA，并赋值引用变量 PARA，此时 CURPARA 的值和 PARA 的值是一样的，第三行，将变量 PARA 的变量修改为“ask”。第六行输出 CURPARA 的值，echo 前面增加@符号，代表只显示命令的结果，不显示命令本身。 通过命令“make print”执行 Makefile，如下：</p>
+<p>分析代码：第一行定义变量 <code>PARA</code>，并赋值为“100”，第二行定义变量<code> CURPARA</code>，并赋值引用变量 <code>PARA</code>，此时<code>CURPARA</code> 的值和 PARA 的值是一样的，第三行，将变量 <code>PARA</code> 的变量修改为<code>ask</code>。第六行输出 <code>CURPARA </code>的值，echo 前面增加<code>@符号，代表只显示命令的结果，不显示命令本身</code>。 通过命令<code>make print</code>执行 Makefile，如下：</p>
 <pre class="line-numbers language-bash"><code class="language-bash">$ <span class="token function">make</span> print
 ask
 <span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
-<p>从结果上看，变量 CURPARA 的值并不是“100”，而是 PARA 的最后一次赋值。使用赋值符“=”设置的变量，它的值在运行时才能确定，这称为“延时变量”。 其实可以理解为在 C 语言中，定义一个指针变量指向一个变量的地址。如下：</p>
-<pre class="line-numbers language-c"><code class="language-c"><span class="token number">01</span> <span class="token keyword">int</span> a <span class="token operator">=</span> <span class="token number">10</span><span class="token punctuation">;</span>
-<span class="token number">02</span> <span class="token keyword">int</span> <span class="token operator">*</span>b <span class="token operator">=</span> <span class="token operator">&amp;</span>a<span class="token punctuation">;</span>
-<span class="token number">03</span> a<span class="token operator">=</span><span class="token number">20</span><span class="token punctuation">;</span>
+<p>从结果上看，变量 <code>CURPARA</code> 的值并不是“100”，而是 PARA 的最后一次赋值。使用赋值符<code>=</code>设置的变量，它的值在运行时才能确定，这称为“延时变量”。 其实可以理解为在 C 语言中，定义一个指针变量指向一个变量的地址。如下：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">int</span> a <span class="token operator">=</span> <span class="token number">10</span><span class="token punctuation">;</span>
+<span class="token keyword">int</span> <span class="token operator">*</span>b <span class="token operator">=</span> <span class="token operator">&amp;</span>a<span class="token punctuation">;</span>
+a<span class="token operator">=</span><span class="token number">20</span><span class="token punctuation">;</span>
 <span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
-<p>代码分析：我们见上面的 Makefile 的第二行的“=”替换成“:=”，重新编译，如下：</p>
+<p>代码分析：我们见上面的 Makefile 的第二行的<code>=</code>替换成<code>:=</code>，重新编译，如下：</p>
 <pre class="line-numbers language-bash"><code class="language-bash">$ <span class="token function">make</span> print
 100
 <span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
-<p>从结果上看，变量 CURPARA 的值为“100”。使用“:=”设置的变量被称为“即时变量”，在赋值时就确定了它的值。</p>
-<p>赋值符‘?=’</p>
-<p>我们用两个 Makefile 来说明赋值符“?=”的用法。如下：</p>
+<p>从结果上看，变量 <code>CURPARA</code> 的值为“100”。使用<code>:=</code>设置的变量被称为“即时变量”，在赋值时就确定了它的值。</p>
+<p>赋值符<code>?=</code></p>
+<p>我们用两个 Makefile 来说明赋值符<code>?=</code>的用法。如下：</p>
 <pre class="line-numbers language-makefile"><code class="language-makefile">第一个 Makefile：
 PARA <span class="token operator">=</span> 100
 PARA <span class="token operator">?=</span> ask
@@ -701,16 +689,16 @@ print:
 <pre class="line-numbers language-bash"><code class="language-bash">$ <span class="token function">make</span> print
 ask
 <span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
-<p>上面的例子说明，使用“?=”给变量设置值时，如果这个变量之前没有被设置过，那么“?=”才会起效果；如果曾经设置过这个变量，那么“?=”不会起效果。赋值符‘+=’ Makefile 中的变量是字符串，有时候我们需要给前面已经定义好的变量添加一些字符串进去,此时就要使用到符号“+=”，比如如下：</p>
+<p>上面的例子说明，使用<code>?=</code>给变量设置值时，如果这个变量之前没有被设置过，那么“?=”才会起效果；如果曾经设置过这个变量，那么<code>?=</code>不会起效果。赋值符<code>+=</code> Makefile 中的变量是字符串，有时候我们需要给前面已经定义好的变量添加一些字符串进去,此时就要使用到符号<code>+=</code>，比如如下：</p>
 <pre class="line-numbers language-makefile"><code class="language-makefile">OBJ <span class="token operator">=</span> main.o add.o
 OBJ <span class="token operator">+=</span> sub.o
 <span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
-<p>这样的结果是 OBJ 的值为：”main.o，add.o，sub.o“。说明“+=”用作与变量的追加。</p>
+<p>这样的结果是 OBJ 的值为：<code>main.o，add.o，sub.o</code>。说明<code>+=</code>用作与变量的追加。</p>
 <h3 id="3-2-系统自带变量"><a href="#3-2-系统自带变量" class="headerlink" title="3.2 系统自带变量"></a>3.2 系统自带变量</h3><p>系统自定义了一些变量，通常都是大写，比如 CC，PWD，CLFAG 等等，有些有默认值，有些没有，比如以下几种，如下：</p>
 <ul>
-<li>CPPFLAGS：预处理器需要的选项，如：-l</li>
-<li>CFLAGS：编译的时候使用的参数，-Wall -g -c</li>
-<li>LDFLAGS：链接库使用的选项，-L -l 其中：默认值可以被修改，比如 CC 默认值是 cc，但可以修改为 gcc：CC=gcc使用的例子，如下：</li>
+<li><code>CPPFLAGS</code>：预处理器需要的选项，如：-l</li>
+<li><code>CFLAGS</code>：编译的时候使用的参数，-Wall -g -c</li>
+<li><code>LDFLAGS</code>：链接库使用的选项，-L -l 其中：默认值可以被修改，比如 CC 默认值是 cc，但可以修改为 gcc：CC=gcc使用的例子，如下：</li>
 </ul>
 <pre class="line-numbers language-text"><code class="language-text">OBJ = main.o add.o sub.o
 output: $(OBJ)
@@ -743,9 +731,9 @@ clean:
 <p>在上面例子中，系统变量 CC 不改变默认值，也同样可以编译，修改的目的是为了明确使用 gcc 编译。</p>
 <h3 id="3-3-自动变量"><a href="#3-3-自动变量" class="headerlink" title="3.3 自动变量"></a>3.3 自动变量</h3><p>Makefile 的语法提供一些自动变量，这些变量可以让我们更加快速地完成Makefile 的编写，其中自动变量只能在规则中的命令使用，常用的自动变量如 下：</p>
 <ul>
-<li>$@：规则中的目标</li>
-<li>$&lt;：规则中的第一个依赖文件</li>
-<li>$^：规则中的所有依赖文件 我们上面的例子继续完善，修改为采用自动变量的格式，如下:</li>
+<li><code>$@</code>：规则中的目标</li>
+<li><code>$&lt;</code>：规则中的第一个依赖文件</li>
+<li><code>$^</code>：规则中的所有依赖文件 我们上面的例子继续完善，修改为采用自动变量的格式，如下:</li>
 </ul>
 <pre class="line-numbers language-makefile"><code class="language-makefile">CC <span class="token operator">=</span> gcc
 OBJ <span class="token operator">=</span> main.o add.o sub.o
@@ -761,7 +749,7 @@ OBJ <span class="token operator">=</span> main.o add.o sub.o
 <span class="token symbol">clean</span><span class="token punctuation">:</span>
     rm <span class="token variable">$</span><span class="token punctuation">(</span>OBJ<span class="token punctuation">)</span> output
 <span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-<p>其中：第 4 行$^表示变量 OBJ 的值，即 main.o add.o sub.o，第四，第六，第八行的$&lt;分别表示 main.c add.c sub.c。$@表示 output。</p>
+<p>其中：第 4 行<code>$^</code>表示变量 OBJ 的值，即 <code>main.o add.o sub.o</code>，第四，第六，第八行的<code>$&lt;</code>分别表示 <code>main.c add.c sub.c</code>。<code>$@</code>表示<code> output</code>。</p>
 <h2 id="4-模式规则与伪目标"><a href="#4-模式规则与伪目标" class="headerlink" title="4.模式规则与伪目标"></a>4.模式规则与伪目标</h2><h3 id="4-1模式规则"><a href="#4-1模式规则" class="headerlink" title="4.1模式规则"></a>4.1模式规则</h3><p>模式规则实在目标及依赖中使用%来匹配对应的文件，我们依旧使用上面的例子，采用模式规则格式，如下：</p>
 <pre class="line-numbers language-makeflie"><code class="language-makeflie">CC = gcc
 OBJ = main.o add.o sub.o
@@ -773,8 +761,16 @@ output: $(OBJ)
 clean:
     rm $(OBJ) output
 <span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-<p>其中：第五行%.o: %.表示如下。 1.main.o 由 main.c 生成 2.add.o 由 add.c 生成 3.sub.o 由 sub.c 生成</p>
-<h3 id="4-2伪目标"><a href="#4-2伪目标" class="headerlink" title="4.2伪目标"></a>4.2伪目标</h3><p>在前面的例子中，我们直接执行“make”命令，它的目的是去执行第 1 个规则，这跟执行“make output”的效果是一样的。在这里，“output”既是规则的目标，也是一个实际的文件。 而伪目标是什么呢？对于以前的例子，先执行 make 命令，然后再执行“make clean”命令，如下</p>
+<p>其中：第五行<code>%.o: %.c</code>表示如下:</p>
+<ol>
+<li><p>main.o 由 main.c 生成 </p>
+</li>
+<li><p>add.o 由 add.c 生成 </p>
+</li>
+<li><p>sub.o 由 sub.c 生成</p>
+</li>
+</ol>
+<h3 id="4-2伪目标"><a href="#4-2伪目标" class="headerlink" title="4.2伪目标"></a>4.2伪目标</h3><p>在前面的例子中，我们直接执行<code>make</code>命令，它的目的是去执行第 1 个规则，这跟执行<code>make output</code>的效果是一样的。在这里，<code>output</code>既是规则的目标，也是一个实际的文件。 而伪目标是什么呢？对于以前的例子，先执行 make 命令，然后再执行<code>make clean</code>命令，如下</p>
 <pre class="line-numbers language-bash"><code class="language-bash"><span class="token variable">$make</span>
 gcc -c main.c
 gcc -c add.c
@@ -793,7 +789,8 @@ gcc -o output main.o add.o sub.o
 <span class="token variable">$make</span> clean
 make: <span class="token string">'clean'</span> is up to date.
 <span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-<p>为什么“make clean”时命令没有被执行？因为已经有名为 clean 的文件了，并且它的依赖是空的，执行规则的条件没满足。 伪目标就是为了解决这个问题，我们在 clean 前面增加<code>.PHONY:clean</code>，如下：</p>
+<p>为什么<code>make clean</code>时命令没有被执行？因为已经有名为 clean 的文件了，并且它的依赖是空的，执行规则的条件没满足。 </p>
+<p>伪目标就是为了解决这个问题，我们在 clean 前面增加<code>.PHONY:clean</code>，如下：</p>
 <pre class="line-numbers language-makefile"><code class="language-makefile">CC <span class="token operator">=</span> gcc
 OBJ <span class="token operator">=</span> main.o add.o sub.o
 <span class="token symbol">output</span><span class="token punctuation">:</span> <span class="token variable">$</span><span class="token punctuation">(</span>OBJ<span class="token punctuation">)</span>
@@ -814,11 +811,16 @@ gcc -o output main.o add.o sub.o
 <span class="token variable">$make</span> clean
 <span class="token function">rm</span> *.o output
 <span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-<p>当一个目标被声明为伪目标后，make 在执行规则时就会默认它满足执行条件。 这样就提高了 make 的执行效率，也不用担心由于目标和文件名重名了。 伪目标的两大好处： 1.避免只执行命令的目标和工作目录下的实际文件出现名字冲突。 2.提高执行 Makefile 时的效率</p>
+<p>当一个目标被声明为伪目标后，make 在执行规则时就会默认它满足执行条件。 这样就提高了 make 的执行效率，也不用担心由于目标和文件名重名了。 </p>
+<p>伪目标的两大好处： </p>
+<ol>
+<li>避免只执行命令的目标和工作目录下的实际文件出现名字冲突。 </li>
+<li>提高执行 Makefile 时的效率</li>
+</ol>
 <h2 id="5-Makefile函数"><a href="#5-Makefile函数" class="headerlink" title="5.Makefile函数"></a>5.Makefile函数</h2><p>Makefile 提供了大量的函数，函数调用的格式如下：</p>
 <pre class="line-numbers language-text"><code class="language-text">$(function arguments)
 <span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
-<p>这里<code>function’是函数名，</code>arguments’是该函数的参数。参数和函数名之间是用空格或 Tab 隔开，如果有多个参数，它们之间用逗号隔开。这些空格和逗号不是参数值的一部分。 我们经常使用的函数主要有两个(wildcard，patsubst)，先把它们单独拎出来讲讲。创建一个文件夹 src，在里下面创建两个文件，100.c，ask.c。如下：</p>
+<p>这里<code>function是函数名</code>，<code>arguments</code>是该函数的参数。参数和函数名之间是用空格或 Tab 隔开，如果有多个参数，它们之间用逗号隔开。这些空格和逗号不是参数值的一部分。 我们经常使用的函数主要有两个(wildcard，patsubst)，先把它们单独拎出来讲讲。创建一个文件夹 src，在里下面创建两个文件，100.c，ask.c。如下：</p>
 <pre class="line-numbers language-bash"><code class="language-bash"><span class="token keyword">.</span>
 ├── Makefile
 └── src
@@ -862,14 +864,14 @@ OBJ <span class="token operator">=</span> <span class="token variable">$</span><
 <h3 id="5-2-字符串替换和分析函数"><a href="#5-2-字符串替换和分析函数" class="headerlink" title="5.2 字符串替换和分析函数"></a>5.2 字符串替换和分析函数</h3><blockquote>
 <p><strong>$(subst from,to,text)</strong></p>
 </blockquote>
-<p>在文本<code>text’中使用</code>to’替换每一处`from’。比如：</p>
+<p>在文本<code>text中使用to替换每一处from</code>。比如：</p>
 <pre class="line-numbers language-makefile"><code class="language-makefile"><span class="token variable">$</span><span class="token punctuation">(</span><span class="token keyword">subst</span> ee,EE,feet on the street<span class="token punctuation">)</span>
 <span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
 <p>结果为<code>fEEt on the strEEt</code>。</p>
 <blockquote>
 <p><strong>$(patsubst pattern,replacement,text)</strong></p>
 </blockquote>
-<p>寻找<code>text’中符合格式</code>pattern’的字，用<code>replacement’替换它们。 </code>pattern’和`replacement’中可以使用通配符。比如：</p>
+<p>寻找<code>text中符合格式pattern</code>的字，用<code>replacement替换它们</code>。 <code>pattern</code>和<code>replacement</code>中可以使用通配符。比如：</p>
 <pre class="line-numbers language-makefile"><code class="language-makefile"><span class="token variable">$</span><span class="token punctuation">(</span><span class="token keyword">patsubst</span> %.c,%.o,x.c.c bar.c）
 <span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
 <p>结果为：<code>x.c.o bar.o</code>。</p>
@@ -919,7 +921,7 @@ OBJ <span class="token operator">=</span> <span class="token variable">$</span><
 <p>抽取<code>names...中每一个文件名中除路径部分外一切字符（真正的文件名）</code>。比如：</p>
 <pre class="line-numbers language-makefile"><code class="language-makefile"><span class="token variable">$</span><span class="token punctuation">(</span><span class="token keyword">notdir</span> src/foo.c hacks<span class="token punctuation">)</span>
 <span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
-<p>结果为‘foo.c hacks’。</p>
+<p>结果为<code>foo.c hacks</code>。</p>
 <blockquote>
 <p><strong>$(suffix names…)</strong></p>
 </blockquote>
@@ -962,7 +964,7 @@ OBJ <span class="token operator">=</span> <span class="token variable">$</span><
 <pre class="line-numbers language-makefile"><code class="language-makefile">dirs <span class="token operator">:=</span> a b c d
 files <span class="token operator">:=</span> <span class="token variable">$</span><span class="token punctuation">(</span><span class="token keyword">foreach</span> dir,<span class="token variable">$</span><span class="token punctuation">(</span>dirs<span class="token punctuation">)</span>,<span class="token variable">$</span><span class="token punctuation">(</span><span class="token keyword">wildcard</span> <span class="token variable">$</span><span class="token punctuation">(</span>dir<span class="token punctuation">)</span>/*<span class="token punctuation">)</span><span class="token punctuation">)</span>
 <span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
-<p>这里‘text’是‘$(wildcard $(dir)/*)’，它的扩展过程如下：</p>
+<p>这里<code>text是‘$(wildcard $(dir)/*)</code>，它的扩展过程如下：</p>
 <p>a) 第一个赋给变量 dir 的值是<code>a</code>，扩展结果为<code>$(wildcard a/*)</code>； </p>
 <p>b) 第二个赋给变量 dir 的值是<code>b</code>，扩展结果为<code>$(wildcard b/*)</code>；</p>
 <p>c) 第三个赋给变量 dir 的值是<code>c</code>，扩展结果为<code>$(wildcard c/*)</code>； </p>
@@ -1168,19 +1170,7 @@ CFLAGS <span class="token operator">=</span> -Wall -g
                 <div class="post-meta__tag-list" style="display: inline-block;">
                     
                         <div class="article-tag">
-                            
-                                <a href="/tags/gcc/">
-                                    <span class="chip bg-color">gcc</span>
-                                </a>
-                            
-                                <a href="/tags/Makefile/">
-                                    <span class="chip bg-color">Makefile</span>
-                                </a>
-                            
-                                <a href="/tags/%E9%93%BE%E6%8E%A5/">
-                                    <span class="chip bg-color">链接</span>
-                                </a>
-                            
+                            <span class="chip bg-color">无标签</span>
                         </div>
                     
                 </div>
@@ -1290,22 +1280,6 @@ CFLAGS <span class="token operator">=</span> -Wall -g
                     </div>
                 </div>
 
-                
-                <div class="card-action article-tags">
-                    
-                    <a href="/tags/gcc/">
-                        <span class="chip bg-color">gcc</span>
-                    </a>
-                    
-                    <a href="/tags/Makefile/">
-                        <span class="chip bg-color">Makefile</span>
-                    </a>
-                    
-                    <a href="/tags/%E9%93%BE%E6%8E%A5/">
-                        <span class="chip bg-color">链接</span>
-                    </a>
-                    
-                </div>
                 
             </div>
         </div>
