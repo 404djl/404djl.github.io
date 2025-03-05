@@ -6,7 +6,7 @@
   <link href="https://404djl.github.io/atom.xml" rel="self"/>
   
   <link href="https://404djl.github.io/"/>
-  <updated>2024-12-19T06:58:59.660Z</updated>
+  <updated>2025-03-05T06:15:20.774Z</updated>
   <id>https://404djl.github.io/</id>
   
   <author>
@@ -15,6 +15,33 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>gcc编译和Makefile</title>
+    <link href="https://404djl.github.io/2025/03/05/gcc-bian-yi-he-makefile/"/>
+    <id>https://404djl.github.io/2025/03/05/gcc-bian-yi-he-makefile/</id>
+    <published>2025-03-05T06:14:09.000Z</published>
+    <updated>2025-03-05T06:15:20.774Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
+        
+      
+    
+    
+    
+    
+    <category term="gcc" scheme="https://404djl.github.io/tags/gcc/"/>
+    
+    <category term="Makefile" scheme="https://404djl.github.io/tags/Makefile/"/>
+    
+    <category term="链接" scheme="https://404djl.github.io/tags/%E9%93%BE%E6%8E%A5/"/>
+    
+  </entry>
   
   <entry>
     <title>03-OLED和中断</title>
