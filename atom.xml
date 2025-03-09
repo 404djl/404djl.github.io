@@ -6,7 +6,7 @@
   <link href="https://404djl.github.io/atom.xml" rel="self"/>
   
   <link href="https://404djl.github.io/"/>
-  <updated>2025-03-05T08:57:49.668Z</updated>
+  <updated>2025-03-09T05:55:12.111Z</updated>
   <id>https://404djl.github.io/</id>
   
   <author>
@@ -15,6 +15,33 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>XV6-LAB1</title>
+    <link href="https://404djl.github.io/2025/03/09/xv6-lab1/"/>
+    <id>https://404djl.github.io/2025/03/09/xv6-lab1/</id>
+    <published>2025-03-09T05:51:43.000Z</published>
+    <updated>2025-03-09T05:55:12.111Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
+        
+      
+    
+    
+    
+    <category term="LAB" scheme="https://404djl.github.io/categories/LAB/"/>
+    
+    
+    <category term="xv6" scheme="https://404djl.github.io/tags/xv6/"/>
+    
+    <category term="c" scheme="https://404djl.github.io/tags/c/"/>
+    
+  </entry>
   
   <entry>
     <title>Git 常用命令及操作详解</title>
