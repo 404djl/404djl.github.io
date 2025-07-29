@@ -6,7 +6,7 @@
   <link href="https://404djl.github.io/atom.xml" rel="self"/>
   
   <link href="https://404djl.github.io/"/>
-  <updated>2025-03-09T05:55:12.111Z</updated>
+  <updated>2025-07-29T02:14:55.064Z</updated>
   <id>https://404djl.github.io/</id>
   
   <author>
@@ -15,6 +15,54 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>protobuf安装及golang使用protobuf</title>
+    <link href="https://404djl.github.io/2025/07/29/protobuf-an-zhuang-ji-golang-shi-yong-protobuf/"/>
+    <id>https://404djl.github.io/2025/07/29/protobuf-an-zhuang-ji-golang-shi-yong-protobuf/</id>
+    <published>2025-07-29T02:11:42.000Z</published>
+    <updated>2025-07-29T02:14:55.064Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
+        
+      
+    
+    
+    
+    <category term="Golang" scheme="https://404djl.github.io/categories/Golang/"/>
+    
+    
+    <category term="Go" scheme="https://404djl.github.io/tags/Go/"/>
+    
+    <category term="protobuf" scheme="https://404djl.github.io/tags/protobuf/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>ubuntu20安装docker</title>
+    <link href="https://404djl.github.io/2025/07/29/ubuntu20-an-zhuang-docker/"/>
+    <id>https://404djl.github.io/2025/07/29/ubuntu20-an-zhuang-docker/</id>
+    <published>2025-07-29T02:05:24.038Z</published>
+    <updated>2025-07-29T02:13:09.540Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
+        
+      
+    
+    
+    
+    
+  </entry>
   
   <entry>
     <title>XV6-LAB1</title>
