@@ -6,7 +6,7 @@
   <link href="https://404djl.github.io/atom.xml" rel="self"/>
   
   <link href="https://404djl.github.io/"/>
-  <updated>2025-11-21T00:44:41.015Z</updated>
+  <updated>2025-11-21T01:52:37.531Z</updated>
   <id>https://404djl.github.io/</id>
   
   <author>
@@ -21,7 +21,7 @@
     <link href="https://404djl.github.io/2025/11/20/liang-zi-jia-jie-mi-jie-kou-sdk-de-shi-yong/"/>
     <id>https://404djl.github.io/2025/11/20/liang-zi-jia-jie-mi-jie-kou-sdk-de-shi-yong/</id>
     <published>2025-11-20T06:20:36.000Z</published>
-    <updated>2025-11-21T00:44:41.015Z</updated>
+    <updated>2025-11-21T01:52:37.531Z</updated>
     
     
       
@@ -37,7 +37,9 @@
     <category term="开发" scheme="https://404djl.github.io/categories/%E5%BC%80%E5%8F%91/"/>
     
     
-    <category term="java，android" scheme="https://404djl.github.io/tags/java%EF%BC%8Candroid/"/>
+    <category term="java" scheme="https://404djl.github.io/tags/java/"/>
+    
+    <category term="android" scheme="https://404djl.github.io/tags/android/"/>
     
   </entry>
   
@@ -154,7 +156,7 @@
     <link href="https://404djl.github.io/2025/03/04/gcc-bian-yi-he-makefile/"/>
     <id>https://404djl.github.io/2025/03/04/gcc-bian-yi-he-makefile/</id>
     <published>2025-03-04T06:20:36.000Z</published>
-    <updated>2025-03-05T09:10:54.756Z</updated>
+    <updated>2025-11-21T01:52:44.215Z</updated>
     
     
       
@@ -170,7 +172,9 @@
     <category term="基础知识" scheme="https://404djl.github.io/categories/%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86/"/>
     
     
-    <category term="GCC，Makefile" scheme="https://404djl.github.io/tags/GCC%EF%BC%8CMakefile/"/>
+    <category term="GCC" scheme="https://404djl.github.io/tags/GCC/"/>
+    
+    <category term="Makefile" scheme="https://404djl.github.io/tags/Makefile/"/>
     
   </entry>
   
