@@ -40,7 +40,9 @@
       
       <categories>
           
-          <category> linux, docker </category>
+          <category> linux </category>
+          
+          <category> docker </category>
           
       </categories>
       
