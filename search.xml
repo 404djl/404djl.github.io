@@ -4,6 +4,37 @@
   
     
     <entry>
+      <title>在Android TEE 环境下添加与交互</title>
+      <link href="/2025/11/24/zai-android-tee-huan-jing-xia-tian-jia-yu-jiao-hu/"/>
+      <url>/2025/11/24/zai-android-tee-huan-jing-xia-tian-jia-yu-jiao-hu/</url>
+      
+        <content type="html"><![CDATA[<link rel="stylesheet" class="aplayer-secondary-style-marker" href="/assets/css/APlayer.min.css"><script src="/assets/js/APlayer.min.js" class="aplayer-secondary-script-marker"></script>]]></content>
+      
+      
+      <categories>
+          
+          <category> 开发 </category>
+          
+          <category> 测试 </category>
+          
+      </categories>
+      
+      
+        <tags>
+            
+            <tag> java </tag>
+            
+            <tag> Android </tag>
+            
+            <tag> TEE </tag>
+            
+        </tags>
+      
+    </entry>
+    
+    
+    
+    <entry>
       <title>量子加解密接口SDK的使用</title>
       <link href="/2025/11/20/liang-zi-jia-jie-mi-jie-kou-sdk-de-shi-yong/"/>
       <url>/2025/11/20/liang-zi-jia-jie-mi-jie-kou-sdk-de-shi-yong/</url>
@@ -31,7 +62,7 @@
     
     
     <entry>
-      <title>uubuntu20安装docker</title>
+      <title>ubuntu20安装docker</title>
       <link href="/2025/07/29/ubuntu20-an-zhuang-docker/"/>
       <url>/2025/07/29/ubuntu20-an-zhuang-docker/</url>
       

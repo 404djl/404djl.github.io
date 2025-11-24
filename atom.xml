@@ -6,7 +6,7 @@
   <link href="https://404djl.github.io/atom.xml" rel="self"/>
   
   <link href="https://404djl.github.io/"/>
-  <updated>2025-11-21T01:52:37.531Z</updated>
+  <updated>2025-11-24T05:25:04.756Z</updated>
   <id>https://404djl.github.io/</id>
   
   <author>
@@ -15,6 +15,37 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>在Android TEE 环境下添加与交互</title>
+    <link href="https://404djl.github.io/2025/11/24/zai-android-tee-huan-jing-xia-tian-jia-yu-jiao-hu/"/>
+    <id>https://404djl.github.io/2025/11/24/zai-android-tee-huan-jing-xia-tian-jia-yu-jiao-hu/</id>
+    <published>2025-11-24T05:21:57.000Z</published>
+    <updated>2025-11-24T05:25:04.756Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
+        
+      
+    
+    
+    
+    <category term="开发" scheme="https://404djl.github.io/categories/%E5%BC%80%E5%8F%91/"/>
+    
+    <category term="测试" scheme="https://404djl.github.io/categories/%E5%BC%80%E5%8F%91/%E6%B5%8B%E8%AF%95/"/>
+    
+    
+    <category term="java" scheme="https://404djl.github.io/tags/java/"/>
+    
+    <category term="Android" scheme="https://404djl.github.io/tags/Android/"/>
+    
+    <category term="TEE" scheme="https://404djl.github.io/tags/TEE/"/>
+    
+  </entry>
   
   <entry>
     <title>量子加解密接口SDK的使用</title>
@@ -44,11 +75,11 @@
   </entry>
   
   <entry>
-    <title>uubuntu20安装docker</title>
+    <title>ubuntu20安装docker</title>
     <link href="https://404djl.github.io/2025/07/29/ubuntu20-an-zhuang-docker/"/>
     <id>https://404djl.github.io/2025/07/29/ubuntu20-an-zhuang-docker/</id>
     <published>2025-07-29T02:29:25.000Z</published>
-    <updated>2025-11-21T01:54:50.823Z</updated>
+    <updated>2025-11-21T02:42:24.710Z</updated>
     
     
       
