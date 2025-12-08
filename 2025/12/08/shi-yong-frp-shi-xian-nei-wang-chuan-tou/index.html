@@ -4,8 +4,15 @@
 
 <head>
     <meta charset="utf-8">
-    <meta name="keywords" content="protobuf安装及golang使用protobuf, 404djlのblog">
-    <meta name="description" content="protobuf安装及golang使用protobuf1. Proto Buffer 介绍Google Protocol Buffer(简称 Protobuf)是google旗下的一款轻便高效的结构化数据存储格式，平台无关、语言无关、可扩展">
+    <meta name="keywords" content="使用frp实现内网穿透, 404djlのblog">
+    <meta name="description" content="使用frp实现内网穿透
+将内网资源强大的ubuntu22服务器，通过借用frp工具和云服务器ubuntu22进行内网穿透，实现内网的服务，可以被外网的用户访问
+
+整体思路：
+
+云服务器（有公网 IP）部署 frps（服务端）
+
+内网 Ubu">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <meta name="renderer" content="webkit|ie-stand|ie-comp">
@@ -17,7 +24,7 @@
     <!-- Global site tag (gtag.js) - Google Analytics -->
 
 
-    <title>protobuf安装及golang使用protobuf | 404djlのblog</title>
+    <title>使用frp实现内网穿透 | 404djlのblog</title>
     <link rel="icon" type="image/gif" href="/icons8-github.gif">
     
     <style>
@@ -352,12 +359,12 @@
 
 
 
-<div class="bg-cover pd-header post-cover" style="background-image: url('/medias/featureimages/26.png')">
+<div class="bg-cover pd-header post-cover" style="background-image: url('/medias/featureimages/24.png')">
     <div class="container" style="right: 0px;left: 0px;">
         <div class="row">
             <div class="col s12 m12 l12">
                 <div class="brand">
-                    <h1 class="description center-align post-title">protobuf安装及golang使用protobuf</h1>
+                    <h1 class="description center-align post-title">使用frp实现内网穿透</h1>
                 </div>
             </div>
         </div>
@@ -381,12 +388,12 @@
                     
                     <div class="article-tag">
                         
-                            <a href="/tags/Go/">
-                                <span class="chip bg-color">Go</span>
+                            <a href="/tags/ubuntu/">
+                                <span class="chip bg-color">ubuntu</span>
                             </a>
                         
-                            <a href="/tags/protobuf/">
-                                <span class="chip bg-color">protobuf</span>
+                            <a href="/tags/frp/">
+                                <span class="chip bg-color">frp</span>
                             </a>
                         
                     </div>
@@ -397,8 +404,8 @@
                     <div class="post-cate">
                         <i class="fas fa-bookmark fa-fw icon-category"></i>
                         
-                            <a href="/categories/Golang/" class="post-category">
-                                Golang
+                            <a href="/categories/%E7%8E%AF%E5%A2%83%E9%85%8D%E7%BD%AE/" class="post-category">
+                                环境配置
                             </a>
                         
                     </div>
@@ -410,28 +417,28 @@
                 
                 <div class="post-date info-break-policy">
                     <i class="far fa-calendar-minus fa-fw"></i>发布日期:&nbsp;&nbsp;
-                    2025-07-29
+                    2025-12-08
                 </div>
                 
 
                 
                 <div class="post-date info-break-policy">
                     <i class="far fa-calendar-check fa-fw"></i>更新日期:&nbsp;&nbsp;
-                    2025-07-29
+                    2025-12-08
                 </div>
                 
 
                 
                 <div class="info-break-policy">
                     <i class="far fa-file-word fa-fw"></i>文章字数:&nbsp;&nbsp;
-                    1.9k
+                    697
                 </div>
                 
 
                 
                 <div class="info-break-policy">
                     <i class="far fa-clock fa-fw"></i>阅读时长:&nbsp;&nbsp;
-                    7 分
+                    3 分
                 </div>
                 
 
@@ -446,208 +453,143 @@
 
         <div class="card-content article-card-content">
             <div id="articleContent">
-                <h2 id="protobuf安装及golang使用protobuf"><a href="#protobuf安装及golang使用protobuf" class="headerlink" title="protobuf安装及golang使用protobuf"></a>protobuf安装及golang使用protobuf</h2><h3 id="1-Proto-Buffer-介绍"><a href="#1-Proto-Buffer-介绍" class="headerlink" title="1. Proto Buffer 介绍"></a>1. Proto Buffer 介绍</h3><p><strong>Google Protocol Buffer</strong>(简称 Protobuf)是google旗下的一款轻便高效的结构化数据存储格式，平台无关、语言无关、可扩展，可用于通讯协议和数据存储等领域。所以很适合用做数据存储和作为不同应用，不同语言之间相互通信的数据交换格式，只要实现相同的协议格式即同一 proto文件被编译成不同的语言版本，加入到各自的工程中去。这样不同语言就可以解析其他语言通过 protobuf序列化的数据。目前官网提供了 C++,Python,JAVA,GO等语言的支持。google在2008年7月7号将其作为开源项目对外公布。</p>
-<p><strong>tips：</strong></p>
-<ol>
-<li>啥叫平台无关？Linux、mac和Windows都可以用，32位系统，64位系统通吃 </li>
-<li>啥叫语言无关？C++、Java、Python、Golang语言编写的程序都可以用，而且可以相互通信 </li>
-<li>那啥叫可扩展呢？就是这个数据格式可以方便的增删一部分字段啦~ </li>
-<li>最后，啥叫序列化啊？解释得通俗点儿就是把复杂的结构体数据按照一定的规则编码成一个字节切片</li>
-</ol>
-<h3 id="2-数据交换格式"><a href="#2-数据交换格式" class="headerlink" title="2. 数据交换格式"></a>2. 数据交换格式</h3><h4 id="A-常用的数据交换格式有三种："><a href="#A-常用的数据交换格式有三种：" class="headerlink" title="A)常用的数据交换格式有三种："></a>A)常用的数据交换格式有三种：</h4><ol>
-<li><code>json</code>: 一般的web项目中，最流行的主要还是 json。因为浏览器对于json 数据支持非常好，有很多内建的函数支持。 </li>
-<li><code>xml</code>: 在 webservice 中应用最为广泛，但是相比于 json，它的数据更加冗余，因为需要成对的闭合标签。json 使用了键值对的方式，不仅压缩了一定的数据空间，同时也具有可读性。 </li>
-<li><code>protobuf</code>: 是后起之秀，是谷歌开源的一种数据格式，适合高性能，对响应速度有要求的数据传输场景。因为 profobuf 是二进制数据格式，需要编码和解码。数据本身不具有可读性。因此只能反序列化之后得到真正可读的数据。</li>
-</ol>
-<h4 id="B-protobuf的优势与劣势"><a href="#B-protobuf的优势与劣势" class="headerlink" title="B)protobuf的优势与劣势"></a>B)protobuf的优势与劣势</h4><p><strong>优势：</strong></p>
-<ol>
-<li><p>序列化后体积相比Json和XML很小，适合网络传输</p>
+                <h2 id="使用frp实现内网穿透"><a href="#使用frp实现内网穿透" class="headerlink" title="使用frp实现内网穿透"></a>使用frp实现内网穿透</h2><blockquote>
+<p>将内网资源强大的ubuntu22服务器，通过借用frp工具和云服务器ubuntu22进行内网穿透，实现内网的服务，可以被外网的用户访问</p>
+</blockquote>
+<p><strong>整体思路：</strong></p>
+<ul>
+<li><p>云服务器（有公网 IP）部署 <strong>frps</strong>（服务端）</p>
 </li>
-<li><p>支持跨平台多语言</p>
+<li><p>内网 Ubuntu 部署 <strong>frpc</strong>（客户端）</p>
 </li>
-<li><p>消息格式升级和兼容性还不错</p>
+<li><p>frpc 主动连接 frps</p>
 </li>
-<li><p>序列化反序列化速度很快，快于Json的处理速速</p>
+<li><p>云服务器绑定端口 → 自动转发到内网 Ubuntu</p>
 </li>
-</ol>
-<p><strong>劣势：</strong></p>
-<ol>
-<li><p>应用不够广(相比xml和json)</p>
-</li>
-<li><p>二进制格式导致可读性差</p>
-</li>
-<li><p>缺乏自描述</p>
-</li>
-</ol>
-<h3 id="3-安装-Go-语言环境-和-安装-protoc-编译器"><a href="#3-安装-Go-语言环境-和-安装-protoc-编译器" class="headerlink" title="3. 安装 Go 语言环境 和 安装 protoc 编译器"></a>3. 安装 Go 语言环境 和 安装 protoc 编译器</h3><p>首先要保证 Go 语言开发环境已安装妥当。你可以从<a href="https://go.dev/dl/" target="_blank" rel="noopener">Go 官网</a>下载适合你操作系统的安装包，也可以借助包管理器来安装。</p>
-<p>1、下载二进制包：go1.24.linux-amd64.tar.gz。</p>
-<p>2、将下载的二进制包解压至 /usr/local目录</p>
-<p>3、将 /usr/local/go/bin 目录添加至 PATH 环境变量：</p>
-<pre class="line-numbers language-bash"><code class="language-bash">编辑 ~/.bashrc文件，添加以下命令到该文件末尾
-<span class="token function">export</span> PATH<span class="token operator">=</span><span class="token variable">$PATH</span>:/usr/local/go/bin
-
-添加后执行：
-<span class="token function">source</span> ~/.bashrc
-<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-<p>安装完成之后，使用下面的命令检查 Go 的版本：</p>
-<pre class="line-numbers language-bash"><code class="language-bash">go version
-<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
-<p>同时，要把<code>$GOPATH/bin</code>添加到系统的环境变量<code>PATH</code>中，这样就能正常使用 Go 安装的工具了。</p>
-<hr>
-<p><code>protoc</code>是 Protocol Buffers 的编译器，其作用是生成 gRPC 客户端和服务器的代码。你可以从<a href="https://github.com/protocolbuffers/protobuf/releases" target="_blank" rel="noopener">Protocol Buffers releases</a>下载与你系统相对应的安装包，</p>
-<p>安装包里有可执行文件将其加入环境变量，可以编辑<code>vim ~/.bashrc</code></p>
-<pre class="line-numbers language-bash"><code class="language-bash"><span class="token function">export</span> PROTOC_DIR<span class="token operator">=</span>/home/guodun/download/protoc/bin
-
-<span class="token function">export</span> PATH<span class="token operator">=</span><span class="token string">"<span class="token variable">$PATH</span>:<span class="token variable">$PROTOC_DIR</span>"</span>
+</ul>
+<h3 id="在云服务器安装-frps（服务端）"><a href="#在云服务器安装-frps（服务端）" class="headerlink" title="在云服务器安装 frps（服务端）"></a>在云服务器安装 frps（服务端）</h3><ol>
+<li><p>下载frp</p>
+<pre class="line-numbers language-bash"><code class="language-bash"><span class="token function">wget</span> https://github.com/fatedier/frp/releases/download/v0.58.0/frp_0.58.0_linux_amd64.tar.gz
+<span class="token function">tar</span> -xzf frp_0.58.0_linux_amd64.tar.gz
+<span class="token function">cd</span> frp_0.58.0_linux_amd64
 <span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
-<p>安装完成后，通过以下命令验证安装是否成功：</p>
-<pre class="line-numbers language-bash"><code class="language-bash">protoc --version
+</li>
+<li><p>配置 frps.ini</p>
+<p><code>vim frps.ini</code> 写入：</p>
+<pre class="line-numbers language-bash"><code class="language-bash"><span class="token punctuation">[</span>common<span class="token punctuation">]</span>
+bind_port <span class="token operator">=</span> 7000
+dashboard_port <span class="token operator">=</span> 7500
+dashboard_user <span class="token operator">=</span> admin
+dashboard_pwd <span class="token operator">=</span> admin123
+token <span class="token operator">=</span> MyStrongPassword
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>bind_port为 frps 绑定的端口，dashboard_port 是 看板的端口（能够可视化使用frp转发的流量），下面两个是看板的账号、密码。</p>
+<p>加入token，防止云服务器变成了一个免费公共内网穿透平台。 </p>
+</li>
+<li><p>启动 frps</p>
+<pre class="line-numbers language-bash"><code class="language-bash">./frps -c frps.ini
 <span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
-<h3 id="4、安装Go语言的protoc插件和依赖"><a href="#4、安装Go语言的protoc插件和依赖" class="headerlink" title="4、安装Go语言的protoc插件和依赖"></a>4、安装Go语言的protoc插件和依赖</h3><p>接下来，安装 Go 语言的 Protocol Buffers 和 gRPC 插件，命令如下：</p>
-<pre class="line-numbers language-bash"><code class="language-bash">go <span class="token function">install</span> google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0
-go <span class="token function">install</span> google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
-<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
-<p>这两个命令会将插件安装到 <code>$GOPATH/bin</code> 目录下，确保 <code>protoc</code> 编译器能够找到它们。</p>
-<hr>
-<p><strong>获取 Protobuf 和 gRPC 库</strong></p>
-<p>虽然在执行 <code>go install</code> 时会自动下载依赖的库，但为了确保项目正确引用这些库，还需要在项目中添加对它们的依赖声明。具体步骤如下：</p>
-<p>首先，在项目根目录下初始化 Go 模块（如果尚未初始化）：</p>
-<pre class="line-numbers language-bash"><code class="language-bash">go mod init your_project_path
-<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
-<p>然后，使用 <code>go get</code> 命令显式获取 Protobuf 和 gRPC 库：</p>
-<pre class="line-numbers language-bash"><code class="language-bash">go get google.golang.org/protobuf
-go get google.golang.org/grpc
-<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
-<p>最后，运行 <code>go mod tidy</code> 命令整理依赖，确保 <code>go.mod</code> 和 <code>go.sum</code> 文件正确记录所有依赖：</p>
-<pre class="line-numbers language-bash"><code class="language-bash">go mod tidy
-<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
-<p><strong>为什么需要这些库</strong></p>
-<ul>
-<li><code>google.golang.org/protobuf</code>：提供 Protocol Buffers 的核心功能，包括消息序列化和反序列化。</li>
-<li><code>google.golang.org/grpc</code>：提供 gRPC 框架的实现，包括客户端和服务器的通信机制。</li>
-</ul>
-<p>在生成的代码（如 <code>hello.pb.go</code> 和 <code>hello_grpc.pb.go</code>）中，会引用这些库的包。如果项目中没有正确声明这些依赖，编译时会报错</p>
-<h3 id="5-编写示例"><a href="#5-编写示例" class="headerlink" title="5. 编写示例"></a>5. 编写示例</h3><p>整体demo目录结构展示：</p>
-<pre class="line-numbers language-bash"><code class="language-bash"><span class="token punctuation">(</span>base<span class="token punctuation">)</span> guodun@hfut-101:~/test/go$ tree lib_protobuf/
-lib_protobuf/
-├── go.mod
-├── go.sum
-├── lib_protobuf.go
-├── pb
-│   └── examplemsg.pb.go
-└── srcproto
-    └── examplemsg.proto
-<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-<p>简单解释下，<code>examplemsg.proto</code> proto源文件，<code>examplemsg.pb.go</code> 是proto导出文件，<code>lib_protobuf.go</code> 是proto协议使用和测试文件</p>
-<h4 id="A-示例初始化"><a href="#A-示例初始化" class="headerlink" title="A)示例初始化"></a>A)示例初始化</h4><p>执行下面的命令，创建示例基础目录文件结构</p>
-<pre class="line-numbers language-bash"><code class="language-bash">$ <span class="token function">mkdir</span> lib_protobuf
-$ <span class="token function">cd</span> lib_protobuf
-$ <span class="token function">mkdir</span> srcproto
-$ <span class="token function">touch</span> srcproto/examplremsg.proto
-$ <span class="token function">touch</span> lib_protobuf.go
-$ go mod init lib_protobuf
-go: creating new go.mod: module lib_protobuf
-go: to add module requirements and sums:
-        go mod tidy
-
-$ go mod tidy
-$ <span class="token function">ls</span>
-go.mod  lib_protobuf.go  srcproto
-<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-<h4 id="B-编写协议文件内容"><a href="#B-编写协议文件内容" class="headerlink" title="B)编写协议文件内容"></a>B)编写协议文件内容</h4><p>先编写proto文件，<code>vim srcproto/examplremsg.proto</code>，内容如下：</p>
-<pre class="line-numbers language-protobuf"><code class="language-protobuf">syntax <span class="token operator">=</span> <span class="token string">"proto3"</span><span class="token punctuation">;</span> 						<span class="token comment" spellcheck="true">//指定版本信息，不指定会报错</span>
-option go_package <span class="token operator">=</span> <span class="token string">"./pb"</span><span class="token punctuation">;</span>	   			<span class="token comment" spellcheck="true">//后期生成go文件的包名</span>
-
-<span class="token comment" spellcheck="true">//message为关键字，作用为定义一种消息类型</span>
-<span class="token keyword">message</span> Person <span class="token punctuation">{</span>
-    <span class="token primitive symbol">string</span>	name <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>					<span class="token comment" spellcheck="true">//姓名</span>
-        <span class="token primitive symbol">int32</span>	age <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span>					<span class="token comment" spellcheck="true">//年龄</span>
-    <span class="token builtin">repeated</span> <span class="token primitive symbol">string</span> emails <span class="token operator">=</span> <span class="token number">3</span><span class="token punctuation">;</span> 		<span class="token comment" spellcheck="true">//电子邮件（repeated表示字段允许重复）</span>
-    <span class="token builtin">repeated</span> PhoneNumber phones <span class="token operator">=</span> <span class="token number">4</span><span class="token punctuation">;</span>	<span class="token comment" spellcheck="true">//手机号</span>
-<span class="token punctuation">}</span>
-
-<span class="token comment" spellcheck="true">//enum为关键字，作用为定义一种枚举类型</span>
-<span class="token keyword">enum</span> PhoneType <span class="token punctuation">{</span>
-    MOBILE <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
-    HOME <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
-    WORK <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span>
-<span class="token punctuation">}</span>
-
-<span class="token comment" spellcheck="true">//message为关键字，作用为定义一种消息类型可以被另外的消息类型嵌套使用</span>
-<span class="token keyword">message</span> PhoneNumber <span class="token punctuation">{</span>
-    <span class="token primitive symbol">string</span> number <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
-    PhoneType type <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span>
-<span class="token punctuation">}</span>
-<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-<h4 id="C-执行导出命令"><a href="#C-执行导出命令" class="headerlink" title="C)执行导出命令"></a>C)执行导出命令</h4><pre class="line-numbers language-bash"><code class="language-bash">protoc --proto_path<span class="token operator">=</span>srcproto --go_out<span class="token operator">=</span>. examplemsg.proto
-<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
-<p>使用<code>protoc</code>将proto文件导出golang可用的文件最重要的两个参数如下：</p>
-<p><code>--proto_path</code>：proto源文件所在文件夹</p>
-<p><code>--go_out</code>：proto文件导出的目标文件夹</p>
-<p>执行完之后生成<code>pb/examplemsg.pb.go</code></p>
-<blockquote>
-<p>注意：</p>
-<ul>
-<li>官方推荐是用直接在.proto文件中添加 <code>go_package</code> 选项（或者在生成的命令上添加）</li>
-<li><code>go_package</code> 要求必须至少包含一个 <code>.</code> 或者 <code>/</code>，那么把选项改成<code>"./pb"</code>；有时为了在当前目录下生成，又要指定包名，可以写成这样<code>option go_package = "./;msgproto";</code></li>
-</ul>
-</blockquote>
-<h4 id="D-利用protobuf生成的类来编码"><a href="#D-利用protobuf生成的类来编码" class="headerlink" title="D)利用protobuf生成的类来编码"></a>D)利用protobuf生成的类来编码</h4><p>在文件 lib_protobuf.go 中编写如下内容，执行 <code>go mod tidy</code> 和 <code>go run .</code> 查看输出结果</p>
-<pre class="line-numbers language-go"><code class="language-go"><span class="token keyword">package</span> main
-
-<span class="token keyword">import</span> <span class="token punctuation">(</span>
-    <span class="token string">"fmt"</span>
-    <span class="token string">"google.golang.org/protobuf/proto"</span>
-    <span class="token string">"lib_protobuf/pb"</span>
-<span class="token punctuation">)</span>
-
-<span class="token keyword">func</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
-    person <span class="token operator">:=</span> <span class="token operator">&amp;</span>pb<span class="token punctuation">.</span>Person<span class="token punctuation">{</span>
-        Name<span class="token punctuation">:</span>   <span class="token string">"Aceld"</span><span class="token punctuation">,</span>
-        Age<span class="token punctuation">:</span>    <span class="token number">16</span><span class="token punctuation">,</span>
-        Emails<span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token builtin">string</span><span class="token punctuation">{</span><span class="token string">"https://legacy.gitbook.com/@aceld"</span><span class="token punctuation">,</span> <span class="token string">"https://github.com/aceld"</span><span class="token punctuation">}</span><span class="token punctuation">,</span>
-        Phones<span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token operator">*</span>pb<span class="token punctuation">.</span>PhoneNumber<span class="token punctuation">{</span>
-            <span class="token operator">&amp;</span>pb<span class="token punctuation">.</span>PhoneNumber<span class="token punctuation">{</span>
-                Number<span class="token punctuation">:</span> <span class="token string">"13113111311"</span><span class="token punctuation">,</span>
-                Type<span class="token punctuation">:</span>   pb<span class="token punctuation">.</span>PhoneType_MOBILE<span class="token punctuation">,</span>
-            <span class="token punctuation">}</span><span class="token punctuation">,</span>
-            <span class="token operator">&amp;</span>pb<span class="token punctuation">.</span>PhoneNumber<span class="token punctuation">{</span>
-                Number<span class="token punctuation">:</span> <span class="token string">"14141444144"</span><span class="token punctuation">,</span>
-                Type<span class="token punctuation">:</span>   pb<span class="token punctuation">.</span>PhoneType_HOME<span class="token punctuation">,</span>
-            <span class="token punctuation">}</span><span class="token punctuation">,</span>
-            <span class="token operator">&amp;</span>pb<span class="token punctuation">.</span>PhoneNumber<span class="token punctuation">{</span>
-                Number<span class="token punctuation">:</span> <span class="token string">"19191919191"</span><span class="token punctuation">,</span>
-                Type<span class="token punctuation">:</span>   pb<span class="token punctuation">.</span>PhoneType_WORK<span class="token punctuation">,</span>
-            <span class="token punctuation">}</span><span class="token punctuation">,</span>
-        <span class="token punctuation">}</span><span class="token punctuation">,</span>
-    <span class="token punctuation">}</span>
-    
-    <span class="token comment" spellcheck="true">// 序列化</span>
-    data<span class="token punctuation">,</span> err <span class="token operator">:=</span> proto<span class="token punctuation">.</span><span class="token function">Marshal</span><span class="token punctuation">(</span>person<span class="token punctuation">)</span>
-    <span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
-        fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span><span class="token string">"marshal err:"</span><span class="token punctuation">,</span> err<span class="token punctuation">)</span>
-    <span class="token punctuation">}</span>
-
-    <span class="token comment" spellcheck="true">// 反序列化</span>
-    newdata <span class="token operator">:=</span> <span class="token operator">&amp;</span>pb<span class="token punctuation">.</span>Person<span class="token punctuation">{</span><span class="token punctuation">}</span>
-    err <span class="token operator">=</span> proto<span class="token punctuation">.</span><span class="token function">Unmarshal</span><span class="token punctuation">(</span>data<span class="token punctuation">,</span> newdata<span class="token punctuation">)</span>
-    <span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span>
-        fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span><span class="token string">"unmarshal err:"</span><span class="token punctuation">,</span> err<span class="token punctuation">)</span>
-    <span class="token punctuation">}</span>
-
-    fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span>newdata<span class="token punctuation">)</span>
-
-<span class="token punctuation">}</span>
-<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
-<p>运行结果：</p>
-<p><img src="https://pic1.imgdb.cn/item/68839c2f58cb8da5c8df1ed0.png"></p>
-<blockquote>
-<p>参考链接：</p>
-<ol>
-<li><a href="https://www.yuque.com/aceld/npyr8s/kiydp7" target="_blank" rel="noopener">https://www.yuque.com/aceld/npyr8s/kiydp7</a></li>
-<li><a href="http://www.008ct.top/blog/2024/02/18/%E5%9C%A8golang%E8%AF%AD%E8%A8%80%E4%B8%AD%E7%AE%80%E5%8D%95%E4%BD%BF%E7%94%A8protobuf%E6%97%B6%E9%81%AD%E9%81%87go-package%E5%9B%B0%E9%9A%BE%E9%87%8D%E9%87%8D/" target="_blank" rel="noopener">http://www.008ct.top/blog/2024/02/18/%E5%9C%A8golang%E8%AF%AD%E8%A8%80%E4%B8%AD%E7%AE%80%E5%8D%95%E4%BD%BF%E7%94%A8protobuf%E6%97%B6%E9%81%AD%E9%81%87go-package%E5%9B%B0%E9%9A%BE%E9%87%8D%E9%87%8D/</a></li>
+</li>
 </ol>
+<h3 id="在内网-Ubuntu-安装-frpc（客户端）"><a href="#在内网-Ubuntu-安装-frpc（客户端）" class="headerlink" title="在内网 Ubuntu 安装 frpc（客户端）"></a>在内网 Ubuntu 安装 frpc（客户端）</h3><ol>
+<li><p>下载同版本 frp</p>
+<pre class="line-numbers language-bash"><code class="language-bash"><span class="token function">wget</span> https://github.com/fatedier/frp/releases/download/v0.58.0/frp_0.58.0_linux_amd64.tar.gz
+<span class="token function">tar</span> -xzf frp_0.58.0_linux_amd64.tar.gz
+<span class="token function">cd</span> frp_0.58.0_linux_amd64
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+</li>
+<li><p>配置 frpc.ini</p>
+<p><code>vim frpc.ini</code> 写入：</p>
+<pre class="line-numbers language-bash"><code class="language-bash"><span class="token punctuation">[</span>common<span class="token punctuation">]</span>
+server_addr <span class="token operator">=</span> <span class="token operator">&lt;</span>你的云服务器公网IP<span class="token operator">></span>
+server_port <span class="token operator">=</span> 7000
+token <span class="token operator">=</span> MyStrongPassword
+
+<span class="token punctuation">[</span>ssh<span class="token punctuation">]</span>
+<span class="token function">type</span> <span class="token operator">=</span> tcp
+local_ip <span class="token operator">=</span> 127.0.0.1
+local_port <span class="token operator">=</span> 22
+remote_port <span class="token operator">=</span> 6000
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>配置 云服务器的ip 和 服务器frp监听的端口。下面配置需要转发的内网端口协议，映射到服务器的端口。比如将内网的端口22的服务 映射 到外网的6000端口，这样访问外网的6000端口，等同于访问内网端口22的服务。</p>
+<p>加入token，才能使用服务器提供的frp服务。</p>
+</li>
+<li><p>启动 frpc</p>
+<pre class="line-numbers language-bash"><code class="language-bash">./frpc -c frpc.ini
+<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+</li>
+</ol>
+<h3 id="从外网-SSH-内网-Ubuntu"><a href="#从外网-SSH-内网-Ubuntu" class="headerlink" title="从外网 SSH 内网 Ubuntu"></a>从外网 SSH 内网 Ubuntu</h3><p>在笔记本或任意外网：</p>
+<pre class="line-numbers language-bash"><code class="language-bash"><span class="token function">ssh</span> -p 6000 user@<span class="token operator">&lt;</span>云服务器公网IP<span class="token operator">></span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>成功访问到内网服务器：</p>
+<p><img src="https://pic1.imgdb.cn/item/6936235221501955d2fdf446.png"></p>
+<h3 id="将frp加入到system自启动服务"><a href="#将frp加入到system自启动服务" class="headerlink" title="将frp加入到system自启动服务"></a>将frp加入到system自启动服务</h3><p>frp放置的路径：</p>
+<blockquote>
+<p><strong>服务端（云服务器）</strong><br><code>/usr/local/frp/</code><br>文件路径：</p>
+<ul>
+<li><code>/usr/local/frp/frps</code></li>
+<li><code>/usr/local/frp/frps.ini</code></li>
+</ul>
+<p><strong>客户端（内网设备）</strong><br><code>/usr/local/frp/</code><br>文件路径：</p>
+<ul>
+<li><code>/usr/local/frp/frpc</code></li>
+<li><code>/usr/local/frp/frpc.ini</code></li>
+</ul>
 </blockquote>
+<h4 id="配置-frps-service（云服务器）"><a href="#配置-frps-service（云服务器）" class="headerlink" title="配置 frps.service（云服务器）"></a>配置 frps.service（云服务器）</h4><p>创建 systemd 文件：</p>
+<pre><code>sudo nano /etc/systemd/system/frps.service
+</code></pre>
+<p>写入以下内容：</p>
+<pre class="line-numbers language-bash"><code class="language-bash"><span class="token punctuation">[</span>Unit<span class="token punctuation">]</span>
+Description<span class="token operator">=</span>FRP Server Service <span class="token punctuation">(</span>frps<span class="token punctuation">)</span>
+After<span class="token operator">=</span>network.target
+
+<span class="token punctuation">[</span>Service<span class="token punctuation">]</span>
+Type<span class="token operator">=</span>simple
+User<span class="token operator">=</span>root
+ExecStart<span class="token operator">=</span>/usr/local/frp/frps -c /usr/local/frp/frps.ini
+Restart<span class="token operator">=</span>on-failure
+RestartSec<span class="token operator">=</span>5s
+
+<span class="token punctuation">[</span>Install<span class="token punctuation">]</span>
+WantedBy<span class="token operator">=</span>multi-user.target
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>保存后执行：</p>
+<pre class="line-numbers language-bash"><code class="language-bash"><span class="token function">sudo</span> systemctl daemon-reload
+<span class="token function">sudo</span> systemctl <span class="token function">enable</span> frps
+<span class="token function">sudo</span> systemctl start frps
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<p>查看状态：</p>
+<pre class="line-numbers language-bash"><code class="language-bash"><span class="token function">sudo</span> systemctl status frps
+<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<h4 id="配置-frpc-service-内网ubuntu"><a href="#配置-frpc-service-内网ubuntu" class="headerlink" title="配置 frpc.service (内网ubuntu)"></a>配置 frpc.service (内网ubuntu)</h4><p>创建 systemd 文件：</p>
+<pre class="line-numbers language-bash"><code class="language-bash"><span class="token function">sudo</span> <span class="token function">nano</span> /etc/systemd/system/frpc.service
+<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>写入：</p>
+<pre class="line-numbers language-bash"><code class="language-bash"><span class="token punctuation">[</span>Unit<span class="token punctuation">]</span>
+Description<span class="token operator">=</span>FRP Client Service <span class="token punctuation">(</span>frpc<span class="token punctuation">)</span>
+After<span class="token operator">=</span>network-online.target
+Wants<span class="token operator">=</span>network-online.target
+
+<span class="token punctuation">[</span>Service<span class="token punctuation">]</span>
+Type<span class="token operator">=</span>simple
+User<span class="token operator">=</span>root
+ExecStart<span class="token operator">=</span>/usr/local/frp/frpc -c /usr/local/frp/frpc.ini
+Restart<span class="token operator">=</span>on-failure
+RestartSec<span class="token operator">=</span>5s
+
+<span class="token punctuation">[</span>Install<span class="token punctuation">]</span>
+WantedBy<span class="token operator">=</span>multi-user.target
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>保存后执行：</p>
+<pre class="line-numbers language-bash"><code class="language-bash"><span class="token function">sudo</span> systemctl daemon-reload
+<span class="token function">sudo</span> systemctl <span class="token function">enable</span> frpc
+<span class="token function">sudo</span> systemctl start frpc
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<p>查看状态：</p>
+<pre class="line-numbers language-bash"><code class="language-bash"><span class="token function">sudo</span> systemctl status frpc
+<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
 
                 
             </div>
@@ -674,7 +616,7 @@ option go_package <span class="token operator">=</span> <span class="token strin
                     </i>
                 </span>
                 <span class="reprint-info">
-                    <a href="https://404djl.github.io/2025/07/29/protobuf-an-zhuang-ji-golang-shi-yong-protobuf/">https://404djl.github.io/2025/07/29/protobuf-an-zhuang-ji-golang-shi-yong-protobuf/</a>
+                    <a href="https://404djl.github.io/2025/12/08/shi-yong-frp-shi-xian-nei-wang-chuan-tou/">https://404djl.github.io/2025/12/08/shi-yong-frp-shi-xian-nei-wang-chuan-tou/</a>
                 </span>
             </div>
             <div class="reprint__notice">
@@ -712,12 +654,12 @@ option go_package <span class="token operator">=</span> <span class="token strin
                     
                         <div class="article-tag">
                             
-                                <a href="/tags/Go/">
-                                    <span class="chip bg-color">Go</span>
+                                <a href="/tags/ubuntu/">
+                                    <span class="chip bg-color">ubuntu</span>
                                 </a>
                             
-                                <a href="/tags/protobuf/">
-                                    <span class="chip bg-color">protobuf</span>
+                                <a href="/tags/frp/">
+                                    <span class="chip bg-color">frp</span>
                                 </a>
                             
                         </div>
@@ -796,17 +738,18 @@ option go_package <span class="token operator">=</span> <span class="token strin
 <article id="prenext-posts" class="prev-next articles">
     <div class="row article-row">
         
-        <div class="article col s12 m6" data-aos="fade-up">
+        <div class="article col s12 m6" data-aos="fade-up" data-aos="fade-up">
             <div class="article-badge left-badge text-color">
-                <i class="fas fa-chevron-left"></i>&nbsp;上一篇</div>
+                <i class="far fa-dot-circle"></i>&nbsp;本篇
+            </div>
             <div class="card">
-                <a href="/2025/07/29/ubuntu20-an-zhuang-docker/">
+                <a href="/2025/12/08/shi-yong-frp-shi-xian-nei-wang-chuan-tou/">
                     <div class="card-image">
                         
                         
-                        <img src="/medias/featureimages/23.png" class="responsive-img" alt="ubuntu20安装docker">
+                        <img src="/medias/featureimages/24.png" class="responsive-img" alt="使用frp实现内网穿透">
                         
-                        <span class="card-title">ubuntu20安装docker</span>
+                        <span class="card-title">使用frp实现内网穿透</span>
                     </div>
                 </a>
                 <div class="card-content article-content">
@@ -816,25 +759,22 @@ option go_package <span class="token operator">=</span> <span class="token strin
                         
                     </div>
                     <div class="publish-info">
-                        <span class="publish-date">
-                            <i class="far fa-clock fa-fw icon-date"></i>2025-07-29
-                        </span>
+                            <span class="publish-date">
+                                <i class="far fa-clock fa-fw icon-date"></i>2025-12-08
+                            </span>
                         <span class="publish-author">
                             
                             <i class="fas fa-bookmark fa-fw icon-category"></i>
                             
-                            <a href="/categories/linux/" class="post-category">
-                                    linux
-                                </a>
-                            
-                            <a href="/categories/linux/docker/" class="post-category">
-                                    docker
+                            <a href="/categories/%E7%8E%AF%E5%A2%83%E9%85%8D%E7%BD%AE/" class="post-category">
+                                    环境配置
                                 </a>
                             
                             
                         </span>
                     </div>
                 </div>
+
                 
                 <div class="card-action article-tags">
                     
@@ -842,12 +782,8 @@ option go_package <span class="token operator">=</span> <span class="token strin
                         <span class="chip bg-color">ubuntu</span>
                     </a>
                     
-                    <a href="/tags/linux/">
-                        <span class="chip bg-color">linux</span>
-                    </a>
-                    
-                    <a href="/tags/docker/">
-                        <span class="chip bg-color">docker</span>
+                    <a href="/tags/frp/">
+                        <span class="chip bg-color">frp</span>
                     </a>
                     
                 </div>
@@ -861,13 +797,13 @@ option go_package <span class="token operator">=</span> <span class="token strin
                 下一篇&nbsp;<i class="fas fa-chevron-right"></i>
             </div>
             <div class="card">
-                <a href="/2025/03/09/xv6-lab1/">
+                <a href="/2025/11/24/zai-android-tee-huan-jing-xia-tian-jia-yu-jiao-hu/">
                     <div class="card-image">
                         
                         
-                        <img src="/medias/featureimages/23.png" class="responsive-img" alt="XV6-LAB1">
+                        <img src="/medias/featureimages/5.png" class="responsive-img" alt="在Android TEE 环境下添加与交互">
                         
-                        <span class="card-title">XV6-LAB1</span>
+                        <span class="card-title">在Android TEE 环境下添加与交互</span>
                     </div>
                 </a>
                 <div class="card-content article-content">
@@ -878,14 +814,18 @@ option go_package <span class="token operator">=</span> <span class="token strin
                     </div>
                     <div class="publish-info">
                             <span class="publish-date">
-                                <i class="far fa-clock fa-fw icon-date"></i>2025-03-09
+                                <i class="far fa-clock fa-fw icon-date"></i>2025-11-24
                             </span>
                         <span class="publish-author">
                             
                             <i class="fas fa-bookmark fa-fw icon-category"></i>
                             
-                            <a href="/categories/LAB/" class="post-category">
-                                    LAB
+                            <a href="/categories/%E5%BC%80%E5%8F%91/" class="post-category">
+                                    开发
+                                </a>
+                            
+                            <a href="/categories/%E5%BC%80%E5%8F%91/%E6%B5%8B%E8%AF%95/" class="post-category">
+                                    测试
                                 </a>
                             
                             
@@ -895,12 +835,16 @@ option go_package <span class="token operator">=</span> <span class="token strin
                 
                 <div class="card-action article-tags">
                     
-                    <a href="/tags/xv6/">
-                        <span class="chip bg-color">xv6</span>
+                    <a href="/tags/java/">
+                        <span class="chip bg-color">java</span>
                     </a>
                     
-                    <a href="/tags/c/">
-                        <span class="chip bg-color">c</span>
+                    <a href="/tags/Android/">
+                        <span class="chip bg-color">Android</span>
+                    </a>
+                    
+                    <a href="/tags/TEE/">
+                        <span class="chip bg-color">TEE</span>
                     </a>
                     
                 </div>

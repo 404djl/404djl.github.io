@@ -6,7 +6,7 @@
   <link href="https://404djl.github.io/atom.xml" rel="self"/>
   
   <link href="https://404djl.github.io/"/>
-  <updated>2025-11-24T05:35:37.769Z</updated>
+  <updated>2025-12-08T15:57:46.943Z</updated>
   <id>https://404djl.github.io/</id>
   
   <author>
@@ -15,6 +15,33 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>使用frp实现内网穿透</title>
+    <link href="https://404djl.github.io/2025/12/08/shi-yong-frp-shi-xian-nei-wang-chuan-tou/"/>
+    <id>https://404djl.github.io/2025/12/08/shi-yong-frp-shi-xian-nei-wang-chuan-tou/</id>
+    <published>2025-12-08T15:56:32.000Z</published>
+    <updated>2025-12-08T15:57:46.943Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
+        
+      
+    
+    
+    
+    <category term="环境配置" scheme="https://404djl.github.io/categories/%E7%8E%AF%E5%A2%83%E9%85%8D%E7%BD%AE/"/>
+    
+    
+    <category term="ubuntu" scheme="https://404djl.github.io/tags/ubuntu/"/>
+    
+    <category term="frp" scheme="https://404djl.github.io/tags/frp/"/>
+    
+  </entry>
   
   <entry>
     <title>在Android TEE 环境下添加与交互</title>
