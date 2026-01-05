@@ -6,7 +6,7 @@
   <link href="https://404djl.github.io/atom.xml" rel="self"/>
   
   <link href="https://404djl.github.io/"/>
-  <updated>2026-01-04T16:45:41.675Z</updated>
+  <updated>2026-01-05T14:34:13.494Z</updated>
   <id>https://404djl.github.io/</id>
   
   <author>
@@ -21,7 +21,7 @@
     <link href="https://404djl.github.io/2026/01/05/ji-yu-yolov8-de-pcb-que-xian-jian-ce-mo-xing/"/>
     <id>https://404djl.github.io/2026/01/05/ji-yu-yolov8-de-pcb-que-xian-jian-ce-mo-xing/</id>
     <published>2026-01-04T16:42:38.000Z</published>
-    <updated>2026-01-04T16:45:41.675Z</updated>
+    <updated>2026-01-05T14:34:13.494Z</updated>
     
     
       
@@ -37,7 +37,9 @@
     <category term="AI" scheme="https://404djl.github.io/categories/AI/"/>
     
     
-    <category term="模型训练， YOLO" scheme="https://404djl.github.io/tags/%E6%A8%A1%E5%9E%8B%E8%AE%AD%E7%BB%83%EF%BC%8C-YOLO/"/>
+    <category term="模型训练" scheme="https://404djl.github.io/tags/%E6%A8%A1%E5%9E%8B%E8%AE%AD%E7%BB%83/"/>
+    
+    <category term="YOLO" scheme="https://404djl.github.io/tags/YOLO/"/>
     
   </entry>
   
