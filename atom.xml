@@ -6,7 +6,7 @@
   <link href="https://404djl.github.io/atom.xml" rel="self"/>
   
   <link href="https://404djl.github.io/"/>
-  <updated>2026-01-05T14:34:13.494Z</updated>
+  <updated>2026-03-17T12:32:58.807Z</updated>
   <id>https://404djl.github.io/</id>
   
   <author>
@@ -17,11 +17,36 @@
   <generator uri="https://hexo.io/">Hexo</generator>
   
   <entry>
+    <title>操作系统概述与环境搭建</title>
+    <link href="https://404djl.github.io/2026/01/17/01-cao-zuo-xi-tong-gai-shu-yu-huan-jing-da-jian/"/>
+    <id>https://404djl.github.io/2026/01/17/01-cao-zuo-xi-tong-gai-shu-yu-huan-jing-da-jian/</id>
+    <published>2026-01-17T12:31:14.000Z</published>
+    <updated>2026-03-17T12:32:58.807Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
+        
+      
+    
+    
+    
+    <category term="OS" scheme="https://404djl.github.io/categories/OS/"/>
+    
+    
+    <category term="操作系统， linux" scheme="https://404djl.github.io/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%8C-linux/"/>
+    
+  </entry>
+  
+  <entry>
     <title>基于YOLOv8的PCB缺陷检测模型</title>
     <link href="https://404djl.github.io/2026/01/05/ji-yu-yolov8-de-pcb-que-xian-jian-ce-mo-xing/"/>
     <id>https://404djl.github.io/2026/01/05/ji-yu-yolov8-de-pcb-que-xian-jian-ce-mo-xing/</id>
     <published>2026-01-04T16:42:38.000Z</published>
-    <updated>2026-01-05T14:34:13.494Z</updated>
+    <updated>2026-03-17T12:27:59.712Z</updated>
     
     
       
