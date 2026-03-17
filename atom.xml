@@ -6,7 +6,7 @@
   <link href="https://404djl.github.io/atom.xml" rel="self"/>
   
   <link href="https://404djl.github.io/"/>
-  <updated>2026-03-17T12:32:58.807Z</updated>
+  <updated>2026-03-17T12:39:58.449Z</updated>
   <id>https://404djl.github.io/</id>
   
   <author>
@@ -17,11 +17,11 @@
   <generator uri="https://hexo.io/">Hexo</generator>
   
   <entry>
-    <title>操作系统概述与环境搭建</title>
+    <title>01操作系统概述与环境搭建</title>
     <link href="https://404djl.github.io/2026/01/17/01-cao-zuo-xi-tong-gai-shu-yu-huan-jing-da-jian/"/>
     <id>https://404djl.github.io/2026/01/17/01-cao-zuo-xi-tong-gai-shu-yu-huan-jing-da-jian/</id>
     <published>2026-01-17T12:31:14.000Z</published>
-    <updated>2026-03-17T12:32:58.807Z</updated>
+    <updated>2026-03-17T12:39:58.449Z</updated>
     
     
       
@@ -37,7 +37,9 @@
     <category term="OS" scheme="https://404djl.github.io/categories/OS/"/>
     
     
-    <category term="操作系统， linux" scheme="https://404djl.github.io/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%8C-linux/"/>
+    <category term="linux" scheme="https://404djl.github.io/tags/linux/"/>
+    
+    <category term="操作系统" scheme="https://404djl.github.io/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/"/>
     
   </entry>
   

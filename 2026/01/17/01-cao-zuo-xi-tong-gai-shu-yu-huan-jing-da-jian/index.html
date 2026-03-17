@@ -4,7 +4,7 @@
 
 <head>
     <meta charset="utf-8">
-    <meta name="keywords" content="操作系统概述与环境搭建, 404djlのblog">
+    <meta name="keywords" content="01操作系统概述与环境搭建, 404djlのblog">
     <meta name="description" content="第 1 节：操作系统概述与实验环境搭建
 学习目标：理解操作系统的角色与核心抽象，掌握 xv6 项目结构，搭建可运行的实验环境。
 预计用时：2-3 小时
@@ -23,7 +23,7 @@
     <!-- Global site tag (gtag.js) - Google Analytics -->
 
 
-    <title>操作系统概述与环境搭建 | 404djlのblog</title>
+    <title>01操作系统概述与环境搭建 | 404djlのblog</title>
     <link rel="icon" type="image/gif" href="/icons8-github.gif">
     
     <style>
@@ -67,9 +67,9 @@
 
     <script src="/libs/jquery/jquery-3.6.0.min.js"></script>
 
-<meta name="generator" content="Hexo 4.2.0"><link rel="alternate" href="/atom.xml" title="404djlのblog" type="application/atom+xml">
-
+<meta name="generator" content="Hexo 4.2.0">
 <style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+<link rel="alternate" href="/atom.xml" title="404djlのblog" type="application/atom+xml">
 <link rel="stylesheet" href="/css/prism-tomorrow.css" type="text/css">
 <link rel="stylesheet" href="/css/prism-line-numbers.css" type="text/css">
 <style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
@@ -358,12 +358,12 @@
 
 
 
-<div class="bg-cover pd-header post-cover" style="background-image: url('/medias/featureimages/24.png')">
+<div class="bg-cover pd-header post-cover" style="background-image: url('/medias/featureimages/17.png')">
     <div class="container" style="right: 0px;left: 0px;">
         <div class="row">
             <div class="col s12 m12 l12">
                 <div class="brand">
-                    <h1 class="description center-align post-title">操作系统概述与环境搭建</h1>
+                    <h1 class="description center-align post-title">01操作系统概述与环境搭建</h1>
                 </div>
             </div>
         </div>
@@ -387,8 +387,12 @@
                     
                     <div class="article-tag">
                         
-                            <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%8C-linux/">
-                                <span class="chip bg-color">操作系统， linux</span>
+                            <a href="/tags/linux/">
+                                <span class="chip bg-color">linux</span>
+                            </a>
+                        
+                            <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                                <span class="chip bg-color">操作系统</span>
                             </a>
                         
                     </div>
@@ -459,18 +463,18 @@
 <li><strong>资源管理</strong>：CPU 时间、内存、磁盘、I/O 设备等硬件资源由多个程序共享，操作系统负责分配和调度</li>
 <li><strong>抽象封装</strong>：隐藏硬件细节，为应用程序提供统一、简洁的接口（系统调用）</li>
 </ol>
-<pre><code>┌──────────────────────────────────────┐
-│          应用程序 (Application)       │
-├──────────────────────────────────────┤  ← 系统调用接口 (ecall)
+<pre class="line-numbers language-bash"><code class="language-bash">┌──────────────────────────────────────┐
+│          应用程序 <span class="token punctuation">(</span>Application<span class="token punctuation">)</span>       │
+├──────────────────────────────────────┤  ← 系统调用接口 <span class="token punctuation">(</span>ecall<span class="token punctuation">)</span>
 │            操 作 系 统               │
 │  ┌──────────┬──────────┬──────────┐  │
 │  │ 进程管理  │ 内存管理  │ 文件系统 │  │
 │  └──────────┴──────────┴──────────┘  │
 ├──────────────────────────────────────┤
-│          硬件 (Hardware)             │
+│          硬件 <span class="token punctuation">(</span>Hardware<span class="token punctuation">)</span>             │
 │    CPU    内存    磁盘    I/O 设备    │
 └──────────────────────────────────────┘
-</code></pre>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <h3 id="1-2-操作系统的三大核心抽象"><a href="#1-2-操作系统的三大核心抽象" class="headerlink" title="1.2 操作系统的三大核心抽象"></a>1.2 操作系统的三大核心抽象</h3><p>操作系统的精髓在于用简单的抽象来管理复杂的硬件：</p>
 <table>
 <thead>
@@ -503,13 +507,13 @@
 <li><strong>易用性</strong>：程序员用 <code>read()</code>/<code>write()</code> 操作文件，无需知道磁盘驱动协议</li>
 </ul>
 <h3 id="1-3-内核态-vs-用户态"><a href="#1-3-内核态-vs-用户态" class="headerlink" title="1.3 内核态 vs 用户态"></a>1.3 内核态 vs 用户态</h3><p>CPU 提供<strong>特权级</strong>机制来实现隔离：</p>
-<pre><code>特权级高 ─────────────────────────── 特权级低
+<pre class="line-numbers language-bash"><code class="language-bash">特权级高 ─────────────────────────── 特权级低
     │                                    │
     ▼                                    ▼
- Machine (M)    Supervisor (S)       User (U)
+ Machine <span class="token punctuation">(</span>M<span class="token punctuation">)</span>    Supervisor <span class="token punctuation">(</span>S<span class="token punctuation">)</span>       User <span class="token punctuation">(</span>U<span class="token punctuation">)</span>
   固件/BIOS       操作系统内核       应用程序
   全部权限       大部分权限        受限权限
-</code></pre>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <ul>
 <li><strong>用户态 (User mode)<strong>：应用程序运行在此模式，</strong>不能</strong>直接访问硬件、不能修改页表</li>
 <li>**内核态 (Supervisor mode)**：操作系统内核运行在此模式，可以执行特权指令</li>
@@ -534,37 +538,37 @@
 <li>每个模块都小到可以完整阅读和理解</li>
 </ul>
 <hr>
-<h2 id="二、源码概览：认识-xv6-项目结构"><a href="#二、源码概览：认识-xv6-项目结构" class="headerlink" title="二、源码概览：认识 xv6 项目结构"></a>二、源码概览：认识 xv6 项目结构</h2><h3 id="2-1-目录结构"><a href="#2-1-目录结构" class="headerlink" title="2.1 目录结构"></a>2.1 目录结构</h3><pre><code>xv6-labs/
-├── kernel/          # 内核源码（约 6300 行核心代码）
-│   ├── entry.S      # 启动入口（汇编）
-│   ├── start.c      # M-mode 初始化
-│   ├── main.c       # 内核初始化主函数
-│   ├── proc.c       # 进程管理（最大的文件之一，695 行）
-│   ├── vm.c         # 虚拟内存管理（442 行）
-│   ├── fs.c         # 文件系统（671 行）
-│   ├── trap.c       # Trap 处理
-│   ├── syscall.c    # 系统调用分发
-│   ├── kalloc.c     # 物理内存分配
-│   ├── ...          # 更多模块
-│   ├── defs.h       # 所有内核函数的声明汇总
-│   ├── param.h      # 系统常量
-│   ├── types.h      # 基础类型
-│   └── kernel.ld    # 链接器脚本
-├── user/            # 用户程序源码
-│   ├── init.c       # 第一个用户进程
-│   ├── sh.c         # Shell
-│   ├── cat.c        # cat 命令
-│   ├── echo.c       # echo 命令
-│   ├── ls.c         # ls 命令
-│   ├── user.h       # 用户程序可用的系统调用和库函数声明
-│   ├── usys.pl      # 生成系统调用 stub 的 Perl 脚本
-│   ├── ulib.c       # 用户库函数（strcmp, printf 等）
-│   ├── umalloc.c    # 用户态 malloc 实现
-│   └── ...
-├── mkfs/            # 文件系统镜像生成工具
-│   └── mkfs.c       # 将用户程序打包为 fs.img
-└── Makefile         # 构建系统
-</code></pre>
+<h2 id="二、源码概览：认识-xv6-项目结构"><a href="#二、源码概览：认识-xv6-项目结构" class="headerlink" title="二、源码概览：认识 xv6 项目结构"></a>二、源码概览：认识 xv6 项目结构</h2><h3 id="2-1-目录结构"><a href="#2-1-目录结构" class="headerlink" title="2.1 目录结构"></a>2.1 目录结构</h3><pre class="line-numbers language-bash"><code class="language-bash">xv6-labs/
+├── kernel/          <span class="token comment" spellcheck="true"># 内核源码（约 6300 行核心代码）</span>
+│   ├── entry.S      <span class="token comment" spellcheck="true"># 启动入口（汇编）</span>
+│   ├── start.c      <span class="token comment" spellcheck="true"># M-mode 初始化</span>
+│   ├── main.c       <span class="token comment" spellcheck="true"># 内核初始化主函数</span>
+│   ├── proc.c       <span class="token comment" spellcheck="true"># 进程管理（最大的文件之一，695 行）</span>
+│   ├── vm.c         <span class="token comment" spellcheck="true"># 虚拟内存管理（442 行）</span>
+│   ├── fs.c         <span class="token comment" spellcheck="true"># 文件系统（671 行）</span>
+│   ├── trap.c       <span class="token comment" spellcheck="true"># Trap 处理</span>
+│   ├── syscall.c    <span class="token comment" spellcheck="true"># 系统调用分发</span>
+│   ├── kalloc.c     <span class="token comment" spellcheck="true"># 物理内存分配</span>
+│   ├── <span class="token punctuation">..</span>.          <span class="token comment" spellcheck="true"># 更多模块</span>
+│   ├── defs.h       <span class="token comment" spellcheck="true"># 所有内核函数的声明汇总</span>
+│   ├── param.h      <span class="token comment" spellcheck="true"># 系统常量</span>
+│   ├── types.h      <span class="token comment" spellcheck="true"># 基础类型</span>
+│   └── kernel.ld    <span class="token comment" spellcheck="true"># 链接器脚本</span>
+├── user/            <span class="token comment" spellcheck="true"># 用户程序源码</span>
+│   ├── init.c       <span class="token comment" spellcheck="true"># 第一个用户进程</span>
+│   ├── sh.c         <span class="token comment" spellcheck="true"># Shell</span>
+│   ├── cat.c        <span class="token comment" spellcheck="true"># cat 命令</span>
+│   ├── echo.c       <span class="token comment" spellcheck="true"># echo 命令</span>
+│   ├── ls.c         <span class="token comment" spellcheck="true"># ls 命令</span>
+│   ├── user.h       <span class="token comment" spellcheck="true"># 用户程序可用的系统调用和库函数声明</span>
+│   ├── usys.pl      <span class="token comment" spellcheck="true"># 生成系统调用 stub 的 Perl 脚本</span>
+│   ├── ulib.c       <span class="token comment" spellcheck="true"># 用户库函数（strcmp, printf 等）</span>
+│   ├── umalloc.c    <span class="token comment" spellcheck="true"># 用户态 malloc 实现</span>
+│   └── <span class="token punctuation">..</span>.
+├── mkfs/            <span class="token comment" spellcheck="true"># 文件系统镜像生成工具</span>
+│   └── mkfs.c       <span class="token comment" spellcheck="true"># 将用户程序打包为 fs.img</span>
+└── Makefile         <span class="token comment" spellcheck="true"># 构建系统</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <h3 id="2-2-Makefile-关键解读"><a href="#2-2-Makefile-关键解读" class="headerlink" title="2.2 Makefile 关键解读"></a>2.2 Makefile 关键解读</h3><p>Makefile 是理解项目编译流程的关键，下面拆解最重要的部分：</p>
 <p><strong>工具链配置</strong>（第 44-60 行）：</p>
 <pre class="line-numbers language-makefile"><code class="language-makefile"><span class="token comment" spellcheck="true"># xv6 运行在 RISC-V 上，需要交叉编译工具链</span>
@@ -710,17 +714,17 @@ QEMUOPTS <span class="token operator">=</span> -machine virt       <span class="
 </ul>
 <hr>
 <h2 id="三、源码精读：用户程序的结构"><a href="#三、源码精读：用户程序的结构" class="headerlink" title="三、源码精读：用户程序的结构"></a>三、源码精读：用户程序的结构</h2><h3 id="3-1-用户程序的组成"><a href="#3-1-用户程序的组成" class="headerlink" title="3.1 用户程序的组成"></a>3.1 用户程序的组成</h3><p>每个 xv6 用户程序都包含三个部分：</p>
-<pre><code>┌────────────────────────────────────────────────┐
-│              用户程序 (如 echo.c)               │
+<pre class="line-numbers language-bash"><code class="language-bash">┌────────────────────────────────────────────────┐
+│              用户程序 <span class="token punctuation">(</span>如 echo.c<span class="token punctuation">)</span>               │
 ├────────────────────────────────────────────────┤
-│  #include "kernel/types.h"    ← 基础类型       │
-│  #include "kernel/stat.h"     ← 文件状态结构    │
-│  #include "user/user.h"       ← 系统调用 + 库   │
+│  <span class="token comment" spellcheck="true">#include "kernel/types.h"    ← 基础类型       │</span>
+│  <span class="token comment" spellcheck="true">#include "kernel/stat.h"     ← 文件状态结构    │</span>
+│  <span class="token comment" spellcheck="true">#include "user/user.h"       ← 系统调用 + 库   │</span>
 ├────────────────────────────────────────────────┤
-│  int main(int argc, char *argv[]) { ... }      │
-│  exit(0);        ← 必须调用 exit()，不能 return │
+│  int main<span class="token punctuation">(</span>int argc, char *argv<span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token punctuation">..</span>. <span class="token punctuation">}</span>      │
+│  exit<span class="token punctuation">(</span>0<span class="token punctuation">)</span><span class="token punctuation">;</span>        ← 必须调用 exit<span class="token punctuation">(</span><span class="token punctuation">)</span>，不能 <span class="token keyword">return</span> │
 └────────────────────────────────────────────────┘
-</code></pre>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <p><strong>重要区别</strong>：在普通 C 程序中，<code>main()</code> 返回后 C 运行时库会调用 <code>exit()</code>。xv6 没有 C 运行时，所以**必须显式调用 <code>exit()</code>**。</p>
 <h3 id="3-2-user-echo-c-精读（19-行）"><a href="#3-2-user-echo-c-精读（19-行）" class="headerlink" title="3.2 user/echo.c 精读（19 行）"></a>3.2 <code>user/echo.c</code> 精读（19 行）</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"kernel/types.h"</span></span>
 <span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"kernel/stat.h"</span></span>
@@ -946,13 +950,13 @@ qemu-system-riscv64 --version      <span class="token comment" spellcheck="true"
 <span class="token function">make</span> qemu
 <span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
 <p>成功启动后，你会看到：</p>
-<pre><code>xv6 kernel is booting
+<pre class="line-numbers language-bash"><code class="language-bash">xv6 kernel is booting
 
 hart 2 starting
 hart 1 starting
 init: starting sh
 $
-</code></pre>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
 <p><strong>1.3 在 xv6 shell 中尝试命令</strong></p>
 <pre class="line-numbers language-bash"><code class="language-bash">$ <span class="token function">ls</span>                    <span class="token comment" spellcheck="true"># 列出文件</span>
 $ <span class="token keyword">echo</span> hello world      <span class="token comment" spellcheck="true"># 输出文本</span>
@@ -1221,8 +1225,12 @@ $ <span class="token keyword">echo</span> hello world
                     
                         <div class="article-tag">
                             
-                                <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%8C-linux/">
-                                    <span class="chip bg-color">操作系统， linux</span>
+                                <a href="/tags/linux/">
+                                    <span class="chip bg-color">linux</span>
+                                </a>
+                            
+                                <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                                    <span class="chip bg-color">操作系统</span>
                                 </a>
                             
                         </div>
@@ -1310,9 +1318,9 @@ $ <span class="token keyword">echo</span> hello world
                     <div class="card-image">
                         
                         
-                        <img src="/medias/featureimages/24.png" class="responsive-img" alt="操作系统概述与环境搭建">
+                        <img src="/medias/featureimages/17.png" class="responsive-img" alt="01操作系统概述与环境搭建">
                         
-                        <span class="card-title">操作系统概述与环境搭建</span>
+                        <span class="card-title">01操作系统概述与环境搭建</span>
                     </div>
                 </a>
                 <div class="card-content article-content">
@@ -1341,8 +1349,12 @@ $ <span class="token keyword">echo</span> hello world
                 
                 <div class="card-action article-tags">
                     
-                    <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%EF%BC%8C-linux/">
-                        <span class="chip bg-color">操作系统， linux</span>
+                    <a href="/tags/linux/">
+                        <span class="chip bg-color">linux</span>
+                    </a>
+                    
+                    <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                        <span class="chip bg-color">操作系统</span>
                     </a>
                     
                 </div>
