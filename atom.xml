@@ -6,7 +6,7 @@
   <link href="https://404djl.github.io/atom.xml" rel="self"/>
   
   <link href="https://404djl.github.io/"/>
-  <updated>2026-03-17T15:50:33.355Z</updated>
+  <updated>2026-03-26T16:14:39.331Z</updated>
   <id>https://404djl.github.io/</id>
   
   <author>
@@ -15,6 +15,168 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>OS08-进程调度与上下文切换</title>
+    <link href="https://404djl.github.io/2026/02/27/os08-jin-cheng-diao-du-yu-shang-xia-wen-qie-huan/"/>
+    <id>https://404djl.github.io/2026/02/27/os08-jin-cheng-diao-du-yu-shang-xia-wen-qie-huan/</id>
+    <published>2026-02-26T16:07:28.000Z</published>
+    <updated>2026-03-26T16:14:39.331Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
+        
+      
+    
+    
+    
+    <category term="OS" scheme="https://404djl.github.io/categories/OS/"/>
+    
+    
+    <category term="linux" scheme="https://404djl.github.io/tags/linux/"/>
+    
+    <category term="操作系统" scheme="https://404djl.github.io/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>OS06-进程数据结构与生命周期</title>
+    <link href="https://404djl.github.io/2026/02/27/os06-jin-cheng-shu-ju-jie-gou-yu-sheng-ming-zhou-qi/"/>
+    <id>https://404djl.github.io/2026/02/27/os06-jin-cheng-shu-ju-jie-gou-yu-sheng-ming-zhou-qi/</id>
+    <published>2026-02-26T16:06:29.000Z</published>
+    <updated>2026-03-26T16:12:04.593Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
+        
+      
+    
+    
+    
+    <category term="OS" scheme="https://404djl.github.io/categories/OS/"/>
+    
+    
+    <category term="linux" scheme="https://404djl.github.io/tags/linux/"/>
+    
+    <category term="操作系统" scheme="https://404djl.github.io/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>OS05-虚拟内存与页表</title>
+    <link href="https://404djl.github.io/2026/02/27/os05-xu-ni-nei-cun-yu-ye-biao/"/>
+    <id>https://404djl.github.io/2026/02/27/os05-xu-ni-nei-cun-yu-ye-biao/</id>
+    <published>2026-02-26T16:03:58.000Z</published>
+    <updated>2026-03-26T16:10:34.488Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
+        
+      
+    
+    
+    
+    <category term="OS" scheme="https://404djl.github.io/categories/OS/"/>
+    
+    
+    <category term="linux" scheme="https://404djl.github.io/tags/linux/"/>
+    
+    <category term="操作系统" scheme="https://404djl.github.io/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>OS07-进程创建与程序加载</title>
+    <link href="https://404djl.github.io/2026/01/27/os07-jin-cheng-chuang-jian-yu-cheng-xu-jia-zai/"/>
+    <id>https://404djl.github.io/2026/01/27/os07-jin-cheng-chuang-jian-yu-cheng-xu-jia-zai/</id>
+    <published>2026-01-26T16:06:50.000Z</published>
+    <updated>2026-03-26T16:13:35.543Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
+        
+      
+    
+    
+    
+    <category term="OS" scheme="https://404djl.github.io/categories/OS/"/>
+    
+    
+    <category term="linux" scheme="https://404djl.github.io/tags/linux/"/>
+    
+    <category term="操作系统" scheme="https://404djl.github.io/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>OS04-物理内存管理</title>
+    <link href="https://404djl.github.io/2026/01/27/os04-wu-li-nei-cun-guan-li/"/>
+    <id>https://404djl.github.io/2026/01/27/os04-wu-li-nei-cun-guan-li/</id>
+    <published>2026-01-26T16:01:35.000Z</published>
+    <updated>2026-03-26T16:03:29.301Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
+        
+      
+    
+    
+    
+    <category term="OS" scheme="https://404djl.github.io/categories/OS/"/>
+    
+    
+    <category term="linux" scheme="https://404djl.github.io/tags/linux/"/>
+    
+    <category term="操作系统" scheme="https://404djl.github.io/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>OS03-系统启动流程</title>
+    <link href="https://404djl.github.io/2026/01/26/os03-xi-tong-qi-dong-liu-cheng/"/>
+    <id>https://404djl.github.io/2026/01/26/os03-xi-tong-qi-dong-liu-cheng/</id>
+    <published>2026-01-26T15:58:24.000Z</published>
+    <updated>2026-03-26T16:00:57.304Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
+        
+      
+    
+    
+    
+    <category term="OS" scheme="https://404djl.github.io/categories/OS/"/>
+    
+    
+    <category term="linux" scheme="https://404djl.github.io/tags/linux/"/>
+    
+    <category term="操作系统" scheme="https://404djl.github.io/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/"/>
+    
+  </entry>
   
   <entry>
     <title>OS02-RISC-V体系结构基础</title>
@@ -44,11 +206,11 @@
   </entry>
   
   <entry>
-    <title>OS01操作系统概述与环境搭建</title>
+    <title>OS01-操作系统概述与环境搭建</title>
     <link href="https://404djl.github.io/2026/01/17/os01-cao-zuo-xi-tong-gai-shu-yu-huan-jing-da-jian/"/>
     <id>https://404djl.github.io/2026/01/17/os01-cao-zuo-xi-tong-gai-shu-yu-huan-jing-da-jian/</id>
     <published>2026-01-17T12:31:14.000Z</published>
-    <updated>2026-03-17T15:44:12.487Z</updated>
+    <updated>2026-03-26T15:55:30.652Z</updated>
     
     
       
@@ -407,33 +569,6 @@
     <category term="STM32" scheme="https://404djl.github.io/tags/STM32/"/>
     
     <category term="环境搭建" scheme="https://404djl.github.io/tags/%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>hexo的搭建过程</title>
-    <link href="https://404djl.github.io/2024/12/16/hexo-de-da-jian-guo-cheng/"/>
-    <id>https://404djl.github.io/2024/12/16/hexo-de-da-jian-guo-cheng/</id>
-    <published>2024-12-16T08:52:29.000Z</published>
-    <updated>2024-12-19T11:16:58.631Z</updated>
-    
-    
-      
-      
-        
-        
-    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
-        
-      
-    
-    
-    
-    
-    <category term="Hexo" scheme="https://404djl.github.io/tags/Hexo/"/>
-    
-    <category term="blog" scheme="https://404djl.github.io/tags/blog/"/>
-    
-    <category term="Matery" scheme="https://404djl.github.io/tags/Matery/"/>
     
   </entry>
   

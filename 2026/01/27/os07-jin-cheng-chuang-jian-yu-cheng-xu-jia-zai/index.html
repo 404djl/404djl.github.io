@@ -1,0 +1,2018 @@
+<!DOCTYPE HTML>
+<html lang="zh-CN">
+
+
+<head>
+    <meta charset="utf-8">
+    <meta name="keywords" content="OS07-进程创建与程序加载, 404djlのblog">
+    <meta name="description" content="第 7 节：进程创建与程序加载（fork + exec）
+学习目标：深入理解 Unix “fork + exec” 模型的实现，掌握地址空间复制、ELF 程序格式解析、用户栈构建，以及失败时的完整回滚机制。
+预计用时：3-4 小时
+前置要求">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="renderer" content="webkit|ie-stand|ie-comp">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="referrer" content="no-referrer-when-downgrade">
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+
+
+    <title>OS07-进程创建与程序加载 | 404djlのblog</title>
+    <link rel="icon" type="image/gif" href="/icons8-github.gif">
+    
+    <style>
+        body{
+            background-image: url(https://pic1.imgdb.cn/item/69b9682b1eedde6824938321.jpg);
+            background-repeat:no-repeat;
+            background-size: 100% 100%;
+            background-attachment:fixed;
+        }
+    </style>
+
+
+
+    <!-- bg-cover style     -->
+
+
+
+<link rel="stylesheet" type="text/css" href="/libs/awesome/css/all.min.css">
+<link rel="stylesheet" type="text/css" href="/libs/materialize/materialize.min.css">
+<link rel="stylesheet" type="text/css" href="/libs/aos/aos.css">
+<link rel="stylesheet" type="text/css" href="/libs/animate/animate.min.css">
+<link rel="stylesheet" type="text/css" href="/libs/lightGallery/css/lightgallery.min.css">
+<link rel="stylesheet" type="text/css" href="/css/matery.css">
+<link rel="stylesheet" type="text/css" href="/css/my.css">
+<link rel="stylesheet" type="text/css" href="/css/dark.css" media="none" onload="if(media!='all')media='all'">
+
+
+
+
+    <link rel="stylesheet" href="/libs/tocbot/tocbot.css">
+    <link rel="stylesheet" href="/css/post.css">
+
+
+
+
+    
+        <link rel="stylesheet" type="text/css" href="/css/reward.css">
+    
+
+
+
+    <script src="/libs/jquery/jquery-3.6.0.min.js"></script>
+
+<meta name="generator" content="Hexo 4.2.0">
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+<link rel="alternate" href="/atom.xml" title="404djlのblog" type="application/atom+xml">
+<link rel="stylesheet" href="/css/prism-tomorrow.css" type="text/css">
+<link rel="stylesheet" href="/css/prism-line-numbers.css" type="text/css">
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+</head>
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+
+
+
+<body>
+    <header class="navbar-fixed">
+    <nav id="headNav" class="bg-color nav-transparent">
+        <div id="navContainer" class="nav-wrapper container">
+            <div class="brand-logo">
+                <a href="/" class="waves-effect waves-light">
+                    
+                    <img src="/icons8-github.gif" class="logo-img" alt="LOGO">
+                    
+                    <span class="logo-span">404djlのblog</span>
+                </a>
+            </div>
+            
+
+<a href="#" data-target="mobile-nav" class="sidenav-trigger button-collapse"><i class="fas fa-bars"></i></a>
+<ul class="right nav-menu">
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/" class="waves-effect waves-light">
+      
+      <i class="fas fa-home" style="zoom: 0.6;"></i>
+      
+      <span>首页</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/tags" class="waves-effect waves-light">
+      
+      <i class="fas fa-tags" style="zoom: 0.6;"></i>
+      
+      <span>标签</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/categories" class="waves-effect waves-light">
+      
+      <i class="fas fa-bookmark" style="zoom: 0.6;"></i>
+      
+      <span>分类</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/archives" class="waves-effect waves-light">
+      
+      <i class="fas fa-archive" style="zoom: 0.6;"></i>
+      
+      <span>归档</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/about" class="waves-effect waves-light">
+      
+      <i class="fas fa-user-circle" style="zoom: 0.6;"></i>
+      
+      <span>关于</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/contact" class="waves-effect waves-light">
+      
+      <i class="fas fa-comments" style="zoom: 0.6;"></i>
+      
+      <span>留言板</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/friends" class="waves-effect waves-light">
+      
+      <i class="fas fa-address-book" style="zoom: 0.6;"></i>
+      
+      <span>友情链接</span>
+    </a>
+    
+  </li>
+  
+  <li>
+    <a href="#searchModal" class="modal-trigger waves-effect waves-light">
+      <i id="searchIcon" class="fas fa-search" title="搜索" style="zoom: 0.85;"></i>
+    </a>
+  </li>
+  <li>
+    <a href="javascript:;" class="waves-effect waves-light" onclick="switchNightMode()" title="深色/浅色模式" >
+      <i id="sum-moon-icon" class="fas fa-sun" style="zoom: 0.85;"></i>
+    </a>
+  </li>
+</ul>
+
+
+<div id="mobile-nav" class="side-nav sidenav">
+
+    <div class="mobile-head bg-color">
+        
+        <img src="/icons8-github.gif" class="logo-img circle responsive-img">
+        
+        <div class="logo-name">404djlのblog</div>
+        <div class="logo-desc">
+            
+            Never really desperate, only the lost of the soul
+            
+        </div>
+    </div>
+
+    <ul class="menu-list mobile-menu-list">
+        
+        <li class="m-nav-item">
+	  
+		<a href="/" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-home"></i>
+			
+			首页
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/tags" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-tags"></i>
+			
+			标签
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/categories" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-bookmark"></i>
+			
+			分类
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/archives" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-archive"></i>
+			
+			归档
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/about" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-user-circle"></i>
+			
+			关于
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/contact" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-comments"></i>
+			
+			留言板
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/friends" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-address-book"></i>
+			
+			友情链接
+		</a>
+          
+        </li>
+        
+        
+        <li><div class="divider"></div></li>
+        <li>
+            <a href="https://github.com/404djl/404djl.github.io" class="waves-effect waves-light" target="_blank">
+                <i class="fab fa-github-square fa-fw"></i>Fork Me
+            </a>
+        </li>
+        
+    </ul>
+</div>
+
+
+        </div>
+
+        
+            <style>
+    .nav-transparent .github-corner {
+        display: none !important;
+    }
+
+    .github-corner {
+        position: absolute;
+        z-index: 10;
+        top: 0;
+        right: 0;
+        border: 0;
+        transform: scale(1.1);
+    }
+
+    .github-corner svg {
+        color: #0f9d58;
+        fill: #fff;
+        height: 64px;
+        width: 64px;
+    }
+
+    .github-corner:hover .octo-arm {
+        animation: a 0.56s ease-in-out;
+    }
+
+    .github-corner .octo-arm {
+        animation: none;
+    }
+
+    @keyframes a {
+        0%,
+        to {
+            transform: rotate(0);
+        }
+        20%,
+        60% {
+            transform: rotate(-25deg);
+        }
+        40%,
+        80% {
+            transform: rotate(10deg);
+        }
+    }
+</style>
+
+<a href="https://github.com/404djl/404djl.github.io" class="github-corner tooltipped hide-on-med-and-down" target="_blank"
+   data-tooltip="Fork Me" data-position="left" data-delay="50">
+    <svg viewBox="0 0 250 250" aria-hidden="true">
+        <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+        <path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2"
+              fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+        <path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z"
+              fill="currentColor" class="octo-body"></path>
+    </svg>
+</a>
+        
+    </nav>
+
+</header>
+
+    
+
+
+
+<div class="bg-cover pd-header post-cover" style="background-image: url('/medias/featureimages/22.png')">
+    <div class="container" style="right: 0px;left: 0px;">
+        <div class="row">
+            <div class="col s12 m12 l12">
+                <div class="brand">
+                    <h1 class="description center-align post-title">OS07-进程创建与程序加载</h1>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+<main class="post-container content">
+
+    
+    <div class="row">
+    <div id="main-content" class="col s12 m12 l9">
+        <!-- 文章内容详情 -->
+<div id="artDetail">
+    <div class="card">
+        <div class="card-content article-info">
+            <div class="row tag-cate">
+                <div class="col s7">
+                    
+                    <div class="article-tag">
+                        
+                            <a href="/tags/linux/">
+                                <span class="chip bg-color">linux</span>
+                            </a>
+                        
+                            <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                                <span class="chip bg-color">操作系统</span>
+                            </a>
+                        
+                    </div>
+                    
+                </div>
+                <div class="col s5 right-align">
+                    
+                    <div class="post-cate">
+                        <i class="fas fa-bookmark fa-fw icon-category"></i>
+                        
+                            <a href="/categories/OS/" class="post-category">
+                                OS
+                            </a>
+                        
+                    </div>
+                    
+                </div>
+            </div>
+
+            <div class="post-info">
+                
+                <div class="post-date info-break-policy">
+                    <i class="far fa-calendar-minus fa-fw"></i>发布日期:&nbsp;&nbsp;
+                    2026-01-27
+                </div>
+                
+
+                
+                <div class="post-date info-break-policy">
+                    <i class="far fa-calendar-check fa-fw"></i>更新日期:&nbsp;&nbsp;
+                    2026-03-27
+                </div>
+                
+
+                
+                <div class="info-break-policy">
+                    <i class="far fa-file-word fa-fw"></i>文章字数:&nbsp;&nbsp;
+                    7.6k
+                </div>
+                
+
+                
+                <div class="info-break-policy">
+                    <i class="far fa-clock fa-fw"></i>阅读时长:&nbsp;&nbsp;
+                    31 分
+                </div>
+                
+
+                
+            </div>
+        </div>
+        <hr class="clearfix">
+
+        
+
+        
+
+        <div class="card-content article-card-content">
+            <div id="articleContent">
+                <h1 id="第-7-节：进程创建与程序加载（fork-exec）"><a href="#第-7-节：进程创建与程序加载（fork-exec）" class="headerlink" title="第 7 节：进程创建与程序加载（fork + exec）"></a>第 7 节：进程创建与程序加载（fork + exec）</h1><blockquote>
+<p><strong>学习目标</strong>：深入理解 Unix “fork + exec” 模型的实现，掌握地址空间复制、ELF 程序格式解析、用户栈构建，以及失败时的完整回滚机制。</p>
+<p><strong>预计用时</strong>：3-4 小时</p>
+<p><strong>前置要求</strong>：完成第 6 节，理解 <code>struct proc</code>、<code>allocproc()</code>、<code>proc_pagetable()</code> 等进程基础设施</p>
+</blockquote>
+<hr>
+<h2 id="一、理论：fork-exec-模型"><a href="#一、理论：fork-exec-模型" class="headerlink" title="一、理论：fork + exec 模型"></a>一、理论：fork + exec 模型</h2><h3 id="1-1-为什么分离-fork-和-exec？"><a href="#1-1-为什么分离-fork-和-exec？" class="headerlink" title="1.1 为什么分离 fork 和 exec？"></a>1.1 为什么分离 fork 和 exec？</h3><p>Unix 的进程创建不是”直接创建一个新进程运行指定程序”，而是拆成两步：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">fork<span class="token punctuation">(</span><span class="token punctuation">)</span>：复制当前进程（包含所有状态）
+exec<span class="token punctuation">(</span><span class="token punctuation">)</span>：用新程序替换当前进程的地址空间
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p>这个设计看起来很绕，但它的价值体现在 fork 和 exec 之间可以插入任意操作：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// shell 执行 "ls > output.txt" 的过程：</span>
+<span class="token keyword">int</span> pid <span class="token operator">=</span> <span class="token function">fork</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">if</span><span class="token punctuation">(</span>pid <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// 子进程（fork 之后、exec 之前）</span>
+    <span class="token function">close</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>                    <span class="token comment" spellcheck="true">// 关闭标准输出</span>
+    <span class="token function">open</span><span class="token punctuation">(</span><span class="token string">"output.txt"</span><span class="token punctuation">,</span> O_WRONLY<span class="token operator">|</span>O_CREATE<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// fd=1 现在指向文件</span>
+    <span class="token function">exec</span><span class="token punctuation">(</span><span class="token string">"ls"</span><span class="token punctuation">,</span> argv_ls<span class="token punctuation">)</span><span class="token punctuation">;</span>         <span class="token comment" spellcheck="true">// ls 的输出自然流向文件</span>
+<span class="token punctuation">}</span>
+<span class="token function">wait</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment" spellcheck="true">// 如果 "创建进程" 是一个原子操作，重定向就无从实现</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>fork+exec 模型的能力</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>操作</th>
+<th>在 fork 和 exec 之间完成</th>
+<th>效果</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>重定向 <code>&gt;</code> / <code>&lt;</code></td>
+<td><code>close()</code> + <code>open()</code></td>
+<td>exec 后程序以为自己在操作 stdout/stdin</td>
+</tr>
+<tr>
+<td>管道 <code>|</code></td>
+<td><code>close()</code> + <code>dup()</code></td>
+<td>exec 后两个程序通过管道通信</td>
+</tr>
+<tr>
+<td>后台运行 <code>&amp;</code></td>
+<td>不调用 <code>wait()</code></td>
+<td>父进程继续，子进程独立运行</td>
+</tr>
+<tr>
+<td>环境变量</td>
+<td>修改全局变量</td>
+<td>exec 的新程序继承修改后的环境</td>
+</tr>
+<tr>
+<td>文件描述符继承</td>
+<td>什么都不做</td>
+<td>exec 后的程序继承所有打开的文件</td>
+</tr>
+</tbody></table>
+<h3 id="1-2-fork-的语义"><a href="#1-2-fork-的语义" class="headerlink" title="1.2 fork() 的语义"></a>1.2 fork() 的语义</h3><p><code>fork()</code> 调用一次，返回两次：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">int</span> pid <span class="token operator">=</span> <span class="token function">fork</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">if</span><span class="token punctuation">(</span>pid <span class="token operator">&lt;</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// fork 失败（进程表满、内存不足）</span>
+<span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span><span class="token punctuation">(</span>pid <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// 在子进程中执行（fork 返回 0）</span>
+<span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// 在父进程中执行（fork 返回子进程的 PID）</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>子进程是父进程的<strong>完整拷贝</strong>：</p>
+<ul>
+<li>相同的地址空间内容（代码、数据、栈、堆）</li>
+<li>相同的程序计数器（PC）——两个进程都从 <code>fork()</code> 返回后的下一条指令开始</li>
+<li>相同的打开文件描述符（但共享文件表项，引用计数 +1）</li>
+<li>不同的 PID，不同的通过 <code>fork()</code> 的返回值</li>
+</ul>
+<pre class="line-numbers language-bash"><code class="language-bash">父进程内存：
+  <span class="token punctuation">[</span>代码<span class="token punctuation">]</span><span class="token punctuation">[</span>数据<span class="token punctuation">]</span><span class="token punctuation">[</span>栈<span class="token punctuation">]</span><span class="token punctuation">[</span>堆<span class="token punctuation">]</span>
+      ↓ fork<span class="token punctuation">(</span><span class="token punctuation">)</span>
+父进程              子进程
+  <span class="token punctuation">[</span>代码<span class="token punctuation">]</span><span class="token punctuation">[</span>数据<span class="token punctuation">]</span><span class="token punctuation">[</span>栈<span class="token punctuation">]</span><span class="token punctuation">[</span>堆<span class="token punctuation">]</span>    <span class="token punctuation">[</span>代码<span class="token punctuation">]</span><span class="token punctuation">[</span>数据<span class="token punctuation">]</span><span class="token punctuation">[</span>栈<span class="token punctuation">]</span><span class="token punctuation">[</span>堆<span class="token punctuation">]</span>（物理内存独立拷贝）
+  pid <span class="token operator">=</span> 子PID           pid <span class="token operator">=</span> 0
+  继续执行<span class="token punctuation">..</span>.            继续执行<span class="token punctuation">..</span>.
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="1-3-exec-的语义"><a href="#1-3-exec-的语义" class="headerlink" title="1.3 exec() 的语义"></a>1.3 exec() 的语义</h3><p><code>exec()</code> 用来自文件系统的新程序<strong>替换</strong>当前进程的地址空间：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token function">exec</span><span class="token punctuation">(</span><span class="token string">"ls"</span><span class="token punctuation">,</span> argv<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment" spellcheck="true">// 如果成功：ls 的代码开始执行，当前进程的所有用户内存被替换</span>
+<span class="token comment" spellcheck="true">// exec 成功时不返回！（返回到的地方已经不存在了）</span>
+<span class="token comment" spellcheck="true">// 如果失败：exec 返回 -1，当前进程正常继续</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<p>被保留的内容：</p>
+<ul>
+<li>PID（进程 ID 不变，仍是同一个进程）</li>
+<li>打开的文件描述符（除非设置了 <code>FD_CLOEXEC</code>，xv6 不支持）</li>
+<li>内核栈</li>
+<li>进程在内核中的 <code>struct proc</code> 槽位</li>
+</ul>
+<p>被替换的内容：</p>
+<ul>
+<li>所有用户内存（代码、数据、栈、堆）</li>
+<li>程序计数器（跳到新程序的入口点 <code>entry</code>）</li>
+<li>用户页表</li>
+</ul>
+<hr>
+<h2 id="二、源码精读：kernel-proc-c-中的-fork"><a href="#二、源码精读：kernel-proc-c-中的-fork" class="headerlink" title="二、源码精读：kernel/proc.c 中的 fork()"></a>二、源码精读：<code>kernel/proc.c</code> 中的 <code>fork()</code></h2><h3 id="2-1-完整-fork-代码解析"><a href="#2-1-完整-fork-代码解析" class="headerlink" title="2.1 完整 fork() 代码解析"></a>2.1 完整 <code>fork()</code> 代码解析</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">int</span>
+<span class="token function">fork</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">int</span> i<span class="token punctuation">,</span> pid<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> proc <span class="token operator">*</span>np<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> proc <span class="token operator">*</span>p <span class="token operator">=</span> <span class="token function">myproc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 父进程</span>
+
+  <span class="token comment" spellcheck="true">// ① 分配新进程槽位（含 trapframe 和初始页表）</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span>np <span class="token operator">=</span> <span class="token function">allocproc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token comment" spellcheck="true">// ② 复制父进程的用户地址空间（所有物理页内容）</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">uvmcopy</span><span class="token punctuation">(</span>p<span class="token operator">-></span>pagetable<span class="token punctuation">,</span> np<span class="token operator">-></span>pagetable<span class="token punctuation">,</span> p<span class="token operator">-></span>sz<span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token function">freeproc</span><span class="token punctuation">(</span>np<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>np<span class="token operator">-></span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  np<span class="token operator">-></span>sz <span class="token operator">=</span> p<span class="token operator">-></span>sz<span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ③ 建立父子关系</span>
+  np<span class="token operator">-></span>parent <span class="token operator">=</span> p<span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ④ 复制 trapframe（保存的用户寄存器现场）</span>
+  <span class="token operator">*</span><span class="token punctuation">(</span>np<span class="token operator">-></span>trapframe<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token operator">*</span><span class="token punctuation">(</span>p<span class="token operator">-></span>trapframe<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ⑤ 让子进程的 fork() 返回 0（父进程的返回值 pid 在后面设置）</span>
+  np<span class="token operator">-></span>trapframe<span class="token operator">-></span>a0 <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ⑥ 复制打开的文件描述符（引用计数 +1）</span>
+  <span class="token keyword">for</span><span class="token punctuation">(</span>i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> NOFILE<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>p<span class="token operator">-></span>ofile<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span>
+      np<span class="token operator">-></span>ofile<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token function">filedup</span><span class="token punctuation">(</span>p<span class="token operator">-></span>ofile<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ⑦ 复制当前目录（引用计数 +1）</span>
+  np<span class="token operator">-></span>cwd <span class="token operator">=</span> <span class="token function">idup</span><span class="token punctuation">(</span>p<span class="token operator">-></span>cwd<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ⑧ 复制进程名（调试用）</span>
+  <span class="token function">safestrcpy</span><span class="token punctuation">(</span>np<span class="token operator">-></span>name<span class="token punctuation">,</span> p<span class="token operator">-></span>name<span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>p<span class="token operator">-></span>name<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ⑨ 记录返回给父进程的值（子进程 PID）</span>
+  pid <span class="token operator">=</span> np<span class="token operator">-></span>pid<span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ⑩ 设为可运行，释放锁</span>
+  np<span class="token operator">-></span>state <span class="token operator">=</span> RUNNABLE<span class="token punctuation">;</span>
+  <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>np<span class="token operator">-></span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">return</span> pid<span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 父进程返回子进程 PID</span>
+                <span class="token comment" spellcheck="true">// 子进程从 forkret → usertrapret 返回，a0=0</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="2-2-关键步骤深度解析"><a href="#2-2-关键步骤深度解析" class="headerlink" title="2.2 关键步骤深度解析"></a>2.2 关键步骤深度解析</h3><p><strong>步骤 ④⑤：为什么复制 trapframe 能让子进程”从 fork() 返回”？</strong></p>
+<p>当父进程进入内核（通过 <code>ecall</code>）调用 <code>sys_fork()</code> 时，<code>trampoline.S</code> 已经将父进程的全部 32 个用户寄存器保存到 <code>p-&gt;trapframe</code>。</p>
+<p><code>fork()</code> 做了 <code>*(np-&gt;trapframe) = *(p-&gt;trapframe)</code>——子进程拷贝了父进程进入内核时的完整寄存器快照，包括：</p>
+<ul>
+<li><code>epc</code>：父进程执行 <code>ecall</code> 时的 PC（<code>+4</code> 后指向 <code>ecall</code> 的下一条指令）</li>
+<li><code>sp</code>：父进程的用户栈指针</li>
+<li>所有其他寄存器</li>
+</ul>
+<p>然后 <code>np-&gt;trapframe-&gt;a0 = 0</code>——覆盖系统调用返回值寄存器为 0。</p>
+<p>当子进程第一次被调度（通过 <code>forkret → usertrapret → trampoline.S</code>），会从 <code>trapframe</code> 恢复所有寄存器：</p>
+<ul>
+<li><code>a0 = 0</code>（fork 在子进程中的返回值）</li>
+<li><code>epc</code> 指向 <code>ecall</code> 后的下一条指令（即 <code>fork()</code> 调用处的返回点）</li>
+<li><code>sp</code> 和其他寄存器与父进程完全相同</li>
+</ul>
+<p>子进程就像刚从 <code>fork()</code> 返回一样——只是返回值是 0。</p>
+<pre class="line-numbers language-bash"><code class="language-bash">父进程进入内核（ecall 系统调用）：
+  用户寄存器全部存入 p-<span class="token operator">></span>trapframe
+  执行 fork<span class="token punctuation">(</span><span class="token punctuation">)</span> → 返回 pid（存入 p-<span class="token operator">></span>trapframe-<span class="token operator">></span>a0）
+  恢复 p-<span class="token operator">></span>trapframe 到寄存器，返回用户态
+  a0 <span class="token operator">=</span> pid（子进程 PID）
+
+子进程第一次被调度：
+  forkret<span class="token punctuation">(</span><span class="token punctuation">)</span> → usertrapret<span class="token punctuation">(</span><span class="token punctuation">)</span> → trampoline.S
+  从 np-<span class="token operator">></span>trapframe 恢复寄存器：
+    a0 <span class="token operator">=</span> 0（被 fork<span class="token punctuation">(</span><span class="token punctuation">)</span> 修改）
+    epc <span class="token operator">=</span> 父进程调用 ecall 时的 PC（fork 的返回处）
+    sp <span class="token operator">=</span> 父进程的用户栈指针
+  进入用户态，在 fork<span class="token punctuation">(</span><span class="token punctuation">)</span> 调用处继续
+  a0 <span class="token operator">=</span> 0（fork 在子进程中返回 0）
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>步骤 ⑥：文件描述符的”共享”</strong></p>
+<p><code>filedup(p-&gt;ofile[i])</code> 不是复制文件，而是增加文件的引用计数：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">fork<span class="token punctuation">(</span><span class="token punctuation">)</span> 之前：
+  父进程 ofile<span class="token punctuation">[</span>1<span class="token punctuation">]</span> ──→ <span class="token punctuation">[</span>struct file: fd<span class="token operator">=</span>1, pos<span class="token operator">=</span>100, refcnt<span class="token operator">=</span>1<span class="token punctuation">]</span> ──→ inode
+
+fork<span class="token punctuation">(</span><span class="token punctuation">)</span> 之后：
+  父进程 ofile<span class="token punctuation">[</span>1<span class="token punctuation">]</span> ──→ <span class="token punctuation">[</span>struct file: fd<span class="token operator">=</span>1, pos<span class="token operator">=</span>100, refcnt<span class="token operator">=</span>2<span class="token punctuation">]</span>
+  子进程 ofile<span class="token punctuation">[</span>1<span class="token punctuation">]</span> ──┘           ↑
+                        父子共享同一个 <span class="token function">file</span> 结构体！
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>这意味着：父子进程如果都向 fd=1 写数据，会推进<strong>同一个文件偏移位置</strong>。</p>
+<p><strong>步骤 ⑦：<code>idup(p-&gt;cwd)</code> 与目录引用</strong></p>
+<p><code>idup</code> 增加当前目录 inode 的引用计数，确保即使父进程调用 <code>chdir()</code> 改变自己的工作目录，子进程仍然指向 fork 时的目录。</p>
+<h3 id="2-3-fork-的全部内存操作"><a href="#2-3-fork-的全部内存操作" class="headerlink" title="2.3 fork() 的全部内存操作"></a>2.3 fork() 的全部内存操作</h3><pre class="line-numbers language-bash"><code class="language-bash">fork<span class="token punctuation">(</span><span class="token punctuation">)</span> 的内存分配（假设父进程 sz <span class="token operator">=</span> 8KB <span class="token operator">=</span> 2 页）：
+
+allocproc<span class="token punctuation">(</span><span class="token punctuation">)</span>:
+  kalloc<span class="token punctuation">(</span><span class="token punctuation">)</span>                   → trapframe（4KB）
+  kvmcreate<span class="token punctuation">(</span><span class="token punctuation">)</span> + mappages<span class="token punctuation">(</span><span class="token punctuation">)</span>   → L2根页表（4KB）
+  各级中间页表               → 若干4KB
+
+uvmcopy<span class="token punctuation">(</span>parent, child, 2 pages<span class="token punctuation">)</span>:
+  kalloc<span class="token punctuation">(</span><span class="token punctuation">)</span>                   → 子进程第 0 页（4KB）
+  memmove<span class="token punctuation">(</span><span class="token punctuation">)</span>                  → 复制父进程第 0 页内容
+  mappages<span class="token punctuation">(</span><span class="token punctuation">)</span>                 → 建立子进程页表映射
+
+  kalloc<span class="token punctuation">(</span><span class="token punctuation">)</span>                   → 子进程第 1 页（4KB）
+  memmove<span class="token punctuation">(</span><span class="token punctuation">)</span>                  → 复制父进程第 1 页内容
+  mappages<span class="token punctuation">(</span><span class="token punctuation">)</span>                 → 建立子进程页表映射
+
+总计：每次 fork 至少分配 <span class="token punctuation">(</span>sz/4KB + 4 + 页表页数<span class="token punctuation">)</span> 个物理页
+父进程 sz 越大，fork 越慢
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>这正是 Linux 引入 Copy-on-Write（COW）fork 的原因：fork 时不立即复制物理页，只有在父子进程真正写某一页时才复制。MIT 6.S081 的 COW lab 要求学生为 xv6 实现这个优化。</p>
+<hr>
+<h2 id="三、源码精读：kernel-exec-c——完整-157-行"><a href="#三、源码精读：kernel-exec-c——完整-157-行" class="headerlink" title="三、源码精读：kernel/exec.c——完整 157 行"></a>三、源码精读：<code>kernel/exec.c</code>——完整 157 行</h2><p><code>exec()</code> 是 Unix 系统最复杂的系统调用之一。xv6 的实现虽然精简，但包含了所有核心要素。</p>
+<h3 id="3-1-ELF-文件格式基础"><a href="#3-1-ELF-文件格式基础" class="headerlink" title="3.1 ELF 文件格式基础"></a>3.1 ELF 文件格式基础</h3><p>在深入 <code>exec()</code> 源码之前，需要理解 ELF（Executable and Linkable Format）文件格式：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">ELF 文件结构：
+
+┌─────────────────────────────────────┐  偏移 0
+│         ELF Header（64字节）         │  struct elfhdr
+│  magic（4字节）: \x7FELF             │
+│  entry（8字节）: 程序入口虚拟地址     │
+│  phoff（8字节）: Program Header 偏移 │
+│  phnum（2字节）: Program Header 数量 │
+│  <span class="token punctuation">..</span>.                                │
+├─────────────────────────────────────┤
+│       Program Header 0              │  struct proghdr
+│  type: LOAD（需要加载到内存）         │
+│  flags: R/W/X 权限                   │
+│  off: 在 ELF 文件中的偏移            │
+│  vaddr: 加载到的虚拟地址             │ ← 比如 0x0（代码段）
+│  filesz: 文件中的大小                │
+│  memsz: 内存中的大小（≥ filesz）     │ ← memsz <span class="token operator">></span> filesz 时多余部分清零（BSS）
+│  align: 对齐要求                     │
+├─────────────────────────────────────┤
+│       Program Header 1              │  另一个段（如数据段）
+│  <span class="token punctuation">..</span>.                                │
+├─────────────────────────────────────┤
+│                                     │
+│     实际的代码和数据                  │ ← 由 off+filesz 描述
+│                                     │
+└─────────────────────────────────────┘
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><code>xv6</code> 编译出的用户程序使用 ELF 格式（<code>file user/_ls</code> 可以验证）。<code>exec()</code> 的核心工作就是解析 ELF，将各个段加载到新进程的地址空间中。</p>
+<p>**<code>struct elfhdr</code> 和 <code>struct proghdr</code>**：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// kernel/elf.h</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> ELF_MAGIC 0x464C457FU  </span><span class="token comment" spellcheck="true">// "\x7FELF"</span>
+
+<span class="token keyword">struct</span> elfhdr <span class="token punctuation">{</span>
+  uint magic<span class="token punctuation">;</span>      <span class="token comment" spellcheck="true">// 魔数，必须是 ELF_MAGIC</span>
+  uchar elf<span class="token punctuation">[</span><span class="token number">12</span><span class="token punctuation">]</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// ELF 标识（class、data、version 等）</span>
+  ushort type<span class="token punctuation">;</span>     <span class="token comment" spellcheck="true">// 类型（ET_EXEC = 可执行文件）</span>
+  ushort machine<span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 目标架构（EM_RISCV = RISC-V）</span>
+  uint version<span class="token punctuation">;</span>
+  uint64 entry<span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 程序入口虚拟地址（main 函数前的 _start）</span>
+  uint64 phoff<span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// Program Header Table 在文件中的偏移</span>
+  uint64 shoff<span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// Section Header Table 偏移（exec 不需要）</span>
+  uint flags<span class="token punctuation">;</span>
+  ushort ehsize<span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// ELF header 大小</span>
+  ushort phentsize<span class="token punctuation">;</span><span class="token comment" spellcheck="true">// 每个 Program Header 的大小</span>
+  ushort phnum<span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// Program Header 数量</span>
+  <span class="token comment" spellcheck="true">// ...</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token keyword">struct</span> proghdr <span class="token punctuation">{</span>
+  uint32 type<span class="token punctuation">;</span>     <span class="token comment" spellcheck="true">// 段类型：ELF_PROG_LOAD(1) = 需要加载</span>
+  uint32 flags<span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 权限：ELF_PROG_FLAG_EXEC(1), WRITE(2), READ(4)</span>
+  uint64 off<span class="token punctuation">;</span>      <span class="token comment" spellcheck="true">// 段在 ELF 文件中的偏移</span>
+  uint64 vaddr<span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 段的目标虚拟地址</span>
+  uint64 paddr<span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 物理地址（用于嵌入式，xv6 忽略）</span>
+  uint64 filesz<span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 文件中的大小</span>
+  uint64 memsz<span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 内存中的大小（memsz > filesz 时，多余部分 = BSS，清零）</span>
+  uint64 align<span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 对齐要求（必须是 2 的幂）</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong><code>memsz &gt; filesz</code> 的含义（BSS 段）</strong>：</p>
+<p>C 程序中全局未初始化变量（<code>int global_arr[1000];</code>）存在 BSS 段。BSS 数据不保存在 ELF 文件中（全是零，保存了浪费空间），但在内存中必须占据相应大小的区域（全部初始化为零）。<code>uvmalloc()</code> 会将分配的页清零（<code>memset(0, PGSIZE)</code>），所以 <code>memsz &gt; filesz</code> 的区域自然就是全零——恰好符合 BSS 语义。</p>
+<h3 id="3-2-exec-完整流程"><a href="#3-2-exec-完整流程" class="headerlink" title="3.2 exec() 完整流程"></a>3.2 <code>exec()</code> 完整流程</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">int</span>
+<span class="token function">exec</span><span class="token punctuation">(</span><span class="token keyword">char</span> <span class="token operator">*</span>path<span class="token punctuation">,</span> <span class="token keyword">char</span> <span class="token operator">*</span><span class="token operator">*</span>argv<span class="token punctuation">)</span>   <span class="token comment" spellcheck="true">// path = 程序路径，argv = 参数数组</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">char</span> <span class="token operator">*</span>s<span class="token punctuation">,</span> <span class="token operator">*</span>last<span class="token punctuation">;</span>
+  <span class="token keyword">int</span> i<span class="token punctuation">,</span> off<span class="token punctuation">;</span>
+  uint64 argc<span class="token punctuation">,</span> sz <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">,</span> sp<span class="token punctuation">,</span> ustack<span class="token punctuation">[</span>MAXARG<span class="token operator">+</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">,</span> stackbase<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> elfhdr elf<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> inode <span class="token operator">*</span>ip<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> proghdr ph<span class="token punctuation">;</span>
+  pagetable_t pagetable <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">,</span> oldpagetable<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> proc <span class="token operator">*</span>p <span class="token operator">=</span> <span class="token function">myproc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>局部变量说明</strong>：</p>
+<ul>
+<li><code>sz</code>：新地址空间已分配到的虚拟地址（从 0 开始增长）</li>
+<li><code>sp</code>：用户栈指针（构建用户栈时使用）</li>
+<li><code>ustack[]</code>：临时存储 argv 字符串在用户栈上的地址</li>
+<li><code>pagetable</code>：新建的页表（成功时替换旧页表，失败时释放）</li>
+<li><code>oldpagetable</code>：原来的页表（成功后释放）</li>
+</ul>
+<hr>
+<h4 id="阶段一：读取并校验-ELF-文件"><a href="#阶段一：读取并校验-ELF-文件" class="headerlink" title="阶段一：读取并校验 ELF 文件"></a>阶段一：读取并校验 ELF 文件</h4><pre class="line-numbers language-c"><code class="language-c">  <span class="token function">begin_op</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>                       <span class="token comment" spellcheck="true">// 文件系统日志开始</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span>ip <span class="token operator">=</span> <span class="token function">namei</span><span class="token punctuation">(</span>path<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">{</span>      <span class="token comment" spellcheck="true">// 在文件系统中查找程序文件</span>
+    <span class="token function">end_op</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token function">ilock</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// 读取 ELF header（64字节）</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">readi</span><span class="token punctuation">(</span>ip<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token punctuation">(</span>uint64<span class="token punctuation">)</span><span class="token operator">&amp;</span>elf<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>elf<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>elf<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token keyword">goto</span> bad<span class="token punctuation">;</span>
+  <span class="token comment" spellcheck="true">// 验证魔数：必须是 "\x7FELF"</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>elf<span class="token punctuation">.</span>magic <span class="token operator">!=</span> ELF_MAGIC<span class="token punctuation">)</span>
+    <span class="token keyword">goto</span> bad<span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>安全检查</strong>：<code>readi(ip, 0, ...)</code> 的第二个参数 <code>0</code> 表示”读到内核地址”（而非用户地址）。<code>elf.magic</code> 验证防止将非 ELF 文件当作程序执行（例如执行一个文本文件会在此 <code>goto bad</code>）。</p>
+<hr>
+<h4 id="阶段二：创建新页表并加载各程序段"><a href="#阶段二：创建新页表并加载各程序段" class="headerlink" title="阶段二：创建新页表并加载各程序段"></a>阶段二：创建新页表并加载各程序段</h4><pre class="line-numbers language-c"><code class="language-c">  <span class="token comment" spellcheck="true">// 为新程序创建新用户页表（含 TRAMPOLINE + TRAPFRAME 映射）</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span>pagetable <span class="token operator">=</span> <span class="token function">proc_pagetable</span><span class="token punctuation">(</span>p<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span>
+    <span class="token keyword">goto</span> bad<span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// 遍历所有 Program Header</span>
+  <span class="token keyword">for</span><span class="token punctuation">(</span>i<span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">,</span> off<span class="token operator">=</span>elf<span class="token punctuation">.</span>phoff<span class="token punctuation">;</span> i<span class="token operator">&lt;</span>elf<span class="token punctuation">.</span>phnum<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">,</span> off<span class="token operator">+</span><span class="token operator">=</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span>ph<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// 读取第 i 个 Program Header</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">readi</span><span class="token punctuation">(</span>ip<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token punctuation">(</span>uint64<span class="token punctuation">)</span><span class="token operator">&amp;</span>ph<span class="token punctuation">,</span> off<span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>ph<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>ph<span class="token punctuation">)</span><span class="token punctuation">)</span>
+      <span class="token keyword">goto</span> bad<span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>ph<span class="token punctuation">.</span>type <span class="token operator">!=</span> ELF_PROG_LOAD<span class="token punctuation">)</span>    <span class="token comment" spellcheck="true">// 只处理 LOAD 类型</span>
+      <span class="token keyword">continue</span><span class="token punctuation">;</span>
+
+    <span class="token comment" spellcheck="true">// 安全检查</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>ph<span class="token punctuation">.</span>memsz <span class="token operator">&lt;</span> ph<span class="token punctuation">.</span>filesz<span class="token punctuation">)</span>        <span class="token comment" spellcheck="true">// 内存大小不能小于文件大小</span>
+      <span class="token keyword">goto</span> bad<span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>ph<span class="token punctuation">.</span>vaddr <span class="token operator">+</span> ph<span class="token punctuation">.</span>memsz <span class="token operator">&lt;</span> ph<span class="token punctuation">.</span>vaddr<span class="token punctuation">)</span>  <span class="token comment" spellcheck="true">// 防止虚拟地址溢出</span>
+      <span class="token keyword">goto</span> bad<span class="token punctuation">;</span>
+
+    <span class="token comment" spellcheck="true">// 在新页表中分配从 sz 到 ph.vaddr+ph.memsz 的虚拟内存</span>
+    uint64 sz1<span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span>sz1 <span class="token operator">=</span> <span class="token function">uvmalloc</span><span class="token punctuation">(</span>pagetable<span class="token punctuation">,</span> sz<span class="token punctuation">,</span> ph<span class="token punctuation">.</span>vaddr <span class="token operator">+</span> ph<span class="token punctuation">.</span>memsz<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span>
+      <span class="token keyword">goto</span> bad<span class="token punctuation">;</span>
+    sz <span class="token operator">=</span> sz1<span class="token punctuation">;</span>
+
+    <span class="token keyword">if</span><span class="token punctuation">(</span>ph<span class="token punctuation">.</span>vaddr <span class="token operator">%</span> PGSIZE <span class="token operator">!=</span> <span class="token number">0</span><span class="token punctuation">)</span>      <span class="token comment" spellcheck="true">// xv6 要求段必须页对齐</span>
+      <span class="token keyword">goto</span> bad<span class="token punctuation">;</span>
+
+    <span class="token comment" spellcheck="true">// 将段数据从文件读取到新页表对应的内存</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">loadseg</span><span class="token punctuation">(</span>pagetable<span class="token punctuation">,</span> ph<span class="token punctuation">.</span>vaddr<span class="token punctuation">,</span> ip<span class="token punctuation">,</span> ph<span class="token punctuation">.</span>off<span class="token punctuation">,</span> ph<span class="token punctuation">.</span>filesz<span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span><span class="token punctuation">)</span>
+      <span class="token keyword">goto</span> bad<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token function">iunlockput</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 解锁并释放 inode 引用</span>
+  <span class="token function">end_op</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>         <span class="token comment" spellcheck="true">// 文件系统日志结束</span>
+  ip <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>           <span class="token comment" spellcheck="true">// 清除，防止 goto bad 重复释放</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong><code>uvmalloc</code> 的调用逻辑</strong>：</p>
+<p>假设程序有两个 <code>LOAD</code> 段：</p>
+<ul>
+<li>段 0：<code>vaddr=0x0</code>, <code>memsz=0x3000</code>（代码段，12KB）</li>
+<li>段 1：<code>vaddr=0x3000</code>, <code>memsz=0x2000</code>（数据段，8KB）</li>
+</ul>
+<pre class="line-numbers language-bash"><code class="language-bash">初始：sz <span class="token operator">=</span> 0
+
+处理段 0：
+  uvmalloc<span class="token punctuation">(</span>pagetable, 0, 0+0x3000<span class="token punctuation">)</span>    → sz <span class="token operator">=</span> 0x3000
+  loadseg<span class="token punctuation">(</span>pagetable, 0, ip, off, filesz<span class="token punctuation">)</span>  → 从文件读代码到 <span class="token punctuation">[</span>0x0, 0x3000<span class="token punctuation">)</span>
+
+处理段 1：
+  uvmalloc<span class="token punctuation">(</span>pagetable, 0x3000, 0x3000+0x2000<span class="token punctuation">)</span> → sz <span class="token operator">=</span> 0x5000
+  loadseg<span class="token punctuation">(</span>pagetable, 0x3000, ip, off, filesz<span class="token punctuation">)</span>  → 从文件读数据到 <span class="token punctuation">[</span>0x3000, 0x5000<span class="token punctuation">)</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><img src="/%E7%A4%BA%E6%84%8F%E5%9B%BE" alt="exec 加载过程示意"></p>
+<hr>
+<h4 id="阶段三：分配用户栈"><a href="#阶段三：分配用户栈" class="headerlink" title="阶段三：分配用户栈"></a>阶段三：分配用户栈</h4><pre class="line-numbers language-c"><code class="language-c">  p <span class="token operator">=</span> <span class="token function">myproc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  uint64 oldsz <span class="token operator">=</span> p<span class="token operator">-></span>sz<span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 保存旧进程的大小（用于失败回滚）</span>
+
+  <span class="token comment" spellcheck="true">// 在 sz 向上对齐到页边界后，再分配 2 个页</span>
+  <span class="token comment" spellcheck="true">// 第 1 页：保护页（不设 PTE_U）—— guard page</span>
+  <span class="token comment" spellcheck="true">// 第 2 页：用户栈</span>
+  sz <span class="token operator">=</span> <span class="token function">PGROUNDUP</span><span class="token punctuation">(</span>sz<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  uint64 sz1<span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span>sz1 <span class="token operator">=</span> <span class="token function">uvmalloc</span><span class="token punctuation">(</span>pagetable<span class="token punctuation">,</span> sz<span class="token punctuation">,</span> sz <span class="token operator">+</span> <span class="token number">2</span><span class="token operator">*</span>PGSIZE<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span>
+    <span class="token keyword">goto</span> bad<span class="token punctuation">;</span>
+  sz <span class="token operator">=</span> sz1<span class="token punctuation">;</span>
+
+  <span class="token function">uvmclear</span><span class="token punctuation">(</span>pagetable<span class="token punctuation">,</span> sz <span class="token operator">-</span> <span class="token number">2</span><span class="token operator">*</span>PGSIZE<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 清除保护页的 PTE_U 标志</span>
+  sp <span class="token operator">=</span> sz<span class="token punctuation">;</span>                              <span class="token comment" spellcheck="true">// 用户栈指针 = 栈顶（高地址）</span>
+  stackbase <span class="token operator">=</span> sp <span class="token operator">-</span> PGSIZE<span class="token punctuation">;</span>             <span class="token comment" spellcheck="true">// 栈底（保护页之上，栈的最低合法地址）</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>用户栈的内存布局</strong>：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">虚拟地址：
+
+  sz（段加载后）：  0x5000
+  PGROUNDUP<span class="token punctuation">(</span>sz<span class="token punctuation">)</span>：  0x5000（已对齐）
+  
+  分配 2*PGSIZE <span class="token operator">=</span> 8KB：
+
+  0x7000    ← sp（栈顶，空的，向下增长）
+  ├─────────── 用户栈（4KB，PTE_R<span class="token operator">|</span>PTE_W<span class="token operator">|</span>PTE_U）
+  0x6000    ← stackbase（栈最低合法地址）
+  ├─────────── 保护页（4KB，PTE_R<span class="token operator">|</span>PTE_W，无 PTE_U）
+  0x5000
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>保护页的作用</strong>：用户栈如果溢出（访问 <code>stackbase</code> 以下），会碰到没有 <code>PTE_U</code> 的保护页，触发 page fault——内核可以检测并报告栈溢出，而不是静默损坏堆数据。</p>
+<hr>
+<h4 id="阶段四：将参数压入用户栈"><a href="#阶段四：将参数压入用户栈" class="headerlink" title="阶段四：将参数压入用户栈"></a>阶段四：将参数压入用户栈</h4><pre class="line-numbers language-c"><code class="language-c">  <span class="token comment" spellcheck="true">// 将 argv 字符串从高地址向下压栈</span>
+  <span class="token keyword">for</span><span class="token punctuation">(</span>argc <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> argv<span class="token punctuation">[</span>argc<span class="token punctuation">]</span><span class="token punctuation">;</span> argc<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>argc <span class="token operator">>=</span> MAXARG<span class="token punctuation">)</span>    <span class="token comment" spellcheck="true">// MAXARG=32，参数不能太多</span>
+      <span class="token keyword">goto</span> bad<span class="token punctuation">;</span>
+    sp <span class="token operator">-</span><span class="token operator">=</span> <span class="token function">strlen</span><span class="token punctuation">(</span>argv<span class="token punctuation">[</span>argc<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 字符串长度 + NUL 终止符</span>
+    sp <span class="token operator">-</span><span class="token operator">=</span> sp <span class="token operator">%</span> <span class="token number">16</span><span class="token punctuation">;</span>                  <span class="token comment" spellcheck="true">// RISC-V ABI：sp 必须 16 字节对齐</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>sp <span class="token operator">&lt;</span> stackbase<span class="token punctuation">)</span>              <span class="token comment" spellcheck="true">// 检测栈溢出</span>
+      <span class="token keyword">goto</span> bad<span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">copyout</span><span class="token punctuation">(</span>pagetable<span class="token punctuation">,</span> sp<span class="token punctuation">,</span> argv<span class="token punctuation">[</span>argc<span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token function">strlen</span><span class="token punctuation">(</span>argv<span class="token punctuation">[</span>argc<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span><span class="token punctuation">)</span>
+      <span class="token keyword">goto</span> bad<span class="token punctuation">;</span>
+    ustack<span class="token punctuation">[</span>argc<span class="token punctuation">]</span> <span class="token operator">=</span> sp<span class="token punctuation">;</span>              <span class="token comment" spellcheck="true">// 记录字符串在用户栈上的地址</span>
+  <span class="token punctuation">}</span>
+  ustack<span class="token punctuation">[</span>argc<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// argv[argc] = NULL（数组终止符）</span>
+
+  <span class="token comment" spellcheck="true">// 将 argv 指针数组（ustack）压栈</span>
+  sp <span class="token operator">-</span><span class="token operator">=</span> <span class="token punctuation">(</span>argc<span class="token operator">+</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>uint64<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 每个指针 8 字节，最后一个是 NULL</span>
+  sp <span class="token operator">-</span><span class="token operator">=</span> sp <span class="token operator">%</span> <span class="token number">16</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>sp <span class="token operator">&lt;</span> stackbase<span class="token punctuation">)</span>
+    <span class="token keyword">goto</span> bad<span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">copyout</span><span class="token punctuation">(</span>pagetable<span class="token punctuation">,</span> sp<span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token keyword">char</span><span class="token operator">*</span><span class="token punctuation">)</span>ustack<span class="token punctuation">,</span> <span class="token punctuation">(</span>argc<span class="token operator">+</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token operator">*</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span>uint64<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span><span class="token punctuation">)</span>
+    <span class="token keyword">goto</span> bad<span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// argc 通过 a0 返回（exec 的返回值）</span>
+  <span class="token comment" spellcheck="true">// argv 指针数组的地址通过 a1 传递</span>
+  p<span class="token operator">-></span>trapframe<span class="token operator">-></span>a1 <span class="token operator">=</span> sp<span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>用户栈构建完成后的布局</strong>：</p>
+<p>假设执行 <code>exec("ls", {"ls", "-l", NULL})</code>：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">高地址 → 低地址：
+
+  0x6FF0  <span class="token punctuation">[</span>NUL<span class="token punctuation">]</span>
+  0x6FED  <span class="token string">"-l\0"</span>（argv<span class="token punctuation">[</span>1<span class="token punctuation">]</span> 的字符串）
+  0x6FE0  <span class="token string">"ls\0"</span>（argv<span class="token punctuation">[</span>0<span class="token punctuation">]</span> 的字符串）
+             ↕ 中间对齐填充
+  0x6FD0  argv<span class="token punctuation">[</span>2<span class="token punctuation">]</span> 的指针 <span class="token operator">=</span> 0（NULL）
+  0x6FC8  argv<span class="token punctuation">[</span>1<span class="token punctuation">]</span> 的指针 <span class="token operator">=</span> 0x6FED
+  0x6FC0  argv<span class="token punctuation">[</span>0<span class="token punctuation">]</span> 的指针 <span class="token operator">=</span> 0x6FE0
+  
+  sp <span class="token operator">=</span> 0x6FC0     （这是 main<span class="token punctuation">(</span>argc, argv<span class="token punctuation">)</span> 中 argv 参数的值）
+  a0 <span class="token operator">=</span> argc <span class="token operator">=</span> 2   （通过 <span class="token function">exec</span> 返回值传给 a0）
+  a1 <span class="token operator">=</span> sp <span class="token operator">=</span> 0x6FC0（直接设置 trapframe-<span class="token operator">></span>a1）
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>RISC-V 调用约定</strong>：<code>main(int argc, char *argv[])</code> 的参数通过 <code>a0</code>, <code>a1</code> 传递。</p>
+<ul>
+<li><code>a0 = argc</code>：通过 <code>exec()</code> 的返回值传递（系统调用返回值放在 a0）</li>
+<li><code>a1 = (char **)sp</code>：通过直接设置 <code>p-&gt;trapframe-&gt;a1</code> 传递</li>
+</ul>
+<hr>
+<h4 id="阶段五：提交，替换旧地址空间"><a href="#阶段五：提交，替换旧地址空间" class="headerlink" title="阶段五：提交，替换旧地址空间"></a>阶段五：提交，替换旧地址空间</h4><pre class="line-numbers language-c"><code class="language-c">  <span class="token comment" spellcheck="true">// 提取程序名（路径的最后一部分）用于调试</span>
+  <span class="token keyword">for</span><span class="token punctuation">(</span>last<span class="token operator">=</span>s<span class="token operator">=</span>path<span class="token punctuation">;</span> <span class="token operator">*</span>s<span class="token punctuation">;</span> s<span class="token operator">++</span><span class="token punctuation">)</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">*</span>s <span class="token operator">==</span> <span class="token string">'/'</span><span class="token punctuation">)</span>
+      last <span class="token operator">=</span> s<span class="token operator">+</span><span class="token number">1</span><span class="token punctuation">;</span>
+  <span class="token function">safestrcpy</span><span class="token punctuation">(</span>p<span class="token operator">-></span>name<span class="token punctuation">,</span> last<span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>p<span class="token operator">-></span>name<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ══════ 不可回滚点（Commit）══════</span>
+  oldpagetable <span class="token operator">=</span> p<span class="token operator">-></span>pagetable<span class="token punctuation">;</span>      <span class="token comment" spellcheck="true">// 保存旧页表</span>
+  p<span class="token operator">-></span>pagetable <span class="token operator">=</span> pagetable<span class="token punctuation">;</span>         <span class="token comment" spellcheck="true">// 切换到新页表</span>
+  p<span class="token operator">-></span>sz <span class="token operator">=</span> sz<span class="token punctuation">;</span>                       <span class="token comment" spellcheck="true">// 更新进程大小</span>
+  p<span class="token operator">-></span>trapframe<span class="token operator">-></span>epc <span class="token operator">=</span> elf<span class="token punctuation">.</span>entry<span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 设置程序入口点（从 entry 开始执行）</span>
+  p<span class="token operator">-></span>trapframe<span class="token operator">-></span>sp <span class="token operator">=</span> sp<span class="token punctuation">;</span>            <span class="token comment" spellcheck="true">// 设置用户栈指针</span>
+  <span class="token function">proc_freepagetable</span><span class="token punctuation">(</span>oldpagetable<span class="token punctuation">,</span> oldsz<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 释放旧地址空间</span>
+
+  <span class="token keyword">return</span> argc<span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 返回 argc，作为用户 main() 的第一个参数（a0）</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>Commit 点的设计</strong>：</p>
+<p>在 <code>p-&gt;pagetable = pagetable</code> 这行之前，失败仍可回滚（释放新页表）；之后就无法回滚了（旧页表已经被 <code>proc_freepagetable</code> 释放）。这就是为什么要先建立新页表，最后才切换并释放旧的——“failed exec leaves the process intact” （exec 失败时进程仍然可以继续运行）。</p>
+<hr>
+<h4 id="阶段六：错误处理（goto-bad）"><a href="#阶段六：错误处理（goto-bad）" class="headerlink" title="阶段六：错误处理（goto bad）"></a>阶段六：错误处理（goto bad）</h4><pre class="line-numbers language-c"><code class="language-c"> bad<span class="token punctuation">:</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>pagetable<span class="token punctuation">)</span>
+    <span class="token function">proc_freepagetable</span><span class="token punctuation">(</span>pagetable<span class="token punctuation">,</span> sz<span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 释放新页表</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token function">iunlockput</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>                       <span class="token comment" spellcheck="true">// 释放文件锁和引用</span>
+    <span class="token function">end_op</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong><code>goto bad</code> 的使用</strong>：</p>
+<p><code>exec()</code> 中多次出现 <code>goto bad</code>，这是 C 语言中处理多层失败的经典模式。任何一步出错，都跳到 <code>bad:</code> 标签，统一释放所有已分配的资源，返回 -1。如果没有 <code>goto</code>，需要在每个失败点重复所有清理代码，极其繁琐且容易遗漏。</p>
+<hr>
+<h3 id="3-3-loadseg-——将程序段从文件读入内存"><a href="#3-3-loadseg-——将程序段从文件读入内存" class="headerlink" title="3.3 loadseg()——将程序段从文件读入内存"></a>3.3 <code>loadseg()</code>——将程序段从文件读入内存</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">static</span> <span class="token keyword">int</span>
+<span class="token function">loadseg</span><span class="token punctuation">(</span>pagetable_t pagetable<span class="token punctuation">,</span> uint64 va<span class="token punctuation">,</span> <span class="token keyword">struct</span> inode <span class="token operator">*</span>ip<span class="token punctuation">,</span>
+        uint offset<span class="token punctuation">,</span> uint sz<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  uint i<span class="token punctuation">,</span> n<span class="token punctuation">;</span>
+  uint64 pa<span class="token punctuation">;</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span>va <span class="token operator">%</span> PGSIZE<span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token number">0</span><span class="token punctuation">)</span>
+    <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"loadseg: va must be page aligned"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">for</span><span class="token punctuation">(</span>i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> sz<span class="token punctuation">;</span> i <span class="token operator">+</span><span class="token operator">=</span> PGSIZE<span class="token punctuation">)</span><span class="token punctuation">{</span>
+    pa <span class="token operator">=</span> <span class="token function">walkaddr</span><span class="token punctuation">(</span>pagetable<span class="token punctuation">,</span> va <span class="token operator">+</span> i<span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 虚拟地址 → 物理地址</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>pa <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span>
+      <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"loadseg: address should exist"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 页必须已由 uvmalloc 分配</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>sz <span class="token operator">-</span> i <span class="token operator">&lt;</span> PGSIZE<span class="token punctuation">)</span>
+      n <span class="token operator">=</span> sz <span class="token operator">-</span> i<span class="token punctuation">;</span>     <span class="token comment" spellcheck="true">// 最后一页可能不满</span>
+    <span class="token keyword">else</span>
+      n <span class="token operator">=</span> PGSIZE<span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">readi</span><span class="token punctuation">(</span>ip<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token punctuation">(</span>uint64<span class="token punctuation">)</span>pa<span class="token punctuation">,</span> offset<span class="token operator">+</span>i<span class="token punctuation">,</span> n<span class="token punctuation">)</span> <span class="token operator">!=</span> n<span class="token punctuation">)</span>  <span class="token comment" spellcheck="true">// 从文件读到物理地址</span>
+      <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>关键细节</strong>：</p>
+<ol>
+<li><code>walkaddr(pagetable, va+i)</code> 在新页表（不是当前进程页表）中查找物理地址——<code>uvmalloc</code> 已经在新页表中建立了映射，<code>loadseg</code> 需要找到这些物理页的实际地址才能写入</li>
+<li><code>readi(ip, 0, (uint64)pa, ...)</code> 的第二个参数 <code>0</code> = 直接写到物理地址（内核视角）—— <code>pa</code> 是物理地址，在内核直接映射区可以直接访问</li>
+<li>按页读取（<code>PGSIZE</code> 为单位），最后一页可能不满（<code>filesz</code> 不一定是 PGSIZE 的倍数）</li>
+</ol>
+<hr>
+<h3 id="3-4-exec-的完整内存视图"><a href="#3-4-exec-的完整内存视图" class="headerlink" title="3.4 exec() 的完整内存视图"></a>3.4 exec() 的完整内存视图</h3><p>执行 <code>exec("ls", argv)</code> 之后，进程的用户地址空间变为：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">虚拟地址（低 → 高）：
+
+0x0000           text（代码段，PTE_R<span class="token operator">|</span>PTE_X<span class="token operator">|</span>PTE_U）
+                   <span class="token function">ls</span> 的机器指令
+ <span class="token punctuation">..</span>.
+vaddr+filesz     text + BSS
+ <span class="token punctuation">..</span>.
+vaddr+memsz      data（数据段，PTE_R<span class="token operator">|</span>PTE_W<span class="token operator">|</span>PTE_U）
+                   全局变量、静态变量
+ <span class="token punctuation">..</span>.
+sz（ELF加载后）
+
+PGROUNDUP<span class="token punctuation">(</span>sz<span class="token punctuation">)</span>    保护页（SZ+PGSIZE，无 PTE_U）
+PGROUNDUP<span class="token punctuation">(</span>sz<span class="token punctuation">)</span>+PGSIZE  用户栈（SZ+2*PGSIZE，PTE_R<span class="token operator">|</span>PTE_W<span class="token operator">|</span>PTE_U）
+                   ↓（sp 从高地址向低地址增长）
+                   <span class="token punctuation">[</span>argv<span class="token punctuation">[</span>0<span class="token punctuation">]</span>指针<span class="token punctuation">]</span><span class="token punctuation">[</span>argv<span class="token punctuation">[</span>1<span class="token punctuation">]</span>指针<span class="token punctuation">]</span><span class="token punctuation">..</span>.<span class="token punctuation">[</span>NULL<span class="token punctuation">]</span>
+                   <span class="token punctuation">[</span>argv<span class="token punctuation">[</span>n-1<span class="token punctuation">]</span>字符串<span class="token punctuation">]</span><span class="token punctuation">..</span>.<span class="token punctuation">[</span>argv<span class="token punctuation">[</span>0<span class="token punctuation">]</span>字符串<span class="token punctuation">]</span>
+                   ← sp 初始指向 argv<span class="token punctuation">[</span><span class="token punctuation">]</span> 数组
+
+（巨大的空洞）
+
+TRAPFRAME <span class="token operator">=</span> TRAMPOLINE - PGSIZE（无 PTE_U）
+TRAMPOLINE <span class="token operator">=</span> MAXVA - PGSIZE（无 PTE_U）
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<hr>
+<h2 id="四、深入理解：fork-exec-的协作"><a href="#四、深入理解：fork-exec-的协作" class="headerlink" title="四、深入理解：fork + exec 的协作"></a>四、深入理解：fork + exec 的协作</h2><h3 id="4-1-shell-如何用-fork-exec-执行命令"><a href="#4-1-shell-如何用-fork-exec-执行命令" class="headerlink" title="4.1 shell 如何用 fork + exec 执行命令"></a>4.1 shell 如何用 fork + exec 执行命令</h3><p><code>user/sh.c</code> 展示了 fork+exec 模型的经典用法：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// shell 主循环（简化）</span>
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">char</span> buf<span class="token punctuation">[</span><span class="token number">100</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+  <span class="token keyword">while</span><span class="token punctuation">(</span><span class="token function">getcmd</span><span class="token punctuation">(</span>buf<span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>buf<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">>=</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+
+    <span class="token keyword">if</span><span class="token punctuation">(</span>buf 是 <span class="token string">"cd xxx"</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">chdir</span><span class="token punctuation">(</span>buf<span class="token operator">+</span><span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// cd 是特例：必须在父进程执行（改变 shell 自身的目录）</span>
+      <span class="token keyword">continue</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">fork1</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span>      <span class="token comment" spellcheck="true">// fork 一个子进程</span>
+      <span class="token function">runcmd</span><span class="token punctuation">(</span><span class="token function">parsecmd</span><span class="token punctuation">(</span>buf<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 子进程执行命令</span>
+    <span class="token function">wait</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>              <span class="token comment" spellcheck="true">// 父进程等待子进程完成</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">void</span> <span class="token function">runcmd</span><span class="token punctuation">(</span><span class="token keyword">struct</span> cmd <span class="token operator">*</span>cmd<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">switch</span><span class="token punctuation">(</span>cmd<span class="token operator">-></span>type<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">case</span> EXEC<span class="token punctuation">:</span>
+    <span class="token function">exec</span><span class="token punctuation">(</span>cmd<span class="token operator">-></span>argv<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> cmd<span class="token operator">-></span>argv<span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 替换子进程为目标程序</span>
+    <span class="token function">fprintf</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">,</span> <span class="token string">"exec %s failed\n"</span><span class="token punctuation">,</span> cmd<span class="token operator">-></span>argv<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 只有 exec 失败才到这里</span>
+    <span class="token keyword">break</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">case</span> PIPE<span class="token punctuation">:</span>  <span class="token comment" spellcheck="true">// "ls | wc"</span>
+    <span class="token function">pipe</span><span class="token punctuation">(</span>p<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">fork1</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">close</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token function">dup</span><span class="token punctuation">(</span>p<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 左侧：标准输出 → 管道写端</span>
+      <span class="token function">close</span><span class="token punctuation">(</span>p<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token function">close</span><span class="token punctuation">(</span>p<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token function">runcmd</span><span class="token punctuation">(</span>pcmd<span class="token operator">-></span>left<span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// exec "ls"</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">fork1</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">close</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token function">dup</span><span class="token punctuation">(</span>p<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 右侧：标准输入 ← 管道读端</span>
+      <span class="token function">close</span><span class="token punctuation">(</span>p<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token function">close</span><span class="token punctuation">(</span>p<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token function">runcmd</span><span class="token punctuation">(</span>pcmd<span class="token operator">-></span>right<span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// exec "wc"</span>
+    <span class="token punctuation">}</span>
+    <span class="token function">close</span><span class="token punctuation">(</span>p<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token function">close</span><span class="token punctuation">(</span>p<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">wait</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token function">wait</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>        <span class="token comment" spellcheck="true">// 等两个子进程完成</span>
+    <span class="token keyword">break</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token function">exit</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>管道 <code>ls | wc</code> 的执行轨迹</strong>：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">shell <span class="token punctuation">(</span>pid<span class="token operator">=</span>2<span class="token punctuation">)</span>
+  ├── fork<span class="token punctuation">(</span><span class="token punctuation">)</span> → pid<span class="token operator">=</span>3（处理 PIPE）
+  │    ├── fork<span class="token punctuation">(</span><span class="token punctuation">)</span> → pid<span class="token operator">=</span>4（ls）
+  │    │    close<span class="token punctuation">(</span>1<span class="token punctuation">)</span><span class="token punctuation">;</span> dup<span class="token punctuation">(</span>p<span class="token punctuation">[</span>1<span class="token punctuation">]</span><span class="token punctuation">)</span>   // stdout → pipe<span class="token punctuation">[</span>1<span class="token punctuation">]</span>
+  │    │    exec<span class="token punctuation">(</span><span class="token string">"ls"</span><span class="token punctuation">)</span>            // <span class="token function">ls</span> 的输出写到管道
+  │    │    exit<span class="token punctuation">(</span>0<span class="token punctuation">)</span>
+  │    └── fork<span class="token punctuation">(</span><span class="token punctuation">)</span> → pid<span class="token operator">=</span>5（wc）
+  │         close<span class="token punctuation">(</span>0<span class="token punctuation">)</span><span class="token punctuation">;</span> dup<span class="token punctuation">(</span>p<span class="token punctuation">[</span>0<span class="token punctuation">]</span><span class="token punctuation">)</span>   // stdin ← pipe<span class="token punctuation">[</span>0<span class="token punctuation">]</span>
+  │         exec<span class="token punctuation">(</span><span class="token string">"wc"</span><span class="token punctuation">)</span>            // <span class="token function">wc</span> 从管道读取 <span class="token function">ls</span> 的输出
+  │         exit<span class="token punctuation">(</span>0<span class="token punctuation">)</span>
+  └── wait<span class="token punctuation">(</span>0<span class="token punctuation">)</span><span class="token punctuation">;</span> wait<span class="token punctuation">(</span>0<span class="token punctuation">)</span>            // 等两个子进程
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>管道的神奇之处：<code>ls</code> 和 <code>wc</code> 本身不知道彼此的存在，也不需要修改。<strong>fork 之后修改文件描述符，再 exec</strong> 实现了透明的进程间通信。</p>
+<h3 id="4-2-exec-为什么先建新页表再释放旧页表（失败安全）"><a href="#4-2-exec-为什么先建新页表再释放旧页表（失败安全）" class="headerlink" title="4.2 exec() 为什么先建新页表再释放旧页表（失败安全）"></a>4.2 exec() 为什么先建新页表再释放旧页表（失败安全）</h3><pre class="line-numbers language-bash"><code class="language-bash">exec<span class="token punctuation">(</span><span class="token punctuation">)</span> 的内存管理策略：
+
+策略一（危险）：先释放旧页表，再建立新页表
+  ①  free<span class="token punctuation">(</span>old_pagetable<span class="token punctuation">)</span>
+  ②  new_pagetable <span class="token operator">=</span> allocate_and_load<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  如果 ② 失败 → 进程没有可用的页表 → 进程损坏，只能 panic
+
+策略二（exec 的实际做法）：先建新页表，成功后再释放旧页表
+  ①  new_pagetable <span class="token operator">=</span> allocate_and_load<span class="token punctuation">(</span><span class="token punctuation">)</span>（在此期间旧页表仍然有效）
+  如果 ① 失败 → goto bad → proc_freepagetable<span class="token punctuation">(</span>new_pagetable, sz<span class="token punctuation">)</span>
+               → 旧页表完好，进程继续正常运行，exec 返回 -1
+  如果 ① 成功 → p-<span class="token operator">></span>pagetable <span class="token operator">=</span> new_pagetable → free<span class="token punctuation">(</span>old_pagetable<span class="token punctuation">)</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>这就是”原子替换”思想：直到确认新状态完全就绪，才切换并废弃旧状态。</p>
+<hr>
+<h2 id="五、动手实验"><a href="#五、动手实验" class="headerlink" title="五、动手实验"></a>五、动手实验</h2><h3 id="实验-1：观察-fork-的”两次返回”"><a href="#实验-1：观察-fork-的”两次返回”" class="headerlink" title="实验 1：观察 fork 的”两次返回”"></a>实验 1：观察 fork 的”两次返回”</h3><p>在 xv6 中运行以下用户程序（可在 <code>user/forktest.c</code> 基础上修改，或直接用 shell 调用已有程序）：</p>
+<p>在 <code>kernel/proc.c</code> 的 <code>fork()</code> 中添加打印，观察父子进程的区分：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">int</span>
+<span class="token function">fork</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token comment" spellcheck="true">// ... 前面的代码 ...</span>
+  pid <span class="token operator">=</span> np<span class="token operator">-></span>pid<span class="token punctuation">;</span>
+  np<span class="token operator">-></span>state <span class="token operator">=</span> RUNNABLE<span class="token punctuation">;</span>
+  <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>np<span class="token operator">-></span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[fork] 父进程 PID=%d 创建了子进程 PID=%d\n"</span><span class="token punctuation">,</span> p<span class="token operator">-></span>pid<span class="token punctuation">,</span> pid<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">return</span> pid<span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 父进程返回子 PID</span>
+  <span class="token comment" spellcheck="true">// 子进程通过 forkret → usertrapret 返回 0（a0 已被设为 0）</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>运行 <code>forktest</code>，观察输出：每次 fork 都能看到”父进程创建子进程”的消息，而子进程（PID 很大）的 fork 调用是静默的（因为 initcode/forktest 子进程直接 exit）。</p>
+<p><strong>做完后恢复代码：</strong></p>
+<pre class="line-numbers language-bash"><code class="language-bash"><span class="token function">git</span> checkout -- kernel/proc.c
+<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<h3 id="实验-2：用-readelf-分析-xv6-用户程序的-ELF-格式"><a href="#实验-2：用-readelf-分析-xv6-用户程序的-ELF-格式" class="headerlink" title="实验 2：用 readelf 分析 xv6 用户程序的 ELF 格式"></a>实验 2：用 readelf 分析 xv6 用户程序的 ELF 格式</h3><p>在宿主机（Linux）上分析 xv6 用户程序：</p>
+<pre class="line-numbers language-bash"><code class="language-bash"><span class="token comment" spellcheck="true"># 查看 ELF 头信息</span>
+readelf -h user/_ls
+
+<span class="token comment" spellcheck="true"># 查看 Program Header（段信息）</span>
+readelf -l user/_ls
+
+<span class="token comment" spellcheck="true"># 看看入口地址、各段的虚拟地址、文件大小、内存大小</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>重点关注：</p>
+<ul>
+<li><code>Entry point address</code>：exec 设置 <code>trapframe-&gt;epc</code> 的值</li>
+<li><code>LOAD</code> 段的 <code>VirtAddr</code>：exec 调用 <code>uvmalloc</code> 的目标地址</li>
+<li><code>FileSize</code> vs <code>MemSize</code>：差值是 BSS 的大小（全零，不在文件中存储）</li>
+</ul>
+<pre class="line-numbers language-bash"><code class="language-bash"><span class="token comment" spellcheck="true"># 查看符号表，找到 main 的地址</span>
+nm user/_ls <span class="token operator">|</span> <span class="token function">grep</span> main
+
+<span class="token comment" spellcheck="true"># 反汇编 ls 的入口（_start），查看 main 是如何被调用的</span>
+objdump -d user/_ls <span class="token operator">|</span> <span class="token function">head</span> -60
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="实验-3：追踪-exec-的内存分配"><a href="#实验-3：追踪-exec-的内存分配" class="headerlink" title="实验 3：追踪 exec 的内存分配"></a>实验 3：追踪 exec 的内存分配</h3><p>在 <code>exec()</code> 的关键位置添加打印：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">int</span>
+<span class="token function">exec</span><span class="token punctuation">(</span><span class="token keyword">char</span> <span class="token operator">*</span>path<span class="token punctuation">,</span> <span class="token keyword">char</span> <span class="token operator">*</span><span class="token operator">*</span>argv<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token comment" spellcheck="true">// ... 打开文件后 ...</span>
+  <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[exec] path=%s, elf.entry=%p, phnum=%d\n"</span><span class="token punctuation">,</span>
+         path<span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token keyword">void</span><span class="token operator">*</span><span class="token punctuation">)</span>elf<span class="token punctuation">.</span>entry<span class="token punctuation">,</span> elf<span class="token punctuation">.</span>phnum<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ... 在循环内，每次 loadseg 后 ...</span>
+  <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[exec] 加载段 %d: vaddr=%p memsz=%d filesz=%d, 当前sz=%p\n"</span><span class="token punctuation">,</span>
+         i<span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token keyword">void</span><span class="token operator">*</span><span class="token punctuation">)</span>ph<span class="token punctuation">.</span>vaddr<span class="token punctuation">,</span> ph<span class="token punctuation">.</span>memsz<span class="token punctuation">,</span> ph<span class="token punctuation">.</span>filesz<span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token keyword">void</span><span class="token operator">*</span><span class="token punctuation">)</span>sz<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ... 分配用户栈后 ...</span>
+  <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[exec] 用户栈: stackbase=%p sp_初始=%p\n"</span><span class="token punctuation">,</span>
+         <span class="token punctuation">(</span><span class="token keyword">void</span><span class="token operator">*</span><span class="token punctuation">)</span>stackbase<span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token keyword">void</span><span class="token operator">*</span><span class="token punctuation">)</span>sp<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ... 压入 argv 后 ...</span>
+  <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[exec] argc=%d, argv 数组首地址(a1)=%p\n"</span><span class="token punctuation">,</span> argc<span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token keyword">void</span><span class="token operator">*</span><span class="token punctuation">)</span>p<span class="token operator">-></span>trapframe<span class="token operator">-></span>a1<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ... 提交前 ...</span>
+  <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[exec] 提交: entry=%p, sp=%p, sz=%p\n"</span><span class="token punctuation">,</span>
+         <span class="token punctuation">(</span><span class="token keyword">void</span><span class="token operator">*</span><span class="token punctuation">)</span>elf<span class="token punctuation">.</span>entry<span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token keyword">void</span><span class="token operator">*</span><span class="token punctuation">)</span>sp<span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token keyword">void</span><span class="token operator">*</span><span class="token punctuation">)</span>sz<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>运行 <code>ls</code>，观察 exec 对 <code>ls</code> 的加载过程。</p>
+<p><strong>做完后恢复：</strong></p>
+<pre class="line-numbers language-bash"><code class="language-bash"><span class="token function">git</span> checkout -- kernel/exec.c
+<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<h3 id="实验-4：理解-fork-的拷贝开销"><a href="#实验-4：理解-fork-的拷贝开销" class="headerlink" title="实验 4：理解 fork() 的拷贝开销"></a>实验 4：理解 fork() 的拷贝开销</h3><p>修改 <code>uvmcopy()</code> 统计复制了多少页：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">int</span>
+<span class="token function">uvmcopy</span><span class="token punctuation">(</span>pagetable_t old<span class="token punctuation">,</span> pagetable_t new<span class="token punctuation">,</span> uint64 sz<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token comment" spellcheck="true">// ... 记录 fork 前时间（xv6 没有 gettimeofday，用页数代替评估开销）</span>
+  <span class="token keyword">int</span> pages <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  <span class="token keyword">for</span><span class="token punctuation">(</span>i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> sz<span class="token punctuation">;</span> i <span class="token operator">+</span><span class="token operator">=</span> PGSIZE<span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// ...</span>
+    pages<span class="token operator">++</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[uvmcopy] 复制了 %d 页 (%d KB)\n"</span><span class="token punctuation">,</span> pages<span class="token punctuation">,</span> pages <span class="token operator">*</span> <span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>在 xv6 中运行不同大小的程序，比较 fork 的”复制开销”：</p>
+<ul>
+<li><code>fork</code> 之后立刻 <code>exit(0)</code>：即使立即退出，也已经复制了全部物理页</li>
+<li>思考：如果是 COW fork，复制开销是多少？</li>
+</ul>
+<h3 id="实验-5：故意让-exec-失败，观察进程继续运行"><a href="#实验-5：故意让-exec-失败，观察进程继续运行" class="headerlink" title="实验 5：故意让 exec 失败，观察进程继续运行"></a>实验 5：故意让 exec 失败，观察进程继续运行</h3><p>写一个用户程序 <code>user/execfail.c</code>：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"kernel/types.h"</span></span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"user/user.h"</span></span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">int</span> pid <span class="token operator">=</span> <span class="token function">fork</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>pid <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// 子进程：尝试执行一个不存在的程序</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"子进程 PID=%d 尝试 exec ...\n"</span><span class="token punctuation">,</span> <span class="token function">getpid</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">int</span> ret <span class="token operator">=</span> <span class="token function">exec</span><span class="token punctuation">(</span><span class="token string">"/noexist"</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"exec 失败，返回 %d，子进程继续运行！\n"</span><span class="token punctuation">,</span> ret<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"子进程 PID=%d 正常退出\n"</span><span class="token punctuation">,</span> <span class="token function">getpid</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">exit</span><span class="token punctuation">(</span><span class="token number">42</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token comment" spellcheck="true">// 父进程</span>
+  <span class="token keyword">int</span> status<span class="token punctuation">;</span>
+  <span class="token function">wait</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>status<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"父进程：子进程退出状态 = %d\n"</span><span class="token punctuation">,</span> status<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>观察：exec 失败后，子进程能继续正常运行，说明旧地址空间完好无损。</p>
+<h3 id="实验-6：分析-shell-的管道实现"><a href="#实验-6：分析-shell-的管道实现" class="headerlink" title="实验 6：分析 shell 的管道实现"></a>实验 6：分析 shell 的管道实现</h3><p>在 <code>user/sh.c</code> 的 <code>runcmd()</code> 函数中，找到 <code>case PIPE:</code> 的代码（约第 100 行）：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">case</span> PIPE<span class="token punctuation">:</span>
+  pcmd <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">struct</span> pipecmd<span class="token operator">*</span><span class="token punctuation">)</span>cmd<span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">pipe</span><span class="token punctuation">(</span>p<span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span><span class="token punctuation">)</span>
+    <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"pipe"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">fork1</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token function">close</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 关闭标准输出</span>
+    <span class="token function">dup</span><span class="token punctuation">(</span>p<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 复制管道写端到 fd=1</span>
+    <span class="token function">close</span><span class="token punctuation">(</span>p<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token function">close</span><span class="token punctuation">(</span>p<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">runcmd</span><span class="token punctuation">(</span>pcmd<span class="token operator">-></span>left<span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 执行左侧命令（输出到管道）</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">fork1</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token function">close</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 关闭标准输入</span>
+    <span class="token function">dup</span><span class="token punctuation">(</span>p<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 复制管道读端到 fd=0</span>
+    <span class="token function">close</span><span class="token punctuation">(</span>p<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token function">close</span><span class="token punctuation">(</span>p<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">runcmd</span><span class="token punctuation">(</span>pcmd<span class="token operator">-></span>right<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 执行右侧命令（从管道读取）</span>
+  <span class="token punctuation">}</span>
+  <span class="token function">close</span><span class="token punctuation">(</span>p<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token function">close</span><span class="token punctuation">(</span>p<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token function">wait</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token function">wait</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">break</span><span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>手绘图</strong>：画出执行 <code>ls | wc</code> 时，各个进程的 fd 表（ofile[]），标注哪些 fd 指向管道的哪一端。</p>
+<hr>
+<h2 id="六、思考题"><a href="#六、思考题" class="headerlink" title="六、思考题"></a>六、思考题</h2><ol>
+<li><p><strong><code>fork()</code> 中 <code>*(np-&gt;trapframe) = *(p-&gt;trapframe)</code> 是一次整体拷贝。其中包含 <code>epc</code> 字段，指向父进程调用 <code>ecall</code> 后的下一条指令。子进程恢复执行后，是从哪里开始运行的？为什么不是从进程的最开始？</strong></p>
+<blockquote>
+<p>子进程从 <code>ecall</code> (系统调用) 指令的<strong>下一条指令</strong>开始运行——也就是 fork() 调用在用户空间的返回处。<code>epc</code> 被 trampoline.S 保存为 <code>sepc</code> 的值，而 <code>sepc</code> 硬件在执行 <code>ecall</code> 时自动设为 <code>ecall</code> +4（下一条指令）。子进程不需要从程序开头运行，它和父进程处于完全相同的执行位置，只是返回值（a0）不同。</p>
+</blockquote>
+</li>
+<li><p><strong><code>exec()</code> 将参数字符串从 <code>argv</code>（内核地址）压入用户栈（用户地址），使用了 <code>copyout()</code>。为什么不能直接用指针赋值？</strong></p>
+<blockquote>
+<p>用户栈存在于新创建的用户页表中，而 <code>argv</code> 字符串来自旧的用户地址空间或内核。<code>exec()</code> 在内核中运行，CPU 使用内核页表，直接用虚拟地址访问用户栈会访问到内核页表下的物理地址，而不是新用户页表对应的物理地址。<code>copyout(pagetable, sp, ...)</code> 通过显式查询新页表（<code>walkaddr</code>）找到用户栈对应的物理地址，再通过内核直接映射写入——这才是正确的跨页表内存访问方式。</p>
+</blockquote>
+</li>
+<li><p><strong>xv6 的 <code>exec()</code> 不支持 setuid 位（即 exec 之后进程有更高权限）。如果要支持这个特性，需要在哪里修改？需要额外注意哪些安全问题？</strong></p>
+<blockquote>
+<p>需要在 ELF 头读取后、提交阶段之前，检查文件的 inode 权限位（<code>ip-&gt;mode &amp; 0x800</code>），如果 setuid 位置位，将进程的 UID 改为文件所有者的 UID（xv6 没有 UID 当然要先加这个机制）。安全问题：(1) 检查 setuid 后要立即关闭它继承的到可能危险的文件描述符（防止权限提升后泄露敏感文件句柄）；(2) 要防止符号链接攻击（TOCTOU：检查权限和执行之间被替换文件）；(3) exec 的参数（从用户空间读取）需要在切换权限之前就已经读取到内核，防止攻击者在切换后修改。</p>
+</blockquote>
+</li>
+<li><p><strong>为什么 exec 成功时不返回，但失败时返回 -1？从进程调度的角度解释：exec 成功时，返回地址已经不复存在了，程序是如何”不返回”的？</strong></p>
+<blockquote>
+<p>exec 成功时：<code>p-&gt;trapframe-&gt;epc</code> 被设置为新程序的入口地址（<code>elf.entry</code>），<code>p-&gt;trapframe-&gt;sp</code> 被设置为新的用户栈指针，然后函数正常 return（返回内核，通过系统调用返回机制）。当系统调用从内核返回用户态时，<code>trampoline.S</code> 会从 <code>trapframe</code> 恢复寄存器，<code>epc</code> 是新程序的入口——于是 CPU 跳到新程序开始执行，而不是回到调用 exec 的用户代码。”旧”程序的代码已经被新页表替换，物理上就不存在了。exec 失败时，<code>trapframe-&gt;epc</code> 没有被修改，系统调用正常返回 -1，控制流回到调用 exec 的地方。</p>
+</blockquote>
+</li>
+<li><p><strong>xv6 的 fork 是完整复制（eager copy），而现代操作系统使用 Copy-on-Write（COW）。在如下场景中，这两种方式的页数消耗有多大差异？假设父进程内存为 10MB（2560 页），fork 后子进程立即 exec 一个 100KB（25页）的程序。</strong></p>
+<blockquote>
+<p>eager copy：fork 时复制 2560 个物理页（10MB），exec 后释放 2560 页再分配约 25+栈 页。消耗峰值：父进程 2560 页 + 子进程 2560 + 几页中间状态 = 约 5120 页额外消耗。COW fork：fork 时<strong>不复制</strong>任何物理页，只复制页表（标记所有页为只读 COW），消耗仅约几页页表页。exec 时直接放弃所有 COW 标记，分配新的 25+栈 页。消耗峰值：父进程 2560 页 + 子进程页表几页 + 新程序约 30 页 = 约 2590 页。节省约 2530 页（~10MB）。这正是 “fork + exec” 最常用场景（shell 执行命令）下 COW 的巨大价值。</p>
+</blockquote>
+</li>
+<li><p><strong>shell 的 <code>cd</code> 命令为什么不通过 fork+exec 来执行，而是直接在父进程（shell 本身）中调用 <code>chdir()</code>？</strong></p>
+<blockquote>
+<p>因为 <code>chdir()</code> 改变的是<strong>当前进程</strong>的工作目录（<code>struct proc.cwd</code>）。如果 shell fork 一个子进程执行 <code>exec("cd", ...)</code> 或在子进程中调用 <code>chdir()</code>，工作目录只在子进程中改变；子进程退出后，shell（父进程）的工作目录丝毫不变——用户感受到的 cd 毫无效果。因此 cd 必须由 shell 进程自己调用 <code>chdir()</code>，修改自己的 <code>cwd</code>。<code>user/sh.c</code> 中对此有明确处理：<code>if(buf[0]=='c' &amp;&amp; buf[1]=='d') { chdir(buf+3); continue; }</code></p>
+</blockquote>
+</li>
+</ol>
+<hr>
+<h2 id="七、本节小结"><a href="#七、本节小结" class="headerlink" title="七、本节小结"></a>七、本节小结</h2><table>
+<thead>
+<tr>
+<th>概念</th>
+<th>要点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>fork+exec 分离</td>
+<td>fork 之间可以插入任意操作（重定向、管道、setuid 等）</td>
+</tr>
+<tr>
+<td><code>fork()</code> 返回</td>
+<td>父进程得到子 PID，子进程 a0 被覆盖为 0</td>
+</tr>
+<tr>
+<td>trapframe 复制</td>
+<td>子进程继承父进程进入内核时的寄存器快照，从同一点恢复执行</td>
+</tr>
+<tr>
+<td>文件描述符共享</td>
+<td><code>filedup()</code> 增加引用计数，父子共享同一 <code>struct file</code>（共享偏移）</td>
+</tr>
+<tr>
+<td>ELF 格式</td>
+<td>file header（入口/段偏移/段数量）+ program headers（各段地址/权限/大小）</td>
+</tr>
+<tr>
+<td><code>exec()</code> 三阶段</td>
+<td>① 读 ELF + 加载段；② 建用户栈 + 压 argv；③ 提交（切换页表）</td>
+</tr>
+<tr>
+<td>BSS 处理</td>
+<td><code>memsz &gt; filesz</code>：多余部分由 <code>uvmalloc</code> 的 <code>memset(0)</code> 自动清零</td>
+</tr>
+<tr>
+<td>用户栈布局</td>
+<td>保护页（无 PTE_U）+ 栈页；argv 字符串从高到低，指针数组在下</td>
+</tr>
+<tr>
+<td>exec 失败安全</td>
+<td>先建新页表再替换，任何步骤失败均 <code>goto bad</code> 释放新页表，进程完好</td>
+</tr>
+<tr>
+<td><code>loadseg()</code></td>
+<td>按页读文件（<code>readi</code>），写入已映射的物理地址（通过 <code>walkaddr</code> 找到）</td>
+</tr>
+<tr>
+<td><code>argc</code> / <code>a1</code> 传递</td>
+<td><code>argc</code> 由 exec 返回值（a0）传递，<code>argv</code> 直接写入 <code>trapframe-&gt;a1</code></td>
+</tr>
+</tbody></table>
+<p><strong>下一节预告</strong>：第 8 节将深入进程调度——<code>scheduler()</code>、<code>swtch.S</code> 的上下文切换汇编、<code>sleep()</code>/<code>wakeup()</code> 的无锁唤醒机制，以及时钟中断驱动的抢占式调度。</p>
+<hr>
+<h2 id="附录：fork-与-exec-对比"><a href="#附录：fork-与-exec-对比" class="headerlink" title="附录：fork() 与 exec() 对比"></a>附录：<code>fork()</code> 与 <code>exec()</code> 对比</h2><table>
+<thead>
+<tr>
+<th>属性</th>
+<th><code>fork()</code></th>
+<th><code>exec()</code></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>进程变化</td>
+<td>创建新进程（子进程）</td>
+<td>不创建进程，替换当前进程</td>
+</tr>
+<tr>
+<td>PID</td>
+<td>子进程获得新 PID</td>
+<td>PID 不变</td>
+</tr>
+<tr>
+<td>内存</td>
+<td>复制父进程所有内存</td>
+<td>丢弃旧内存，加载新程序</td>
+</tr>
+<tr>
+<td>返回</td>
+<td>返回两次（父/子各一次）</td>
+<td>成功时不返回；失败返回 -1</td>
+</tr>
+<tr>
+<td>文件描述符</td>
+<td>继承（引用计数 +1）</td>
+<td>继承（exec 本身不关闭）</td>
+</tr>
+<tr>
+<td>核心代码</td>
+<td><code>proc.c: fork()</code></td>
+<td><code>exec.c: exec()</code></td>
+</tr>
+<tr>
+<td>内存操作</td>
+<td><code>uvmcopy()</code></td>
+<td><code>uvmalloc()</code> + <code>loadseg()</code></td>
+</tr>
+<tr>
+<td>失败回滚</td>
+<td><code>freeproc()</code></td>
+<td><code>proc_freepagetable(new, sz)</code></td>
+</tr>
+</tbody></table>
+<h2 id="附录：关键文件速查"><a href="#附录：关键文件速查" class="headerlink" title="附录：关键文件速查"></a>附录：关键文件速查</h2><table>
+<thead>
+<tr>
+<th>文件</th>
+<th>行数</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>kernel/proc.c</code></td>
+<td>~700</td>
+<td><code>fork()</code>, <code>exit()</code>, <code>wait()</code>, <code>allocproc()</code></td>
+</tr>
+<tr>
+<td><code>kernel/exec.c</code></td>
+<td>157</td>
+<td><code>exec()</code>, <code>loadseg()</code></td>
+</tr>
+<tr>
+<td><code>kernel/elf.h</code></td>
+<td>~50</td>
+<td><code>struct elfhdr</code>, <code>struct proghdr</code>, <code>ELF_MAGIC</code></td>
+</tr>
+<tr>
+<td><code>user/sh.c</code></td>
+<td>~400</td>
+<td>shell：解析命令、fork+exec 执行、管道、重定向</td>
+</tr>
+<tr>
+<td><code>user/forktest.c</code></td>
+<td>~60</td>
+<td>测试 fork 的压力测试（进程表撑满）</td>
+</tr>
+<tr>
+<td><code>user/init.c</code></td>
+<td>~55</td>
+<td>第一个用户进程：打开控制台、启动 shell</td>
+</tr>
+</tbody></table>
+
+                
+            </div>
+            <hr/>
+
+            
+
+    <div class="reprint" id="reprint-statement">
+        
+            <div class="reprint__author">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-user">
+                        文章作者:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    <a href="/about" rel="external nofollow noreferrer">404djl</a>
+                </span>
+            </div>
+            <div class="reprint__type">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-link">
+                        文章链接:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    <a href="https://404djl.github.io/2026/01/27/os07-jin-cheng-chuang-jian-yu-cheng-xu-jia-zai/">https://404djl.github.io/2026/01/27/os07-jin-cheng-chuang-jian-yu-cheng-xu-jia-zai/</a>
+                </span>
+            </div>
+            <div class="reprint__notice">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-copyright">
+                        版权声明:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    本博客所有文章除特別声明外，均采用
+                    <a href="https://creativecommons.org/licenses/by/4.0/deed.zh" rel="external nofollow noreferrer" target="_blank">CC BY 4.0</a>
+                    许可协议。转载请注明来源
+                    <a href="/about" target="_blank">404djl</a>
+                    !
+                </span>
+            </div>
+        
+    </div>
+
+    <script async defer>
+      document.addEventListener("copy", function (e) {
+        let toastHTML = '<span>复制成功，请遵循本文的转载规则</span><button class="btn-flat toast-action" onclick="navToReprintStatement()" style="font-size: smaller">查看</a>';
+        M.toast({html: toastHTML})
+      });
+
+      function navToReprintStatement() {
+        $("html, body").animate({scrollTop: $("#reprint-statement").offset().top - 80}, 800);
+      }
+    </script>
+
+
+
+            <div class="tag_share" style="display: block;">
+                <div class="post-meta__tag-list" style="display: inline-block;">
+                    
+                        <div class="article-tag">
+                            
+                                <a href="/tags/linux/">
+                                    <span class="chip bg-color">linux</span>
+                                </a>
+                            
+                                <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                                    <span class="chip bg-color">操作系统</span>
+                                </a>
+                            
+                        </div>
+                    
+                </div>
+                <div class="post_share" style="zoom: 80%; width: fit-content; display: inline-block; float: right; margin: -0.15rem 0;">
+                    <link rel="stylesheet" type="text/css" href="/libs/share/css/share.min.css">
+<div id="article-share">
+
+    
+    <div class="social-share" data-sites="twitter,facebook,google,qq,qzone,wechat,weibo,douban,linkedin" data-wechat-qrcode-helper="<p>微信扫一扫即可分享！</p>"></div>
+    <script src="/libs/share/js/social-share.min.js"></script>
+    
+
+    
+
+</div>
+
+                </div>
+            </div>
+            
+                <div id="reward">
+    <a href="#rewardModal" class="reward-link modal-trigger btn-floating btn-medium waves-effect waves-light red">赏</a>
+
+    <!-- Modal Structure -->
+    <div id="rewardModal" class="modal">
+        <div class="modal-content">
+            <a class="close modal-close"><i class="fas fa-times"></i></a>
+            <h4 class="reward-title">你的赏识是我前进的动力</h4>
+            <div class="reward-content">
+                <div class="reward-tabs">
+                    <ul class="tabs row">
+                        <li class="tab col s6 alipay-tab waves-effect waves-light"><a href="#alipay">支付宝</a></li>
+                        <li class="tab col s6 wechat-tab waves-effect waves-light"><a href="#wechat">微 信</a></li>
+                    </ul>
+                    <div id="alipay">
+                        <img src="/medias/reward/alipay.jpg" class="reward-img" alt="支付宝打赏二维码">
+                    </div>
+                    <div id="wechat">
+                        <img src="/medias/reward/wechat.png" class="reward-img" alt="微信打赏二维码">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(function () {
+        $('.tabs').tabs();
+    });
+</script>
+
+            
+        </div>
+    </div>
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+<article id="prenext-posts" class="prev-next articles">
+    <div class="row article-row">
+        
+        <div class="article col s12 m6" data-aos="fade-up">
+            <div class="article-badge left-badge text-color">
+                <i class="fas fa-chevron-left"></i>&nbsp;上一篇</div>
+            <div class="card">
+                <a href="/2026/02/27/os05-xu-ni-nei-cun-yu-ye-biao/">
+                    <div class="card-image">
+                        
+                        
+                        <img src="/medias/featureimages/38.png" class="responsive-img" alt="OS05-虚拟内存与页表">
+                        
+                        <span class="card-title">OS05-虚拟内存与页表</span>
+                    </div>
+                </a>
+                <div class="card-content article-content">
+                    <div class="summary block-with-text">
+                        
+                            
+                        
+                    </div>
+                    <div class="publish-info">
+                        <span class="publish-date">
+                            <i class="far fa-clock fa-fw icon-date"></i>2026-02-27
+                        </span>
+                        <span class="publish-author">
+                            
+                            <i class="fas fa-bookmark fa-fw icon-category"></i>
+                            
+                            <a href="/categories/OS/" class="post-category">
+                                    OS
+                                </a>
+                            
+                            
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="card-action article-tags">
+                    
+                    <a href="/tags/linux/">
+                        <span class="chip bg-color">linux</span>
+                    </a>
+                    
+                    <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                        <span class="chip bg-color">操作系统</span>
+                    </a>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+        
+        <div class="article col s12 m6" data-aos="fade-up">
+            <div class="article-badge right-badge text-color">
+                下一篇&nbsp;<i class="fas fa-chevron-right"></i>
+            </div>
+            <div class="card">
+                <a href="/2026/01/27/os04-wu-li-nei-cun-guan-li/">
+                    <div class="card-image">
+                        
+                        
+                        <img src="/medias/featureimages/28.png" class="responsive-img" alt="OS04-物理内存管理">
+                        
+                        <span class="card-title">OS04-物理内存管理</span>
+                    </div>
+                </a>
+                <div class="card-content article-content">
+                    <div class="summary block-with-text">
+                        
+                            
+                        
+                    </div>
+                    <div class="publish-info">
+                            <span class="publish-date">
+                                <i class="far fa-clock fa-fw icon-date"></i>2026-01-27
+                            </span>
+                        <span class="publish-author">
+                            
+                            <i class="fas fa-bookmark fa-fw icon-category"></i>
+                            
+                            <a href="/categories/OS/" class="post-category">
+                                    OS
+                                </a>
+                            
+                            
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="card-action article-tags">
+                    
+                    <a href="/tags/linux/">
+                        <span class="chip bg-color">linux</span>
+                    </a>
+                    
+                    <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                        <span class="chip bg-color">操作系统</span>
+                    </a>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+    </div>
+</article>
+
+</div>
+
+
+
+<!-- 代码块功能依赖 -->
+<script type="text/javascript" src="/libs/codeBlock/codeBlockFuction.js"></script>
+
+
+
+<!-- 代码语言 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeLang.js"></script>
+
+
+<!-- 代码块复制 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeCopy.js"></script>
+
+
+<!-- 代码块收缩 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeShrink.js"></script>
+
+
+
+    </div>
+    <div id="toc-aside" class="expanded col l3 hide-on-med-and-down">
+        <div class="toc-widget card" style="background-color: white;">
+            <div class="toc-title"><i class="far fa-list-alt"></i>&nbsp;&nbsp;目录</div>
+            <div id="toc-content"></div>
+        </div>
+    </div>
+</div>
+
+<!-- TOC 悬浮按钮. -->
+
+<div id="floating-toc-btn" class="hide-on-med-and-down">
+    <a class="btn-floating btn-large bg-color">
+        <i class="fas fa-list-ul"></i>
+    </a>
+</div>
+
+
+<script src="/libs/tocbot/tocbot.min.js"></script>
+<script>
+    $(function () {
+        tocbot.init({
+            tocSelector: '#toc-content',
+            contentSelector: '#articleContent',
+            headingsOffset: -($(window).height() * 0.4 - 45),
+            collapseDepth: Number('0'),
+            headingSelector: 'h2, h3, h4'
+        });
+
+        // Set scroll toc fixed.
+        let tocHeight = parseInt($(window).height() * 0.4 - 64);
+        let $tocWidget = $('.toc-widget');
+        $(window).scroll(function () {
+            let scroll = $(window).scrollTop();
+            /* add post toc fixed. */
+            if (scroll > tocHeight) {
+                $tocWidget.addClass('toc-fixed');
+            } else {
+                $tocWidget.removeClass('toc-fixed');
+            }
+        });
+
+        
+        /* 修复文章卡片 div 的宽度. */
+        let fixPostCardWidth = function (srcId, targetId) {
+            let srcDiv = $('#' + srcId);
+            if (srcDiv.length === 0) {
+                return;
+            }
+
+            let w = srcDiv.width();
+            if (w >= 450) {
+                w = w + 21;
+            } else if (w >= 350 && w < 450) {
+                w = w + 18;
+            } else if (w >= 300 && w < 350) {
+                w = w + 16;
+            } else {
+                w = w + 14;
+            }
+            $('#' + targetId).width(w);
+        };
+
+        // 切换TOC目录展开收缩的相关操作.
+        const expandedClass = 'expanded';
+        let $tocAside = $('#toc-aside');
+        let $mainContent = $('#main-content');
+        $('#floating-toc-btn .btn-floating').click(function () {
+            if ($tocAside.hasClass(expandedClass)) {
+                $tocAside.removeClass(expandedClass).hide();
+                $mainContent.removeClass('l9');
+            } else {
+                $tocAside.addClass(expandedClass).show();
+                $mainContent.addClass('l9');
+            }
+            fixPostCardWidth('artDetail', 'prenext-posts');
+        });
+        
+    });
+</script>
+
+    
+
+</main>
+
+
+
+
+    <footer class="page-footer" style="background: linear-gradient(to right, #ff5f6d, #ffc371); color: #fff;">
+    <div class="container" style="text-align: center; padding: 5px;">
+      <p>Copyright © 2024 - 2025 <a href="https://404djl.github.io" style="color: #fff; text-decoration: underline;">404djl</a> | Powered by <a href="https://hexo.io" target="_blank" style="color: #fff; text-decoration: underline;">Hexo</a> | Theme by <a href="https://github.com/blinkfox/hexo-theme-matery" target="_blank" style="color: #fff; text-decoration: underline;">Matery</a></p>
+      <p>
+        <p>📚 站点总字数: <span id="site-word-count"></span> 字</p> |
+        <span id="runtime"></span>
+      </p>
+    </div>
+    <div class="footer-contact" style="background: linear-gradient(to right, #ff5f6d, #ffc371); color: #fff;">
+        <a href="javascript:void(0);" class="tooltipped" target="_blank" data-tooltip="邮箱：3490002122@qq.com" data-position="top" data-delay="50">
+          <i class="fas fa-envelope"></i>
+        </a>
+        <a href="https://github.com/404djl" class="tooltipped" target="_blank" data-tooltip="GitHub：404djl" data-position="top" data-delay="50">
+          <i class="fab fa-github"></i>
+        </a>
+        <a href="javascript:void(0);" class="tooltipped" data-tooltip="微信：djl123456404" data-position="top" data-delay="50">
+          <i class="fab fa-weixin"></i>
+        </a>
+    </div>
+</footer>
+
+
+
+
+<script>
+    const blogStartDate = new Date("2024-12-16T00:00:00Z"); // 修改为你的博客起始日期
+  
+    function updateRuntime() {
+      const now = new Date();
+      const diff = now - blogStartDate;
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((diff / (1000 * 60)) % 60);
+      const seconds = Math.floor((diff / 1000) % 60);
+  
+      const runtimeText = `本站已安全运行 ${days} 天 ${hours} 小时 ${minutes} 分钟 ${seconds} 秒`;
+      document.getElementById("runtime").innerText = runtimeText;
+    }
+  
+    updateRuntime();
+    setInterval(updateRuntime, 1000);
+  </script>
+  
+  <script>
+    fetch('/index.html')
+      .then(response => response.text())
+      .then(html => {
+        const wordCountRegex = /<meta name="wordCount" content="(\d+)">/;
+        const match = wordCountRegex.exec(html);
+        if (match) {
+          document.getElementById('site-word-count').innerText = match[1];
+        }
+      });
+  </script>
+  
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var tooltips = document.querySelectorAll('.tooltipped');
+      M.Tooltip.init(tooltips);
+    });
+  </script>
+  
+
+    <!-- 搜索遮罩框 -->
+<div id="searchModal" class="modal">
+    <div class="modal-content">
+        <div class="search-header">
+            <span class="title"><i class="fas fa-search"></i>&nbsp;&nbsp;搜索</span>
+            <input type="search" id="searchInput" name="s" placeholder="请输入搜索的关键字"
+                   class="search-input">
+        </div>
+        <div id="searchResult"></div>
+    </div>
+</div>
+
+<script type="text/javascript">
+$(function () {
+    var searchFunc = function (path, search_id, content_id) {
+        'use strict';
+        $.ajax({
+            url: path,
+            dataType: "xml",
+            success: function (xmlResponse) {
+                // get the contents from search data
+                var datas = $("entry", xmlResponse).map(function () {
+                    return {
+                        title: $("title", this).text(),
+                        content: $("content", this).text(),
+                        url: $("url", this).text()
+                    };
+                }).get();
+                var $input = document.getElementById(search_id);
+                var $resultContent = document.getElementById(content_id);
+                $input.addEventListener('input', function () {
+                    var str = '<ul class=\"search-result-list\">';
+                    var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+                    $resultContent.innerHTML = "";
+                    if (this.value.trim().length <= 0) {
+                        return;
+                    }
+                    // perform local searching
+                    datas.forEach(function (data) {
+                        var isMatch = true;
+                        var data_title = data.title.trim().toLowerCase();
+                        var data_content = data.content.trim().replace(/<[^>]+>/g, "").toLowerCase();
+                        var data_url = data.url;
+                        data_url = data_url.indexOf('/') === 0 ? data.url : '/' + data_url;
+                        var index_title = -1;
+                        var index_content = -1;
+                        var first_occur = -1;
+                        // only match artiles with not empty titles and contents
+                        if (data_title !== '' && data_content !== '') {
+                            keywords.forEach(function (keyword, i) {
+                                index_title = data_title.indexOf(keyword);
+                                index_content = data_content.indexOf(keyword);
+                                if (index_title < 0 && index_content < 0) {
+                                    isMatch = false;
+                                } else {
+                                    if (index_content < 0) {
+                                        index_content = 0;
+                                    }
+                                    if (i === 0) {
+                                        first_occur = index_content;
+                                    }
+                                }
+                            });
+                        }
+                        // show search results
+                        if (isMatch) {
+                            str += "<li><a href='" + data_url + "' class='search-result-title'>" + data_title + "</a>";
+                            var content = data.content.trim().replace(/<[^>]+>/g, "");
+                            if (first_occur >= 0) {
+                                // cut out 100 characters
+                                var start = first_occur - 20;
+                                var end = first_occur + 80;
+                                if (start < 0) {
+                                    start = 0;
+                                }
+                                if (start === 0) {
+                                    end = 100;
+                                }
+                                if (end > content.length) {
+                                    end = content.length;
+                                }
+                                var match_content = content.substr(start, end);
+                                // highlight all keywords
+                                keywords.forEach(function (keyword) {
+                                    var regS = new RegExp(keyword, "gi");
+                                    match_content = match_content.replace(regS, "<em class=\"search-keyword\">" + keyword + "</em>");
+                                });
+
+                                str += "<p class=\"search-result\">" + match_content + "...</p>"
+                            }
+                            str += "</li>";
+                        }
+                    });
+                    str += "</ul>";
+                    $resultContent.innerHTML = str;
+                });
+            }
+        });
+    };
+
+    searchFunc('/search.xml', 'searchInput', 'searchResult');
+});
+</script>
+
+    <!-- 白天和黑夜主题 -->
+<div class="stars-con">
+    <div id="stars"></div>
+    <div id="stars2"></div>
+    <div id="stars3"></div>  
+</div>
+
+<script>
+    function switchNightMode() {
+        $('<div class="Cuteen_DarkSky"><div class="Cuteen_DarkPlanet"></div></div>').appendTo($('body')),
+        setTimeout(function () {
+            $('body').hasClass('DarkMode') 
+            ? ($('body').removeClass('DarkMode'), localStorage.setItem('isDark', '0'), $('#sum-moon-icon').removeClass("fa-sun").addClass('fa-moon')) 
+            : ($('body').addClass('DarkMode'), localStorage.setItem('isDark', '1'), $('#sum-moon-icon').addClass("fa-sun").removeClass('fa-moon')),
+            
+            setTimeout(function () {
+            $('.Cuteen_DarkSky').fadeOut(1e3, function () {
+                $(this).remove()
+            })
+            }, 2e3)
+        })
+    }
+</script>
+
+    <!-- 回到顶部按钮 -->
+<div id="backTop" class="top-scroll">
+    <a class="btn-floating btn-large waves-effect waves-light" href="#!">
+        <i class="fas fa-arrow-up"></i>
+    </a>
+</div>
+
+
+    <script src="/libs/materialize/materialize.min.js"></script>
+    <script src="/libs/masonry/masonry.pkgd.min.js"></script>
+    <script src="/libs/aos/aos.js"></script>
+    <script src="/libs/scrollprogress/scrollProgress.min.js"></script>
+    <script src="/libs/lightGallery/js/lightgallery-all.min.js"></script>
+    <script src="/js/matery.js"></script>
+
+    
+
+    
+    
+    
+
+    <!-- 雪花特效 -->
+     
+        <script type="text/javascript">
+            // 只在桌面版网页启用特效
+            var windowWidth = $(window).width();
+            if (windowWidth > 768) {
+                document.write('<script type="text/javascript" src="/libs/others/snow.js"><\/script>');
+            }
+        </script>
+    
+
+    <!-- 鼠标星星特效 -->
+    
+
+     
+        <script src="https://ssl.captcha.qq.com/TCaptcha.js"></script>
+        <script src="/libs/others/TencentCaptcha.js"></script>
+        <button id="TencentCaptcha" data-appid="xxxxxxxxxx" data-cbfn="callback" type="button" hidden></button>
+    
+
+    <!-- Baidu Analytics -->
+
+    <!-- Baidu Push -->
+
+<script>
+    (function () {
+        var bp = document.createElement('script');
+        var curProtocol = window.location.protocol.split(':')[0];
+        if (curProtocol === 'https') {
+            bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+        } else {
+            bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+        }
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(bp, s);
+    })();
+</script>
+
+    
+    <script src="/libs/others/clicklove.js" async="async"></script>
+    
+    
+    <script async src="/libs/others/busuanzi.pure.mini.js"></script>
+    
+
+    
+
+    
+
+    <!--腾讯兔小巢-->
+    
+    
+
+    
+
+    
+
+    
+    <script src="/libs/instantpage/instantpage.js" type="module"></script>
+    
+
+</body>
+
+</html>

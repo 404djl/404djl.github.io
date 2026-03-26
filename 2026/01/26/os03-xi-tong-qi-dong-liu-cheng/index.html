@@ -1,0 +1,2164 @@
+<!DOCTYPE HTML>
+<html lang="zh-CN">
+
+
+<head>
+    <meta charset="utf-8">
+    <meta name="keywords" content="OS03-系统启动流程, 404djlのblog">
+    <meta name="description" content="第 3 节：系统启动流程
+学习目标：追踪 xv6 从 QEMU 上电到第一个用户进程运行的完整路径，理解多核启动协议、特权级切换和内核初始化序列。
+预计用时：3-4 小时
+前置要求：完成第 2 节，理解 RISC-V 特权级和 CSR 寄存">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="renderer" content="webkit|ie-stand|ie-comp">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="referrer" content="no-referrer-when-downgrade">
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+
+
+    <title>OS03-系统启动流程 | 404djlのblog</title>
+    <link rel="icon" type="image/gif" href="/icons8-github.gif">
+    
+    <style>
+        body{
+            background-image: url(https://pic1.imgdb.cn/item/69b9682b1eedde6824938321.jpg);
+            background-repeat:no-repeat;
+            background-size: 100% 100%;
+            background-attachment:fixed;
+        }
+    </style>
+
+
+
+    <!-- bg-cover style     -->
+
+
+
+<link rel="stylesheet" type="text/css" href="/libs/awesome/css/all.min.css">
+<link rel="stylesheet" type="text/css" href="/libs/materialize/materialize.min.css">
+<link rel="stylesheet" type="text/css" href="/libs/aos/aos.css">
+<link rel="stylesheet" type="text/css" href="/libs/animate/animate.min.css">
+<link rel="stylesheet" type="text/css" href="/libs/lightGallery/css/lightgallery.min.css">
+<link rel="stylesheet" type="text/css" href="/css/matery.css">
+<link rel="stylesheet" type="text/css" href="/css/my.css">
+<link rel="stylesheet" type="text/css" href="/css/dark.css" media="none" onload="if(media!='all')media='all'">
+
+
+
+
+    <link rel="stylesheet" href="/libs/tocbot/tocbot.css">
+    <link rel="stylesheet" href="/css/post.css">
+
+
+
+
+    
+        <link rel="stylesheet" type="text/css" href="/css/reward.css">
+    
+
+
+
+    <script src="/libs/jquery/jquery-3.6.0.min.js"></script>
+
+<meta name="generator" content="Hexo 4.2.0">
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+<link rel="alternate" href="/atom.xml" title="404djlのblog" type="application/atom+xml">
+<link rel="stylesheet" href="/css/prism-tomorrow.css" type="text/css">
+<link rel="stylesheet" href="/css/prism-line-numbers.css" type="text/css">
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+</head>
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+
+
+
+<body>
+    <header class="navbar-fixed">
+    <nav id="headNav" class="bg-color nav-transparent">
+        <div id="navContainer" class="nav-wrapper container">
+            <div class="brand-logo">
+                <a href="/" class="waves-effect waves-light">
+                    
+                    <img src="/icons8-github.gif" class="logo-img" alt="LOGO">
+                    
+                    <span class="logo-span">404djlのblog</span>
+                </a>
+            </div>
+            
+
+<a href="#" data-target="mobile-nav" class="sidenav-trigger button-collapse"><i class="fas fa-bars"></i></a>
+<ul class="right nav-menu">
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/" class="waves-effect waves-light">
+      
+      <i class="fas fa-home" style="zoom: 0.6;"></i>
+      
+      <span>首页</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/tags" class="waves-effect waves-light">
+      
+      <i class="fas fa-tags" style="zoom: 0.6;"></i>
+      
+      <span>标签</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/categories" class="waves-effect waves-light">
+      
+      <i class="fas fa-bookmark" style="zoom: 0.6;"></i>
+      
+      <span>分类</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/archives" class="waves-effect waves-light">
+      
+      <i class="fas fa-archive" style="zoom: 0.6;"></i>
+      
+      <span>归档</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/about" class="waves-effect waves-light">
+      
+      <i class="fas fa-user-circle" style="zoom: 0.6;"></i>
+      
+      <span>关于</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/contact" class="waves-effect waves-light">
+      
+      <i class="fas fa-comments" style="zoom: 0.6;"></i>
+      
+      <span>留言板</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/friends" class="waves-effect waves-light">
+      
+      <i class="fas fa-address-book" style="zoom: 0.6;"></i>
+      
+      <span>友情链接</span>
+    </a>
+    
+  </li>
+  
+  <li>
+    <a href="#searchModal" class="modal-trigger waves-effect waves-light">
+      <i id="searchIcon" class="fas fa-search" title="搜索" style="zoom: 0.85;"></i>
+    </a>
+  </li>
+  <li>
+    <a href="javascript:;" class="waves-effect waves-light" onclick="switchNightMode()" title="深色/浅色模式" >
+      <i id="sum-moon-icon" class="fas fa-sun" style="zoom: 0.85;"></i>
+    </a>
+  </li>
+</ul>
+
+
+<div id="mobile-nav" class="side-nav sidenav">
+
+    <div class="mobile-head bg-color">
+        
+        <img src="/icons8-github.gif" class="logo-img circle responsive-img">
+        
+        <div class="logo-name">404djlのblog</div>
+        <div class="logo-desc">
+            
+            Never really desperate, only the lost of the soul
+            
+        </div>
+    </div>
+
+    <ul class="menu-list mobile-menu-list">
+        
+        <li class="m-nav-item">
+	  
+		<a href="/" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-home"></i>
+			
+			首页
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/tags" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-tags"></i>
+			
+			标签
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/categories" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-bookmark"></i>
+			
+			分类
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/archives" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-archive"></i>
+			
+			归档
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/about" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-user-circle"></i>
+			
+			关于
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/contact" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-comments"></i>
+			
+			留言板
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/friends" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-address-book"></i>
+			
+			友情链接
+		</a>
+          
+        </li>
+        
+        
+        <li><div class="divider"></div></li>
+        <li>
+            <a href="https://github.com/404djl/404djl.github.io" class="waves-effect waves-light" target="_blank">
+                <i class="fab fa-github-square fa-fw"></i>Fork Me
+            </a>
+        </li>
+        
+    </ul>
+</div>
+
+
+        </div>
+
+        
+            <style>
+    .nav-transparent .github-corner {
+        display: none !important;
+    }
+
+    .github-corner {
+        position: absolute;
+        z-index: 10;
+        top: 0;
+        right: 0;
+        border: 0;
+        transform: scale(1.1);
+    }
+
+    .github-corner svg {
+        color: #0f9d58;
+        fill: #fff;
+        height: 64px;
+        width: 64px;
+    }
+
+    .github-corner:hover .octo-arm {
+        animation: a 0.56s ease-in-out;
+    }
+
+    .github-corner .octo-arm {
+        animation: none;
+    }
+
+    @keyframes a {
+        0%,
+        to {
+            transform: rotate(0);
+        }
+        20%,
+        60% {
+            transform: rotate(-25deg);
+        }
+        40%,
+        80% {
+            transform: rotate(10deg);
+        }
+    }
+</style>
+
+<a href="https://github.com/404djl/404djl.github.io" class="github-corner tooltipped hide-on-med-and-down" target="_blank"
+   data-tooltip="Fork Me" data-position="left" data-delay="50">
+    <svg viewBox="0 0 250 250" aria-hidden="true">
+        <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+        <path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2"
+              fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+        <path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z"
+              fill="currentColor" class="octo-body"></path>
+    </svg>
+</a>
+        
+    </nav>
+
+</header>
+
+    
+
+
+
+<div class="bg-cover pd-header post-cover" style="background-image: url('/medias/featureimages/20.png')">
+    <div class="container" style="right: 0px;left: 0px;">
+        <div class="row">
+            <div class="col s12 m12 l12">
+                <div class="brand">
+                    <h1 class="description center-align post-title">OS03-系统启动流程</h1>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+<main class="post-container content">
+
+    
+    <div class="row">
+    <div id="main-content" class="col s12 m12 l9">
+        <!-- 文章内容详情 -->
+<div id="artDetail">
+    <div class="card">
+        <div class="card-content article-info">
+            <div class="row tag-cate">
+                <div class="col s7">
+                    
+                    <div class="article-tag">
+                        
+                            <a href="/tags/linux/">
+                                <span class="chip bg-color">linux</span>
+                            </a>
+                        
+                            <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                                <span class="chip bg-color">操作系统</span>
+                            </a>
+                        
+                    </div>
+                    
+                </div>
+                <div class="col s5 right-align">
+                    
+                    <div class="post-cate">
+                        <i class="fas fa-bookmark fa-fw icon-category"></i>
+                        
+                            <a href="/categories/OS/" class="post-category">
+                                OS
+                            </a>
+                        
+                    </div>
+                    
+                </div>
+            </div>
+
+            <div class="post-info">
+                
+                <div class="post-date info-break-policy">
+                    <i class="far fa-calendar-minus fa-fw"></i>发布日期:&nbsp;&nbsp;
+                    2026-01-26
+                </div>
+                
+
+                
+                <div class="post-date info-break-policy">
+                    <i class="far fa-calendar-check fa-fw"></i>更新日期:&nbsp;&nbsp;
+                    2026-03-27
+                </div>
+                
+
+                
+                <div class="info-break-policy">
+                    <i class="far fa-file-word fa-fw"></i>文章字数:&nbsp;&nbsp;
+                    7.5k
+                </div>
+                
+
+                
+                <div class="info-break-policy">
+                    <i class="far fa-clock fa-fw"></i>阅读时长:&nbsp;&nbsp;
+                    31 分
+                </div>
+                
+
+                
+            </div>
+        </div>
+        <hr class="clearfix">
+
+        
+
+        
+
+        <div class="card-content article-card-content">
+            <div id="articleContent">
+                <h1 id="第-3-节：系统启动流程"><a href="#第-3-节：系统启动流程" class="headerlink" title="第 3 节：系统启动流程"></a>第 3 节：系统启动流程</h1><blockquote>
+<p><strong>学习目标</strong>：追踪 xv6 从 QEMU 上电到第一个用户进程运行的完整路径，理解多核启动协议、特权级切换和内核初始化序列。</p>
+<p><strong>预计用时</strong>：3-4 小时</p>
+<p><strong>前置要求</strong>：完成第 2 节，理解 RISC-V 特权级和 CSR 寄存器</p>
+</blockquote>
+<hr>
+<h2 id="一、理论：从上电到用户空间"><a href="#一、理论：从上电到用户空间" class="headerlink" title="一、理论：从上电到用户空间"></a>一、理论：从上电到用户空间</h2><h3 id="1-1-启动的全景图"><a href="#1-1-启动的全景图" class="headerlink" title="1.1 启动的全景图"></a>1.1 启动的全景图</h3><p>xv6 的启动是一个精心编排的序列，从硬件到软件，从最高特权级到最低特权级：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">┌──────────────────────────────────────────────────────────────────┐
+│ 阶段 1: 硬件 <span class="token punctuation">(</span>QEMU<span class="token punctuation">)</span>                                             │
+│   QEMU 将 kernel 加载到 0x80000000                               │
+│   每个 CPU 核心（hart）从 0x80000000 开始执行                     │
+├──────────────────────────────────────────────────────────────────┤
+│ 阶段 2: M-mode <span class="token punctuation">(</span>entry.S → start.c<span class="token punctuation">)</span>                              │
+│   每个 hart 设置自己的栈指针                                      │
+│   配置 CSR 寄存器、委托中断、初始化时钟                            │
+│   通过 mret 切换到 S-mode                                        │
+├──────────────────────────────────────────────────────────────────┤
+│ 阶段 3: S-mode 初始化 <span class="token punctuation">(</span>main.c<span class="token punctuation">)</span>                                   │
+│   CPU 0：执行完整的初始化序列（17 个 init 函数）                   │
+│   其他 CPU：等待 CPU 0 完成，再做最小初始化                        │
+├──────────────────────────────────────────────────────────────────┤
+│ 阶段 4: 第一个用户进程 <span class="token punctuation">(</span>userinit → initcode → init<span class="token punctuation">)</span>              │
+│   userinit<span class="token punctuation">(</span><span class="token punctuation">)</span> 创建第一个进程，加载 initcode                        │
+│   initcode 执行 exec<span class="token punctuation">(</span><span class="token string">"/init"</span><span class="token punctuation">)</span>                                   │
+│   init 进程打开控制台、启动 shell                                 │
+├──────────────────────────────────────────────────────────────────┤
+│ 阶段 5: 调度循环 <span class="token punctuation">(</span>scheduler<span class="token punctuation">)</span>                                     │
+│   每个 CPU 进入 scheduler<span class="token punctuation">(</span><span class="token punctuation">)</span> 无限循环                              │
+│   在 RUNNABLE 进程间轮转调度                                      │
+│   系统正式运行                                                    │
+└──────────────────────────────────────────────────────────────────┘
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="1-2-多核启动协议"><a href="#1-2-多核启动协议" class="headerlink" title="1.2 多核启动协议"></a>1.2 多核启动协议</h3><p>xv6 运行在 QEMU 的 RISC-V virt 平台上，默认配置 3 个 CPU 核心。启动时的关键问题：</p>
+<p><strong>所有核心同时开始执行</strong></p>
+<p>QEMU 使用 <code>-kernel</code> 选项加载内核 ELF，然后让每个 hart 从 <code>0x80000000</code> 开始执行（即 <code>entry.S</code> 的 <code>_entry</code>）。这意味着 3 个 CPU 核心会<strong>同时</strong>执行相同的代码。</p>
+<p><strong>为什么不能所有核心同时初始化？</strong></p>
+<p>初始化涉及大量共享数据结构的设置（如进程表、页表、文件表），如果多个核心同时修改这些数据，会产生竞态条件。因此 xv6 采用<strong>主从式</strong>启动：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">CPU 0（主核心）：
+  ① 执行完整初始化（17 个 init 函数）
+  ② 设置 started <span class="token operator">=</span> 1（通知其他核心）
+  ③ 进入 scheduler<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+CPU 1, 2（从核心）：
+  ① 自旋等待 started <span class="token operator">==</span> 1
+  ② 仅执行最小初始化（3 个 init 函数）
+  ③ 进入 scheduler<span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="1-3-第一个用户进程的诞生"><a href="#1-3-第一个用户进程的诞生" class="headerlink" title="1.3 第一个用户进程的诞生"></a>1.3 第一个用户进程的诞生</h3><p>xv6 的第一个用户进程有两个阶段：</p>
+<p><strong>阶段 1：initcode（嵌入内核的微型程序）</strong></p>
+<ul>
+<li><code>userinit()</code> 将 <code>initcode[]</code> 数组（52 字节的机器码）复制到新进程的用户空间</li>
+<li>initcode 的唯一任务：调用 <code>exec("/init", argv)</code></li>
+<li>为什么不直接加载 <code>/init</code>？因为此时文件系统初始化还没有完成（<code>fsinit()</code> 在 <code>forkret()</code> 中调用）</li>
+</ul>
+<p><strong>阶段 2：/init 程序（user/init.c）</strong></p>
+<ul>
+<li>打开控制台设备（建立 fd 0/1/2）</li>
+<li>无限循环：<code>fork()</code> + <code>exec("sh")</code> → shell 退出则重启</li>
+</ul>
+<pre class="line-numbers language-bash"><code class="language-bash">userinit<span class="token punctuation">(</span><span class="token punctuation">)</span>                 initcode              /init          shell
+    │                          │                    │              │
+    │  创建进程 + 加载 initcode  │                    │              │
+    ├─────────────────────────<span class="token operator">></span>│                    │              │
+    │                          │ exec<span class="token punctuation">(</span><span class="token string">"/init"</span><span class="token punctuation">)</span>      │              │
+    │                          ├──────────────────<span class="token operator">></span>│              │
+    │                          │                    │ <span class="token function">open</span> console │
+    │                          │                    │ dup<span class="token punctuation">(</span>0<span class="token punctuation">)</span>, dup<span class="token punctuation">(</span>0<span class="token punctuation">)</span>
+    │                          │                    │ fork+exec    │
+    │                          │                    ├─────────────<span class="token operator">></span>│
+    │                          │                    │              │ $
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<hr>
+<h2 id="二、源码精读：kernel-kernel-ld（链接器脚本）"><a href="#二、源码精读：kernel-kernel-ld（链接器脚本）" class="headerlink" title="二、源码精读：kernel/kernel.ld（链接器脚本）"></a>二、源码精读：<code>kernel/kernel.ld</code>（链接器脚本）</h2><p>在分析代码之前，先理解内核是如何在内存中布局的。链接器脚本控制了这一切。</p>
+<h3 id="2-1-逐段解析"><a href="#2-1-逐段解析" class="headerlink" title="2.1 逐段解析"></a>2.1 逐段解析</h3><pre class="line-numbers language-ld"><code class="language-ld">OUTPUT_ARCH( "riscv" )        /* 目标架构：RISC-V */
+ENTRY( _entry )                /* 程序入口点：_entry（在 entry.S 中） */
+
+SECTIONS
+{
+  . = 0x80000000;              /* 起始虚拟地址（=物理地址，因为还没开分页） */
+
+  .text : {                    /* 代码段 */
+    *(.text .text.*)           /* 所有 .o 文件的代码 */
+    . = ALIGN(0x1000);         /* 对齐到页边界 */
+    _trampoline = .;           /* 标记 trampoline 代码的起始地址 */
+    *(trampsec)                /* trampoline.S 中标记为 trampsec 段的代码 */
+    . = ALIGN(0x1000);         /* 对齐到下一个页边界 */
+    ASSERT(. - _trampoline == 0x1000, "..."); /* 确保 trampoline 恰好 1 页 */
+    PROVIDE(etext = .);        /* 导出符号：代码段结束地址 */
+  }
+
+  .rodata : { ... }           /* 只读数据段 */
+  .data : { ... }             /* 可读写数据段 */
+  .bss : { ... }              /* 未初始化数据段（零初始化） */
+
+  PROVIDE(end = .);            /* 导出符号：内核结束地址 */
+}
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>关键符号</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>符号</th>
+<th>含义</th>
+<th>使用位置</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>_entry</code></td>
+<td>内核入口点（第一条指令）</td>
+<td>QEMU 跳转目标</td>
+</tr>
+<tr>
+<td><code>_trampoline</code></td>
+<td>trampoline 代码的物理地址</td>
+<td><code>kvminit()</code> 映射用</td>
+</tr>
+<tr>
+<td><code>etext</code></td>
+<td>代码段结束地址</td>
+<td><code>kvminit()</code> 区分代码段和数据段的映射权限</td>
+</tr>
+<tr>
+<td><code>end</code></td>
+<td>内核在内存中的结束地址</td>
+<td><code>kinit()</code> 从这里开始管理空闲物理页</td>
+</tr>
+</tbody></table>
+<p><strong>内核在内存中的布局</strong>：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">0x80000000  ┌──────────────────┐ ← _entry
+            │   .text          │    代码段（可读+可执行）
+            │   <span class="token punctuation">..</span>.            │
+            ├──────────────────┤ ← _trampoline（页对齐）
+            │   trampoline.S   │    恰好 1 页（4KB）
+            ├──────────────────┤ ← etext（页对齐）
+            │   .rodata        │    只读数据（可读）
+            ├──────────────────┤
+            │   .data          │    数据段（可读+可写）
+            ├──────────────────┤
+            │   .bss           │    未初始化数据（零初始化）
+            ├──────────────────┤ ← end
+            │                  │
+            │   空闲物理页      │    由 kalloc.c 管理
+            │                  │
+0x88000000  └──────────────────┘ ← PHYSTOP
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>为什么 trampoline 必须在单独的一页？</strong></p>
+<blockquote>
+<p>trampoline 会被映射到用户页表和内核页表的最高虚拟地址（<code>TRAMPOLINE = MAXVA - PGSIZE</code>）。页表映射以页为单位，所以 trampoline 代码必须占据完整的一页，且不能与其他代码混在一个页中。</p>
+</blockquote>
+<hr>
+<h2 id="三、源码精读：kernel-entry-S（启动入口）"><a href="#三、源码精读：kernel-entry-S（启动入口）" class="headerlink" title="三、源码精读：kernel/entry.S（启动入口）"></a>三、源码精读：<code>kernel/entry.S</code>（启动入口）</h2><p>这是整个内核执行的<strong>第一条指令</strong>。仅 20 行，却建立了 C 语言运行的基础。</p>
+<h3 id="3-1-完整代码逐行解析"><a href="#3-1-完整代码逐行解析" class="headerlink" title="3.1 完整代码逐行解析"></a>3.1 完整代码逐行解析</h3><pre class="line-numbers language-asm"><code class="language-asm">        # QEMU 将内核加载到 0x80000000
+        # 并让每个 CPU 跳转到这里
+        # kernel.ld 保证这段代码被放在 0x80000000
+
+.section .text           # 放入 .text 段
+_entry:                  # 入口标签（kernel.ld 中 ENTRY(_entry) 指定的）
+
+        # 为 C 代码建立栈
+        # stack0 在 start.c 中声明
+        # 每个 CPU 有 4096 字节的栈
+        # sp = stack0 + (hartid + 1) * 4096
+
+        la sp, stack0           # sp = stack0 的地址
+        li a0, 1024*4           # a0 = 4096（栈大小）
+        csrr a1, mhartid        # a1 = 当前 CPU 的 hartid（0, 1, 或 2）
+        addi a1, a1, 1          # a1 = hartid + 1
+        mul a0, a0, a1          # a0 = 4096 * (hartid + 1)
+        add sp, sp, a0          # sp = stack0 + 4096 * (hartid + 1)
+
+        # 跳转到 start.c 中的 start() 函数
+        call start
+
+spin:                           # start() 不应该返回
+        j spin                  # 如果返回了，死循环
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="3-2-栈指针计算详解"><a href="#3-2-栈指针计算详解" class="headerlink" title="3.2 栈指针计算详解"></a>3.2 栈指针计算详解</h3><p><code>stack0</code> 在 <code>start.c</code> 中定义为：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token function">__attribute__</span> <span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token function">aligned</span> <span class="token punctuation">(</span><span class="token number">16</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">char</span> stack0<span class="token punctuation">[</span><span class="token number">4096</span> <span class="token operator">*</span> NCPU<span class="token punctuation">]</span><span class="token punctuation">;</span>
+<span class="token comment" spellcheck="true">// = 一个 4096 * 8 = 32768 字节的数组（NCPU=8）</span>
+<span class="token comment" spellcheck="true">// __attribute__ ((aligned (16))) 保证 16 字节对齐（RISC-V ABI 要求）</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<p>三个 CPU 的栈分配：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">stack0 <span class="token punctuation">(</span>低地址<span class="token punctuation">)</span>
+  │                                            
+  ├────── stack0 + 4096  ← CPU 0 的栈顶 <span class="token punctuation">(</span>sp<span class="token punctuation">)</span>   
+  │       CPU 0 的栈空间（向下增长）              
+  ├────── stack0 + 8192  ← CPU 1 的栈顶 <span class="token punctuation">(</span>sp<span class="token punctuation">)</span>   
+  │       CPU 1 的栈空间                         
+  ├────── stack0 + 12288 ← CPU 2 的栈顶 <span class="token punctuation">(</span>sp<span class="token punctuation">)</span>   
+  │       CPU 2 的栈空间                         
+  ├────── <span class="token punctuation">..</span>.                                   
+  └────── stack0 + 32768                        
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>为什么是 <code>hartid + 1</code> 而不是 <code>hartid</code>？</strong></p>
+<blockquote>
+<p>栈从高地址向低地址增长。CPU 0 的栈空间是 <code>stack0[0..4095]</code>，栈顶是 <code>stack0 + 4096</code>。如果用 <code>hartid * 4096</code>，CPU 0 的 <code>sp = stack0</code>（栈底），就没有可用空间了。</p>
+</blockquote>
+<p><strong>为什么这里可以用 <code>csrr a1, mhartid</code>？</strong></p>
+<blockquote>
+<p>此时 CPU 运行在 M-mode（QEMU 启动后默认的特权级），<code>mhartid</code> 是 M-mode 的 CSR，只有 M-mode 可以访问。</p>
+</blockquote>
+<h3 id="3-3-关键点：此时的-CPU-状态"><a href="#3-3-关键点：此时的-CPU-状态" class="headerlink" title="3.3 关键点：此时的 CPU 状态"></a>3.3 关键点：此时的 CPU 状态</h3><p><code>_entry</code> 执行时，CPU 处于以下状态：</p>
+<ul>
+<li><strong>特权级</strong>：M-mode</li>
+<li><strong>分页</strong>：关闭（物理地址 = 虚拟地址）</li>
+<li><strong>中断</strong>：未配置</li>
+<li><strong>其他寄存器</strong>：不确定（未初始化）</li>
+</ul>
+<p>这就是为什么 <code>_entry</code> 的第一件事是设置 <code>sp</code>——没有栈就不能调用 C 函数。</p>
+<hr>
+<h2 id="四、源码精读：kernel-start-c（M-mode-初始化）"><a href="#四、源码精读：kernel-start-c（M-mode-初始化）" class="headerlink" title="四、源码精读：kernel/start.c（M-mode 初始化）"></a>四、源码精读：<code>kernel/start.c</code>（M-mode 初始化）</h2><p><code>entry.S</code> 设好栈后调用 <code>start()</code>。这个函数在 M-mode 执行，完成硬件初始化后切换到 S-mode。</p>
+<h3 id="4-1-全局变量"><a href="#4-1-全局变量" class="headerlink" title="4.1 全局变量"></a>4.1 全局变量</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// entry.S 使用的栈空间，每个 CPU 一个 4KB 栈</span>
+<span class="token function">__attribute__</span> <span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token function">aligned</span> <span class="token punctuation">(</span><span class="token number">16</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">char</span> stack0<span class="token punctuation">[</span><span class="token number">4096</span> <span class="token operator">*</span> NCPU<span class="token punctuation">]</span><span class="token punctuation">;</span>
+
+<span class="token comment" spellcheck="true">// 时钟中断的 scratch 区域，每个 CPU 32 个 uint64</span>
+uint64 mscratch0<span class="token punctuation">[</span>NCPU <span class="token operator">*</span> <span class="token number">32</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+
+<span class="token comment" spellcheck="true">// kernelvec.S 中的 M-mode 时钟中断处理函数</span>
+<span class="token keyword">extern</span> <span class="token keyword">void</span> <span class="token function">timervec</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="4-2-start-函数详解"><a href="#4-2-start-函数详解" class="headerlink" title="4.2 start() 函数详解"></a>4.2 <code>start()</code> 函数详解</h3><p>每个 CPU 核心都会<strong>独立</strong>执行这个函数。三个核心几乎同时运行到这里，但由于操作的都是各自的 CSR 寄存器（每个核心有自己的一套 CSR），所以不会冲突。</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">start</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p><strong>步骤 ①：配置 mret 的目标特权级</strong></p>
+<pre class="line-numbers language-c"><code class="language-c">  <span class="token comment" spellcheck="true">// 将 MPP 设为 S-mode，mret 执行后进入 S-mode</span>
+  <span class="token keyword">unsigned</span> <span class="token keyword">long</span> x <span class="token operator">=</span> <span class="token function">r_mstatus</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  x <span class="token operator">&amp;</span><span class="token operator">=</span> <span class="token operator">~</span>MSTATUS_MPP_MASK<span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 清除 MPP 字段（bit 12:11）</span>
+  x <span class="token operator">|</span><span class="token operator">=</span> MSTATUS_MPP_S<span class="token punctuation">;</span>       <span class="token comment" spellcheck="true">// 设置 MPP = 01（S-mode）</span>
+  <span class="token function">w_mstatus</span><span class="token punctuation">(</span>x<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><code>mstatus.MPP</code> 告诉 <code>mret</code> 指令要跳转到哪个特权级。这里设置为 S-mode，因为 xv6 内核运行在 S-mode。</p>
+<p><strong>步骤 ②：配置 mret 的目标地址</strong></p>
+<pre class="line-numbers language-c"><code class="language-c">  <span class="token comment" spellcheck="true">// mepc = main 函数的地址，mret 会跳转到这里</span>
+  <span class="token function">w_mepc</span><span class="token punctuation">(</span><span class="token punctuation">(</span>uint64<span class="token punctuation">)</span>main<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p><code>mret</code> 的行为：跳转到 <code>mepc</code> 的地址 + 切换到 <code>MPP</code> 指定的特权级。</p>
+<p><strong>步骤 ③：关闭分页</strong></p>
+<pre class="line-numbers language-c"><code class="language-c">  <span class="token comment" spellcheck="true">// satp = 0 → 关闭分页</span>
+  <span class="token function">w_satp</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p>此时还没有创建页表。如果分页已开启但没有有效的页表，任何内存访问都会页错误。</p>
+<p><strong>步骤 ④：委托中断和异常</strong></p>
+<pre class="line-numbers language-c"><code class="language-c">  <span class="token comment" spellcheck="true">// 将所有异常和中断委托给 S-mode 处理</span>
+  <span class="token function">w_medeleg</span><span class="token punctuation">(</span><span class="token number">0xffff</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// Exception DElegation</span>
+  <span class="token function">w_mideleg</span><span class="token punctuation">(</span><span class="token number">0xffff</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// Interrupt DElegation</span>
+  
+  <span class="token comment" spellcheck="true">// 使能 S-mode 的三类中断</span>
+  <span class="token function">w_sie</span><span class="token punctuation">(</span><span class="token function">r_sie</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">|</span> SIE_SEIE <span class="token operator">|</span> SIE_STIE <span class="token operator">|</span> SIE_SSIE<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>不委托的话，用户态的 <code>ecall</code>（系统调用）会先陷入 M-mode，再转发到 S-mode，增加不必要的延迟。委托后直接到 S-mode。</p>
+<p><strong>步骤 ⑤：初始化时钟中断</strong></p>
+<pre class="line-numbers language-c"><code class="language-c">  <span class="token function">timerinit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>详见 4.3 节。</p>
+<p><strong>步骤 ⑥：保存 hartid 到 tp 寄存器</strong></p>
+<pre class="line-numbers language-c"><code class="language-c">  <span class="token keyword">int</span> id <span class="token operator">=</span> <span class="token function">r_mhartid</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token function">w_tp</span><span class="token punctuation">(</span>id<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p><code>mhartid</code> 只能在 M-mode 读取。进入 S-mode 后，内核通过 <code>r_tp()</code> 获取当前 CPU 编号（<code>cpuid()</code> 函数就是这样实现的）。</p>
+<p><strong>步骤 ⑦：切换到 S-mode</strong></p>
+<pre class="line-numbers language-c"><code class="language-c">  <span class="token keyword">asm</span> <span class="token keyword">volatile</span><span class="token punctuation">(</span><span class="token string">"mret"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p><code>mret</code> 执行后：</p>
+<ol>
+<li>特权级从 M-mode 切换到 S-mode（因为 MPP = 01）</li>
+<li>PC 跳转到 <code>mepc</code> 的值（<code>main</code> 函数的地址）</li>
+<li><code>mstatus.MIE</code> 被恢复为 <code>mstatus.MPIE</code> 的值</li>
+</ol>
+<p><strong>此后 CPU 永远不会回到 M-mode</strong>（时钟中断除外）。</p>
+<h3 id="4-3-timerinit-函数详解"><a href="#4-3-timerinit-函数详解" class="headerlink" title="4.3 timerinit() 函数详解"></a>4.3 <code>timerinit()</code> 函数详解</h3><p>时钟中断是操作系统实现抢占式调度的基础。</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">timerinit</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">int</span> id <span class="token operator">=</span> <span class="token function">r_mhartid</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<p><strong>设置第一次时钟中断的触发时间</strong>：</p>
+<pre class="line-numbers language-c"><code class="language-c">  <span class="token keyword">int</span> interval <span class="token operator">=</span> <span class="token number">1000000</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 1,000,000 个时钟周期</span>
+  <span class="token operator">*</span><span class="token punctuation">(</span>uint64<span class="token operator">*</span><span class="token punctuation">)</span><span class="token function">CLINT_MTIMECMP</span><span class="token punctuation">(</span>id<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token operator">*</span><span class="token punctuation">(</span>uint64<span class="token operator">*</span><span class="token punctuation">)</span>CLINT_MTIME <span class="token operator">+</span> interval<span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<ul>
+<li><code>CLINT_MTIME</code>：单调递增的时钟计数器（所有 CPU 共享）</li>
+<li><code>CLINT_MTIMECMP(id)</code>：每个 CPU 的比较寄存器</li>
+<li>当 <code>MTIME &gt;= MTIMECMP</code> 时，触发时钟中断</li>
+<li>间隔约 1/10 秒（在 QEMU 中）</li>
+</ul>
+<p><strong>为 <code>timervec</code> 准备 scratch 数据</strong>：</p>
+<pre class="line-numbers language-c"><code class="language-c">  uint64 <span class="token operator">*</span>scratch <span class="token operator">=</span> <span class="token operator">&amp;</span>mscratch0<span class="token punctuation">[</span><span class="token number">32</span> <span class="token operator">*</span> id<span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token comment" spellcheck="true">// 每个 CPU 有独立的 scratch 区域</span>
+  scratch<span class="token punctuation">[</span><span class="token number">4</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token function">CLINT_MTIMECMP</span><span class="token punctuation">(</span>id<span class="token punctuation">)</span><span class="token punctuation">;</span>        <span class="token comment" spellcheck="true">// MTIMECMP 寄存器的地址</span>
+  scratch<span class="token punctuation">[</span><span class="token number">5</span><span class="token punctuation">]</span> <span class="token operator">=</span> interval<span class="token punctuation">;</span>                   <span class="token comment" spellcheck="true">// 中断间隔</span>
+  <span class="token function">w_mscratch</span><span class="token punctuation">(</span><span class="token punctuation">(</span>uint64<span class="token punctuation">)</span>scratch<span class="token punctuation">)</span><span class="token punctuation">;</span>             <span class="token comment" spellcheck="true">// 存入 mscratch CSR</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<p><code>timervec</code> 是纯汇编代码，不能调用 C 函数，所以提前把需要的数据放在 scratch 中。</p>
+<p><strong>设置 M-mode trap 处理函数</strong>：</p>
+<pre class="line-numbers language-c"><code class="language-c">  <span class="token function">w_mtvec</span><span class="token punctuation">(</span><span class="token punctuation">(</span>uint64<span class="token punctuation">)</span>timervec<span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// M-mode trap → 跳到 timervec</span>
+  <span class="token function">w_mstatus</span><span class="token punctuation">(</span><span class="token function">r_mstatus</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">|</span> MSTATUS_MIE<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 使能 M-mode 中断</span>
+  <span class="token function">w_mie</span><span class="token punctuation">(</span><span class="token function">r_mie</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">|</span> MIE_MTIE<span class="token punctuation">)</span><span class="token punctuation">;</span>             <span class="token comment" spellcheck="true">// 使能 M-mode 时钟中断</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="4-4-timervec：时钟中断的-M-mode-处理"><a href="#4-4-timervec：时钟中断的-M-mode-处理" class="headerlink" title="4.4 timervec：时钟中断的 M-mode 处理"></a>4.4 <code>timervec</code>：时钟中断的 M-mode 处理</h3><p><code>timervec</code> 在 <code>kernelvec.S</code> 中定义（第 93-121 行），是整个系统中唯一在 M-mode 运行的中断处理程序：</p>
+<pre class="line-numbers language-asm"><code class="language-asm">timervec:
+        # scratch[0..2] 是寄存器保存区
+        # scratch[4] = CLINT_MTIMECMP 地址
+        # scratch[5] = 中断间隔
+        
+        csrrw a0, mscratch, a0    # 交换 a0 和 mscratch
+        sd a1, 0(a0)              # 保存 a1 到 scratch[0]
+        sd a2, 8(a0)              # 保存 a2 到 scratch[1]
+        sd a3, 16(a0)             # 保存 a3 到 scratch[2]
+
+        # 设置下一次时钟中断
+        ld a1, 32(a0)             # a1 = CLINT_MTIMECMP 地址
+        ld a2, 40(a0)             # a2 = interval
+        ld a3, 0(a1)              # a3 = 当前 MTIMECMP 值
+        add a3, a3, a2            # a3 += interval
+        sd a3, 0(a1)              # 写回新的 MTIMECMP
+
+        # 触发 S-mode 软件中断（将时钟中断"转发"给内核）
+        li a1, 2                  # bit 1 = SSIP
+        csrw sip, a1              # 设置 sip.SSIP
+
+        # 恢复寄存器
+        ld a3, 16(a0)
+        ld a2, 8(a0)
+        ld a1, 0(a0)
+        csrrw a0, mscratch, a0    # 恢复 a0
+
+        mret                       # 返回被中断的代码
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>中断转发机制</strong>：</p>
+<pre><code>时钟到期 → M-mode timervec 执行
+  ① 设置下一次定时器（MTIMECMP += interval）
+  ② 写 sip.SSIP = 1（触发 S-mode 软件中断）
+  ③ mret 返回
+
+S-mode 检测到 SSIP 中断 → kerneltrap() / usertrap() 处理
+  → 调用 yield() 让出 CPU
+</code></pre>
+<p>这是因为 RISC-V 不允许将 M-mode 时钟中断委托给 S-mode，所以必须用这种”M-mode 接收 → 转发为软件中断 → S-mode 处理”的方式。</p>
+<hr>
+<h2 id="五、源码精读：kernel-main-c（S-mode-初始化）"><a href="#五、源码精读：kernel-main-c（S-mode-初始化）" class="headerlink" title="五、源码精读：kernel/main.c（S-mode 初始化）"></a>五、源码精读：<code>kernel/main.c</code>（S-mode 初始化）</h2><p><code>start()</code> 的 <code>mret</code> 跳转到 <code>main()</code>，此时 CPU 已经在 S-mode。这是内核初始化的核心。</p>
+<h3 id="5-1-完整代码解析"><a href="#5-1-完整代码解析" class="headerlink" title="5.1 完整代码解析"></a>5.1 完整代码解析</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"types.h"</span></span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"param.h"</span></span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"memlayout.h"</span></span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"riscv.h"</span></span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"defs.h"</span></span>
+
+<span class="token keyword">volatile</span> <span class="token keyword">static</span> <span class="token keyword">int</span> started <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 多核同步标志</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><code>volatile</code> 告诉编译器不要优化对 <code>started</code> 的读取——其他 CPU 可能随时修改它。</p>
+<h3 id="5-2-CPU-0-的初始化序列"><a href="#5-2-CPU-0-的初始化序列" class="headerlink" title="5.2 CPU 0 的初始化序列"></a>5.2 CPU 0 的初始化序列</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">cpuid</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">{</span>              <span class="token comment" spellcheck="true">// 只有 CPU 0 执行完整初始化</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<p><code>cpuid()</code> 读取 <code>tp</code> 寄存器获取 hartid（在 <code>start.c</code> 中设置）。</p>
+<p><strong>阶段 1：控制台和输出（先让 printf 能工作）</strong></p>
+<pre class="line-numbers language-c"><code class="language-c">    <span class="token function">consoleinit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 初始化 UART 硬件，注册 console 设备的 read/write</span>
+    <span class="token function">printfinit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>     <span class="token comment" spellcheck="true">// 初始化 printf 的锁（pr.lock）</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"xv6 kernel is booting\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<ul>
+<li><code>consoleinit()</code>：调用 <code>uartinit()</code> 配置 UART 硬件，将 <code>consoleread</code> / <code>consolewrite</code> 注册到 <code>devsw[CONSOLE]</code></li>
+<li><code>printfinit()</code>：初始化一个自旋锁 <code>pr.lock</code>，使多核打印不会混乱</li>
+<li>必须最先初始化，否则后续的 <code>printf</code> 和 <code>panic</code> 无法工作</li>
+</ul>
+<p><strong>阶段 2：内存管理</strong></p>
+<pre class="line-numbers language-c"><code class="language-c">    <span class="token function">kinit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>          <span class="token comment" spellcheck="true">// 初始化物理页分配器</span>
+    <span class="token function">kvminit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>        <span class="token comment" spellcheck="true">// 创建内核页表</span>
+    <span class="token function">kvminithart</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 开启分页（写 satp 寄存器）</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<ul>
+<li><code>kinit()</code>：将 <code>end</code> 到 <code>PHYSTOP</code> 之间的所有物理页加入空闲链表</li>
+<li><code>kvminit()</code>：分配一个页作为根页表，建立内核地址空间的映射（UART, PLIC, 内核代码/数据, TRAMPOLINE 等）</li>
+<li><code>kvminithart()</code>：将内核页表地址写入 <code>satp</code>，执行 <code>sfence_vma()</code> 刷新 TLB，正式开启分页</li>
+</ul>
+<p><strong>从此刻起，所有内存访问都经过页表翻译。</strong> 但由于内核页表使用直接映射（虚拟地址 = 物理地址），代码可以无缝继续执行。</p>
+<p><strong>阶段 3：进程子系统</strong></p>
+<pre class="line-numbers language-c"><code class="language-c">    <span class="token function">procinit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>       <span class="token comment" spellcheck="true">// 初始化进程表（为每个进程分配内核栈）</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p><code>procinit()</code> 做了重要的工作：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">procinit</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">struct</span> proc <span class="token operator">*</span>p<span class="token punctuation">;</span>
+  <span class="token function">initlock</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>pid_lock<span class="token punctuation">,</span> <span class="token string">"nextpid"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">for</span><span class="token punctuation">(</span>p <span class="token operator">=</span> proc<span class="token punctuation">;</span> p <span class="token operator">&lt;</span> <span class="token operator">&amp;</span>proc<span class="token punctuation">[</span>NPROC<span class="token punctuation">]</span><span class="token punctuation">;</span> p<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token function">initlock</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>p<span class="token operator">-></span>lock<span class="token punctuation">,</span> <span class="token string">"proc"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment" spellcheck="true">// 为每个可能的进程分配一个内核栈页</span>
+    <span class="token keyword">char</span> <span class="token operator">*</span>pa <span class="token operator">=</span> <span class="token function">kalloc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>                    <span class="token comment" spellcheck="true">// 分配物理页</span>
+    uint64 va <span class="token operator">=</span> <span class="token function">KSTACK</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">)</span><span class="token punctuation">(</span>p <span class="token operator">-</span> proc<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 计算虚拟地址</span>
+    <span class="token function">kvmmap</span><span class="token punctuation">(</span>va<span class="token punctuation">,</span> <span class="token punctuation">(</span>uint64<span class="token punctuation">)</span>pa<span class="token punctuation">,</span> PGSIZE<span class="token punctuation">,</span> PTE_R <span class="token operator">|</span> PTE_W<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 映射到内核页表</span>
+    p<span class="token operator">-></span>kstack <span class="token operator">=</span> va<span class="token punctuation">;</span>                         <span class="token comment" spellcheck="true">// 记录栈的虚拟地址</span>
+  <span class="token punctuation">}</span>
+  <span class="token function">kvminithart</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 重新加载 satp（因为页表变了）</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>关键设计：</p>
+<ul>
+<li>每个进程的内核栈都有独立的虚拟地址（靠近 <code>TRAMPOLINE</code> 之下）</li>
+<li>栈之间有 guard page（未映射的页），栈溢出会触发页错误而不是默默覆盖数据</li>
+</ul>
+<pre><code>TRAMPOLINE  ┌─────────────────┐
+            │   TRAMPOLINE    │
+            ├─────────────────┤
+            │ Guard Page (×)  │  ← 未映射
+            ├─────────────────┤ ← KSTACK(0)
+            │ proc[0] 内核栈  │  4KB
+            ├─────────────────┤
+            │ Guard Page (×)  │
+            ├─────────────────┤ ← KSTACK(1)
+            │ proc[1] 内核栈  │
+            ├─────────────────┤
+            │      ...        │
+</code></pre>
+<p><strong>阶段 4：Trap 和中断</strong></p>
+<pre class="line-numbers language-c"><code class="language-c">    <span class="token function">trapinit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>       <span class="token comment" spellcheck="true">// 初始化 tickslock 锁</span>
+    <span class="token function">trapinithart</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 设置 stvec = kernelvec</span>
+    <span class="token function">plicinit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>       <span class="token comment" spellcheck="true">// 设置 PLIC 中断优先级</span>
+    <span class="token function">plicinithart</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 使能该 CPU 的 UART 和 VIRTIO 中断</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<ul>
+<li><code>trapinit()</code>：仅初始化一个锁（<code>tickslock</code>），非常简单</li>
+<li><code>trapinithart()</code>：<code>w_stvec((uint64)kernelvec)</code> — 设置 S-mode 的 trap 处理函数。此后这个 CPU 上发生的任何 trap（中断/异常）都会跳到 <code>kernelvec</code></li>
+<li><code>plicinit()</code>：在 PLIC 中设置 UART 和 VIRTIO 的中断优先级为 1（非零 = 使能）</li>
+<li><code>plicinithart()</code>：在 PLIC 中使能当前 CPU 接收 UART 和 VIRTIO 中断</li>
+</ul>
+<p><strong>阶段 5：文件系统基础结构</strong></p>
+<pre class="line-numbers language-c"><code class="language-c">    <span class="token function">binit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>            <span class="token comment" spellcheck="true">// 初始化块缓存（buffer cache）双向链表</span>
+    <span class="token function">iinit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>            <span class="token comment" spellcheck="true">// 初始化 inode 缓存</span>
+    <span class="token function">fileinit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>         <span class="token comment" spellcheck="true">// 初始化全局文件表（ftable）</span>
+    <span class="token function">virtio_disk_init</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment" spellcheck="true">// 初始化 virtio 磁盘驱动</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<p>这些函数主要是初始化锁和数据结构。注意 <strong><code>fsinit()</code>（文件系统初始化）不在这里</strong>——它在第一个用户进程的 <code>forkret()</code> 中调用，因为 <code>fsinit()</code> 需要读磁盘（可能阻塞），不适合在 <code>main()</code> 中使用。</p>
+<p><strong>阶段 6：创建第一个用户进程</strong></p>
+<pre class="line-numbers language-c"><code class="language-c">    <span class="token function">userinit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>         <span class="token comment" spellcheck="true">// 创建第一个用户进程</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>详见第六节。</p>
+<p><strong>阶段 7：通知其他 CPU</strong></p>
+<pre class="line-numbers language-c"><code class="language-c">    <span class="token function">__sync_synchronize</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 内存屏障</span>
+    started <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>           <span class="token comment" spellcheck="true">// 通知其他 CPU 可以继续了</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p><code>__sync_synchronize()</code> 是 GCC 内置的内存屏障（memory barrier），确保：</p>
+<ol>
+<li><code>started = 1</code> 的写入不会被编译器/CPU 重排到前面的初始化之前</li>
+<li>前面所有写入的数据对其他 CPU 立刻可见</li>
+</ol>
+<h3 id="5-3-其他-CPU-的初始化"><a href="#5-3-其他-CPU-的初始化" class="headerlink" title="5.3 其他 CPU 的初始化"></a>5.3 其他 CPU 的初始化</h3><pre class="line-numbers language-c"><code class="language-c">  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    <span class="token keyword">while</span><span class="token punctuation">(</span>started <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span>    <span class="token comment" spellcheck="true">// 自旋等待 CPU 0 完成初始化</span>
+      <span class="token punctuation">;</span>
+    <span class="token function">__sync_synchronize</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 内存屏障</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"hart %d starting\n"</span><span class="token punctuation">,</span> <span class="token function">cpuid</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">kvminithart</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>         <span class="token comment" spellcheck="true">// 开启分页（使用 CPU 0 创建的页表）</span>
+    <span class="token function">trapinithart</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>        <span class="token comment" spellcheck="true">// 设置 stvec = kernelvec</span>
+    <span class="token function">plicinithart</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>        <span class="token comment" spellcheck="true">// 使能设备中断</span>
+  <span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>从核心只需要三个初始化：</p>
+<ul>
+<li><code>kvminithart()</code>：将 <code>satp</code> 设为 <code>kernel_pagetable</code>（所有 CPU 共享同一个内核页表）</li>
+<li><code>trapinithart()</code>：设置自己的 <code>stvec</code></li>
+<li><code>plicinithart()</code>：在 PLIC 中使能自己的中断</li>
+</ul>
+<p><strong>为什么其他 CPU 不需要 <code>kinit()</code>, <code>procinit()</code> 等？</strong></p>
+<blockquote>
+<p>这些函数初始化的是全局共享的数据结构（空闲链表、进程表等），只需要初始化一次。多个 CPU 通过锁来安全地共享这些数据。</p>
+</blockquote>
+<h3 id="5-4-进入调度循环"><a href="#5-4-进入调度循环" class="headerlink" title="5.4 进入调度循环"></a>5.4 进入调度循环</h3><pre class="line-numbers language-c"><code class="language-c">  <span class="token function">scheduler</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 永不返回</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p>所有 CPU 最终都进入 <code>scheduler()</code> 的无限循环。<code>main()</code> 永远不会返回。</p>
+<hr>
+<h2 id="六、源码精读：userinit-—-创建第一个用户进程"><a href="#六、源码精读：userinit-—-创建第一个用户进程" class="headerlink" title="六、源码精读：userinit() — 创建第一个用户进程"></a>六、源码精读：<code>userinit()</code> — 创建第一个用户进程</h2><h3 id="6-1-完整代码解析"><a href="#6-1-完整代码解析" class="headerlink" title="6.1 完整代码解析"></a>6.1 完整代码解析</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">userinit</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">struct</span> proc <span class="token operator">*</span>p<span class="token punctuation">;</span>
+
+  p <span class="token operator">=</span> <span class="token function">allocproc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>         <span class="token comment" spellcheck="true">// ① 分配一个进程结构</span>
+  initproc <span class="token operator">=</span> p<span class="token punctuation">;</span>            <span class="token comment" spellcheck="true">// 记录为全局的 init 进程指针</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><code>allocproc()</code> 做了以下工作：</p>
+<ol>
+<li>在 <code>proc[NPROC]</code> 数组中找到一个 <code>UNUSED</code> 的槽位</li>
+<li>分配 PID</li>
+<li>分配一个物理页作为 <code>trapframe</code></li>
+<li>创建空的用户页表（映射了 TRAMPOLINE 和 TRAPFRAME）</li>
+<li>设置 <code>context.ra = forkret</code>，<code>context.sp = kstack + PGSIZE</code></li>
+</ol>
+<pre class="line-numbers language-c"><code class="language-c">  <span class="token comment" spellcheck="true">// ② 分配一个用户页，复制 initcode 的机器码进去</span>
+  <span class="token function">uvminit</span><span class="token punctuation">(</span>p<span class="token operator">-></span>pagetable<span class="token punctuation">,</span> initcode<span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>initcode<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  p<span class="token operator">-></span>sz <span class="token operator">=</span> PGSIZE<span class="token punctuation">;</span>           <span class="token comment" spellcheck="true">// 进程大小 = 1 页</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<p><code>initcode[]</code> 是硬编码在 <code>proc.c</code> 中的 52 字节机器码（从 <code>user/initcode.S</code> 编译而来）：</p>
+<pre class="line-numbers language-c"><code class="language-c">uchar initcode<span class="token punctuation">[</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+  <span class="token number">0x17</span><span class="token punctuation">,</span> <span class="token number">0x05</span><span class="token punctuation">,</span> <span class="token number">0x00</span><span class="token punctuation">,</span> <span class="token number">0x00</span><span class="token punctuation">,</span> <span class="token number">0x13</span><span class="token punctuation">,</span> <span class="token number">0x05</span><span class="token punctuation">,</span> <span class="token number">0x45</span><span class="token punctuation">,</span> <span class="token number">0x02</span><span class="token punctuation">,</span>
+  <span class="token number">0x97</span><span class="token punctuation">,</span> <span class="token number">0x05</span><span class="token punctuation">,</span> <span class="token number">0x00</span><span class="token punctuation">,</span> <span class="token number">0x00</span><span class="token punctuation">,</span> <span class="token number">0x93</span><span class="token punctuation">,</span> <span class="token number">0x85</span><span class="token punctuation">,</span> <span class="token number">0x35</span><span class="token punctuation">,</span> <span class="token number">0x02</span><span class="token punctuation">,</span>
+  <span class="token number">0x93</span><span class="token punctuation">,</span> <span class="token number">0x08</span><span class="token punctuation">,</span> <span class="token number">0x70</span><span class="token punctuation">,</span> <span class="token number">0x00</span><span class="token punctuation">,</span> <span class="token number">0x73</span><span class="token punctuation">,</span> <span class="token number">0x00</span><span class="token punctuation">,</span> <span class="token number">0x00</span><span class="token punctuation">,</span> <span class="token number">0x00</span><span class="token punctuation">,</span>
+  <span class="token comment" spellcheck="true">// ... 共 52 字节</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>为什么不直接从磁盘加载 <code>/init</code>？</strong></p>
+<blockquote>
+<p>此时文件系统还没有初始化！<code>fsinit()</code> 在第一个进程被调度运行后才会调用。所以只能把一小段启动代码直接嵌入内核。</p>
+</blockquote>
+<pre class="line-numbers language-c"><code class="language-c">  <span class="token comment" spellcheck="true">// ③ 设置 trapframe，准备"返回"用户态</span>
+  p<span class="token operator">-></span>trapframe<span class="token operator">-></span>epc <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>      <span class="token comment" spellcheck="true">// 用户程序从地址 0 开始执行</span>
+  p<span class="token operator">-></span>trapframe<span class="token operator">-></span>sp <span class="token operator">=</span> PGSIZE<span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 用户栈在页的顶部</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<p><code>epc = 0</code> 意味着 sret 后 CPU 会跳到虚拟地址 0，这正是 <code>uvminit()</code> 放置 initcode 的地方。</p>
+<pre class="line-numbers language-c"><code class="language-c">  <span class="token comment" spellcheck="true">// ④ 设置进程名和当前目录</span>
+  <span class="token function">safestrcpy</span><span class="token punctuation">(</span>p<span class="token operator">-></span>name<span class="token punctuation">,</span> <span class="token string">"initcode"</span><span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>p<span class="token operator">-></span>name<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  p<span class="token operator">-></span>cwd <span class="token operator">=</span> <span class="token function">namei</span><span class="token punctuation">(</span><span class="token string">"/"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>        <span class="token comment" spellcheck="true">// 当前目录 = 根目录</span>
+
+  <span class="token comment" spellcheck="true">// ⑤ 设置进程状态为 RUNNABLE</span>
+  p<span class="token operator">-></span>state <span class="token operator">=</span> RUNNABLE<span class="token punctuation">;</span>
+
+  <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>p<span class="token operator">-></span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>进程创建完成！但它还没有运行——它只是被标记为 <code>RUNNABLE</code>，等待 <code>scheduler()</code> 调度。</p>
+<h3 id="6-2-initcode-做了什么"><a href="#6-2-initcode-做了什么" class="headerlink" title="6.2 initcode 做了什么"></a>6.2 initcode 做了什么</h3><p><code>user/initcode.S</code> 的源码非常简单：</p>
+<pre class="line-numbers language-asm"><code class="language-asm"># 在用户空间运行的初始程序
+# 执行 exec("/init", argv)
+
+.globl start
+start:
+        la a0, init         # a0 = "/init" 字符串的地址
+        la a1, argv         # a1 = argv 数组的地址
+        li a7, SYS_exec     # a7 = 7（exec 的系统调用号）
+        ecall               # 系统调用！
+
+# exec 如果成功不会返回，如果失败则循环 exit
+exit:
+        li a7, SYS_exit     # a7 = 2（exit 的系统调用号）
+        ecall
+        jal exit
+
+# 数据
+init:
+  .string "/init\0"         # 程序路径
+
+.p2align 2
+argv:
+  .long init                # argv[0] = "/init"
+  .long 0                   # argv[1] = NULL（终止符）
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>initcode 的唯一目的就是执行 <code>exec("/init", argv)</code>。<code>exec()</code> 会用 <code>/init</code> 程序的代码替换当前地址空间，所以 initcode 执行后就”消失”了。</p>
+<h3 id="6-3-第一次被调度：forkret"><a href="#6-3-第一次被调度：forkret" class="headerlink" title="6.3 第一次被调度：forkret()"></a>6.3 第一次被调度：<code>forkret()</code></h3><p>当 <code>scheduler()</code> 第一次选中 initcode 进程时，会 <code>swtch</code> 到该进程的 <code>context</code>。由于 <code>allocproc()</code> 设置了 <code>context.ra = forkret</code>，所以第一次”调度”实际上是跳到 <code>forkret()</code>：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">forkret</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">static</span> <span class="token keyword">int</span> first <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// 释放 scheduler 持有的进程锁</span>
+  <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span><span class="token function">myproc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">-></span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>first<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    first <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    <span class="token function">fsinit</span><span class="token punctuation">(</span>ROOTDEV<span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// ← 文件系统初始化！在这里完成</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token function">usertrapret</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>         <span class="token comment" spellcheck="true">// 返回用户空间</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>关键洞察</strong>：</p>
+<ul>
+<li><code>fsinit(ROOTDEV)</code> 在这里调用，因为它需要读磁盘（<code>bread()</code>），而读磁盘可能需要 <code>sleep()</code>，<code>sleep()</code> 需要一个进程上下文。<code>main()</code> 中没有进程上下文，所以不能在 <code>main()</code> 中调用</li>
+<li><code>first</code> 是 <code>static</code> 变量，确保 <code>fsinit()</code> 只被调用一次</li>
+<li><code>usertrapret()</code> 最终会 <code>sret</code> 到用户态，PC 跳转到 <code>trapframe-&gt;epc</code>（= 0），开始执行 initcode</li>
+</ul>
+<h3 id="6-4-从内核到用户态的第一次跳转"><a href="#6-4-从内核到用户态的第一次跳转" class="headerlink" title="6.4 从内核到用户态的第一次跳转"></a>6.4 从内核到用户态的第一次跳转</h3><p>完整路径：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">scheduler<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  ↓ swtch<span class="token punctuation">(</span><span class="token operator">&amp;</span>c-<span class="token operator">></span>context, <span class="token operator">&amp;</span>p-<span class="token operator">></span>context<span class="token punctuation">)</span>
+forkret<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  ↓ usertrapret<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    ↓ 设置 trapframe 中的内核信息
+    ↓ w_stvec<span class="token punctuation">(</span>uservec<span class="token punctuation">)</span> — 切换到用户态 <span class="token function">trap</span> 处理
+    ↓ w_satp<span class="token punctuation">(</span>用户页表<span class="token punctuation">)</span>
+    ↓ 跳到 trampoline.S 中的 userret
+      ↓ 恢复用户寄存器
+      ↓ sret
+用户态地址 0x0 → initcode 开始执行
+  ↓ ecall <span class="token punctuation">(</span>exec<span class="token punctuation">(</span><span class="token string">"/init"</span><span class="token punctuation">))</span>
+    ↓ 进入内核，执行 sys_exec<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    ↓ 加载 /init 程序
+    ↓ sret
+/init 程序开始执行
+  ↓ open<span class="token punctuation">(</span><span class="token string">"console"</span><span class="token punctuation">)</span> → fd 0
+  ↓ dup<span class="token punctuation">(</span>0<span class="token punctuation">)</span> → fd 1
+  ↓ dup<span class="token punctuation">(</span>0<span class="token punctuation">)</span> → fd 2
+  ↓ fork<span class="token punctuation">(</span><span class="token punctuation">)</span> + exec<span class="token punctuation">(</span><span class="token string">"sh"</span><span class="token punctuation">)</span>
+shell 启动，显示 <span class="token string">"$"</span> 提示符
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<hr>
+<h2 id="七、源码精读：scheduler-—-调度循环"><a href="#七、源码精读：scheduler-—-调度循环" class="headerlink" title="七、源码精读：scheduler() — 调度循环"></a>七、源码精读：<code>scheduler()</code> — 调度循环</h2><h3 id="7-1-代码解析"><a href="#7-1-代码解析" class="headerlink" title="7.1 代码解析"></a>7.1 代码解析</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">scheduler</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">struct</span> proc <span class="token operator">*</span>p<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> cpu <span class="token operator">*</span>c <span class="token operator">=</span> <span class="token function">mycpu</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>     <span class="token comment" spellcheck="true">// 获取当前 CPU 结构</span>
+  
+  c<span class="token operator">-></span>proc <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>                <span class="token comment" spellcheck="true">// 当前没有运行进程</span>
+  <span class="token keyword">for</span><span class="token punctuation">(</span><span class="token punctuation">;</span><span class="token punctuation">;</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token function">intr_on</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>                 <span class="token comment" spellcheck="true">// 开中断（避免死锁）</span>
+    
+    <span class="token keyword">int</span> found <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    <span class="token keyword">for</span><span class="token punctuation">(</span>p <span class="token operator">=</span> proc<span class="token punctuation">;</span> p <span class="token operator">&lt;</span> <span class="token operator">&amp;</span>proc<span class="token punctuation">[</span>NPROC<span class="token punctuation">]</span><span class="token punctuation">;</span> p<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">acquire</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>p<span class="token operator">-></span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">if</span><span class="token punctuation">(</span>p<span class="token operator">-></span>state <span class="token operator">==</span> RUNNABLE<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token comment" spellcheck="true">// 找到一个可运行的进程</span>
+        p<span class="token operator">-></span>state <span class="token operator">=</span> RUNNING<span class="token punctuation">;</span>        <span class="token comment" spellcheck="true">// 标记为运行中</span>
+        c<span class="token operator">-></span>proc <span class="token operator">=</span> p<span class="token punctuation">;</span>               <span class="token comment" spellcheck="true">// 记录当前 CPU 运行的进程</span>
+        <span class="token function">swtch</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>c<span class="token operator">-></span>context<span class="token punctuation">,</span> <span class="token operator">&amp;</span>p<span class="token operator">-></span>context<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 切换到该进程</span>
+
+        <span class="token comment" spellcheck="true">// 进程让出 CPU 后回到这里</span>
+        c<span class="token operator">-></span>proc <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+        found <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+      <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>p<span class="token operator">-></span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>found <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">intr_on</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">asm</span> <span class="token keyword">volatile</span><span class="token punctuation">(</span><span class="token string">"wfi"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>     <span class="token comment" spellcheck="true">// 没有可运行进程，等待中断</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="7-2-调度器的工作方式"><a href="#7-2-调度器的工作方式" class="headerlink" title="7.2 调度器的工作方式"></a>7.2 调度器的工作方式</h3><pre class="line-numbers language-bash"><code class="language-bash">scheduler<span class="token punctuation">(</span><span class="token punctuation">)</span> 无限循环:
+┌─────────────────────────────────────────────────────┐
+│ ① 遍历 proc<span class="token punctuation">[</span>0<span class="token punctuation">..</span>63<span class="token punctuation">]</span>，找 state <span class="token operator">==</span> RUNNABLE 的进程     │
+│ ② 找到了：                                          │
+│    p-<span class="token operator">></span>state <span class="token operator">=</span> RUNNING                               │
+│    swtch<span class="token punctuation">(</span><span class="token operator">&amp;</span>c-<span class="token operator">></span>context, <span class="token operator">&amp;</span>p-<span class="token operator">></span>context<span class="token punctuation">)</span>                  │
+│    ─── 现在 CPU 在执行进程 p 的代码 ───               │
+│    ─── 进程 p 调用 yield<span class="token punctuation">(</span><span class="token punctuation">)</span>/exit<span class="token punctuation">(</span><span class="token punctuation">)</span>/sleep<span class="token punctuation">(</span><span class="token punctuation">)</span> ───        │
+│    ─── swtch 回到这里 ───                            │
+│    c-<span class="token operator">></span>proc <span class="token operator">=</span> 0                                      │
+│    继续遍历                                          │
+│ ③ 没找到（所有进程都在等待）：                        │
+│    wfi（wait <span class="token keyword">for</span> interrupt，低功耗等待中断唤醒）     │
+└─────────────────────────────────────────────────────┘
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong><code>swtch</code> 的本质</strong>：保存当前的 callee-saved 寄存器（ra, sp, s0-s11）到 <code>c-&gt;context</code>，然后从 <code>p-&gt;context</code> 恢复这些寄存器。由于恢复了 <code>ra</code> 和 <code>sp</code>，”返回”时实际上跳到了另一段代码（进程 p 之前让出 CPU 的位置）。</p>
+<h3 id="7-3-启动时的第一次调度"><a href="#7-3-启动时的第一次调度" class="headerlink" title="7.3 启动时的第一次调度"></a>7.3 启动时的第一次调度</h3><p>启动时 scheduler 第一次循环：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">proc<span class="token punctuation">[</span>0<span class="token punctuation">]</span> <span class="token operator">=</span> initcode 进程 <span class="token punctuation">(</span>RUNNABLE<span class="token punctuation">)</span>
+proc<span class="token punctuation">[</span>1<span class="token punctuation">..</span>63<span class="token punctuation">]</span> <span class="token operator">=</span> UNUSED
+
+scheduler:
+  找到 proc<span class="token punctuation">[</span>0<span class="token punctuation">]</span>，state <span class="token operator">=</span> RUNNABLE
+  proc<span class="token punctuation">[</span>0<span class="token punctuation">]</span>.state <span class="token operator">=</span> RUNNING
+  swtch<span class="token punctuation">(</span><span class="token operator">&amp;</span>c-<span class="token operator">></span>context, <span class="token operator">&amp;</span>proc<span class="token punctuation">[</span>0<span class="token punctuation">]</span>.context<span class="token punctuation">)</span>
+    ↓
+  proc<span class="token punctuation">[</span>0<span class="token punctuation">]</span>.context.ra <span class="token operator">=</span> forkret  ← allocproc<span class="token punctuation">(</span><span class="token punctuation">)</span> 设置的
+  proc<span class="token punctuation">[</span>0<span class="token punctuation">]</span>.context.sp <span class="token operator">=</span> kstack + PGSIZE
+    ↓
+  跳到 forkret<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    ↓
+  fsinit<span class="token punctuation">(</span>ROOTDEV<span class="token punctuation">)</span>  ← 初始化文件系统
+  usertrapret<span class="token punctuation">(</span><span class="token punctuation">)</span>    ← 返回用户态
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<hr>
+<h2 id="八、初始化序列的依赖关系"><a href="#八、初始化序列的依赖关系" class="headerlink" title="八、初始化序列的依赖关系"></a>八、初始化序列的依赖关系</h2><p>理解为什么初始化必须按这个顺序，是理解内核架构的关键。</p>
+<h3 id="8-1-依赖关系图"><a href="#8-1-依赖关系图" class="headerlink" title="8.1 依赖关系图"></a>8.1 依赖关系图</h3><pre><code>consoleinit ─┐
+printfinit ──┴── printf 可用 ──┐
+                                │
+kinit ────── 物理页分配器可用 ──┤
+                                │
+kvminit ──── 内核页表创建 ──────┤
+kvminithart ─ 分页开启 ────────┤
+                                │
+procinit ──── 进程表 + 内核栈 ──┤ （依赖 kalloc + kvmmap）
+                                │
+trapinit ────┐                  │
+trapinithart ┴ trap 处理就绪 ──┤
+plicinit ────┐                  │
+plicinithart ┴ 设备中断就绪 ──┤
+                                │
+binit ───────── 块缓存就绪 ────┤ （依赖锁）
+iinit ───────── inode 缓存就绪 ┤ （依赖锁）
+fileinit ────── 文件表就绪 ────┤ （依赖锁）
+virtio_disk_init ─ 磁盘就绪 ──┤ （依赖 kalloc）
+                                │
+userinit ─── 第一个进程就绪 ───┤ （依赖以上所有）
+                                │
+                 scheduler() ───┘ （依赖 userinit 创建了可运行进程）
+</code></pre>
+<h3 id="8-2-关键依赖解释"><a href="#8-2-关键依赖解释" class="headerlink" title="8.2 关键依赖解释"></a>8.2 关键依赖解释</h3><table>
+<thead>
+<tr>
+<th>顺序约束</th>
+<th>原因</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>consoleinit</code> 在最前面</td>
+<td><code>printf</code> 底层依赖 UART 硬件初始化</td>
+</tr>
+<tr>
+<td><code>kinit</code> 在 <code>kvminit</code> 之前</td>
+<td>创建页表需要分配物理页（<code>kalloc()</code>）</td>
+</tr>
+<tr>
+<td><code>kvminit</code> 在 <code>kvminithart</code> 之前</td>
+<td>必须先创建页表内容，再加载到 <code>satp</code></td>
+</tr>
+<tr>
+<td><code>kvminithart</code> 在 <code>procinit</code> 之前</td>
+<td><code>procinit</code> 调用 <code>kvmmap()</code> 修改页表</td>
+</tr>
+<tr>
+<td><code>procinit</code> 在 <code>userinit</code> 之前</td>
+<td><code>userinit</code> 需要 <code>allocproc()</code> 从进程表分配</td>
+</tr>
+<tr>
+<td><code>virtio_disk_init</code> 在 <code>userinit</code> 之前</td>
+<td>initcode 最终要读磁盘加载 <code>/init</code></td>
+</tr>
+<tr>
+<td><code>fsinit</code> 不在 <code>main</code> 中</td>
+<td><code>fsinit</code> 需要读磁盘（<code>bread</code> → sleep），需要进程上下文</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="九、动手实验"><a href="#九、动手实验" class="headerlink" title="九、动手实验"></a>九、动手实验</h2><h3 id="实验-1：用-GDB-追踪完整启动流程"><a href="#实验-1：用-GDB-追踪完整启动流程" class="headerlink" title="实验 1：用 GDB 追踪完整启动流程"></a>实验 1：用 GDB 追踪完整启动流程</h3><p><strong>1.1 启动调试环境</strong></p>
+<p>终端 1：</p>
+<pre class="line-numbers language-bash"><code class="language-bash"><span class="token function">cd</span> ~/xv6-labs
+<span class="token function">make</span> qemu-gdb
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p>终端 2：</p>
+<pre class="line-numbers language-bash"><code class="language-bash"><span class="token function">cd</span> ~/xv6-labs
+gdb-multiarch kernel/kernel
+<span class="token punctuation">(</span>gdb<span class="token punctuation">)</span> target remote localhost:26000
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<p><strong>1.2 在 <code>_entry</code> 设断点</strong></p>
+<pre class="line-numbers language-gdb"><code class="language-gdb">(gdb) b *0x80000000         # entry.S 的第一条指令
+(gdb) c
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p>停下后：</p>
+<pre class="line-numbers language-gdb"><code class="language-gdb">(gdb) print/x $mhartid      # 查看当前 CPU 编号
+(gdb) print/x $sp            # 栈指针（还没设置，值不确定）
+(gdb) si                     # 单步执行一条汇编指令
+(gdb) si
+(gdb) si
+# 观察 sp 被逐步计算和设置
+(gdb) print/x $sp            # 现在应该指向 stack0 + 4096*(hartid+1)
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>1.3 追踪 M-mode → S-mode 切换</strong></p>
+<pre class="line-numbers language-gdb"><code class="language-gdb">(gdb) b start                # 在 start() 设断点
+(gdb) c
+(gdb) n                      # 逐行执行
+(gdb) print/x $mstatus       # 观察 MPP 的变化
+# 重复 n 直到 mret
+(gdb) b main                 # 在 main 设断点
+(gdb) c                      # mret 后应该停在 main()
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>1.4 追踪初始化序列</strong></p>
+<pre class="line-numbers language-gdb"><code class="language-gdb">(gdb) b userinit
+(gdb) c                      # 跳到 userinit
+(gdb) s                      # 进入 allocproc
+(gdb) print p->pid           # 应该是 1
+(gdb) c                      # 跳到下一个断点
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="实验-2：在初始化函数中添加追踪信息"><a href="#实验-2：在初始化函数中添加追踪信息" class="headerlink" title="实验 2：在初始化函数中添加追踪信息"></a>实验 2：在初始化函数中添加追踪信息</h3><p>修改 <code>kernel/main.c</code>，在每个初始化函数前后加打印：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">cpuid</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token function">consoleinit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printfinit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"xv6 kernel is booting\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[boot] kinit...\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">kinit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[boot] kvminit...\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">kvminit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[boot] kvminithart...\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">kvminithart</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[boot] procinit...\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">procinit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[boot] trapinit...\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">trapinit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[boot] trapinithart...\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">trapinithart</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[boot] plicinit...\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">plicinit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[boot] plicinithart...\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">plicinithart</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[boot] binit...\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">binit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[boot] iinit...\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">iinit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[boot] fileinit...\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">fileinit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[boot] virtio_disk_init...\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">virtio_disk_init</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[boot] userinit...\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">userinit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[boot] all init done, entering scheduler\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token function">__sync_synchronize</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    started <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// ...</span>
+  <span class="token punctuation">}</span>
+  <span class="token function">scheduler</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>        
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>编译运行：</p>
+<pre class="line-numbers language-bash"><code class="language-bash"><span class="token function">make</span> clean <span class="token operator">&amp;&amp;</span> <span class="token function">make</span> qemu
+<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>观察输出顺序，验证你对初始化依赖关系的理解。</p>
+<h3 id="实验-3：观察多核启动"><a href="#实验-3：观察多核启动" class="headerlink" title="实验 3：观察多核启动"></a>实验 3：观察多核启动</h3><p>在 <code>main.c</code> 中为其他 CPU 也添加打印：</p>
+<pre class="line-numbers language-c"><code class="language-c">  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    <span class="token keyword">while</span><span class="token punctuation">(</span>started <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span>
+      <span class="token punctuation">;</span>
+    <span class="token function">__sync_synchronize</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"hart %d starting\n"</span><span class="token punctuation">,</span> <span class="token function">cpuid</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"hart %d: kvminithart\n"</span><span class="token punctuation">,</span> <span class="token function">cpuid</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">kvminithart</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"hart %d: trapinithart\n"</span><span class="token punctuation">,</span> <span class="token function">cpuid</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">trapinithart</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"hart %d: plicinithart\n"</span><span class="token punctuation">,</span> <span class="token function">cpuid</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">plicinithart</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"hart %d: entering scheduler\n"</span><span class="token punctuation">,</span> <span class="token function">cpuid</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>多次运行，观察 hart 1 和 hart 2 的初始化顺序是否总是一样？</p>
+<blockquote>
+<p>提示：由于是真正的并行执行，它们的打印可能交错出现。</p>
+</blockquote>
+<h3 id="实验-4：追踪第一个进程的创建"><a href="#实验-4：追踪第一个进程的创建" class="headerlink" title="实验 4：追踪第一个进程的创建"></a>实验 4：追踪第一个进程的创建</h3><p>在 <code>userinit()</code> 中添加详细打印：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">userinit</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">struct</span> proc <span class="token operator">*</span>p<span class="token punctuation">;</span>
+  p <span class="token operator">=</span> <span class="token function">allocproc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  initproc <span class="token operator">=</span> p<span class="token punctuation">;</span>
+  
+  <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[userinit] pid=%d, kstack=%p\n"</span><span class="token punctuation">,</span> p<span class="token operator">-></span>pid<span class="token punctuation">,</span> p<span class="token operator">-></span>kstack<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token function">uvminit</span><span class="token punctuation">(</span>p<span class="token operator">-></span>pagetable<span class="token punctuation">,</span> initcode<span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>initcode<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  p<span class="token operator">-></span>sz <span class="token operator">=</span> PGSIZE<span class="token punctuation">;</span>
+  
+  p<span class="token operator">-></span>trapframe<span class="token operator">-></span>epc <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  p<span class="token operator">-></span>trapframe<span class="token operator">-></span>sp <span class="token operator">=</span> PGSIZE<span class="token punctuation">;</span>
+  
+  <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[userinit] epc=%p, sp=%p\n"</span><span class="token punctuation">,</span> p<span class="token operator">-></span>trapframe<span class="token operator">-></span>epc<span class="token punctuation">,</span> p<span class="token operator">-></span>trapframe<span class="token operator">-></span>sp<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[userinit] initcode size=%d bytes\n"</span><span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>initcode<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token function">safestrcpy</span><span class="token punctuation">(</span>p<span class="token operator">-></span>name<span class="token punctuation">,</span> <span class="token string">"initcode"</span><span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>p<span class="token operator">-></span>name<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  p<span class="token operator">-></span>cwd <span class="token operator">=</span> <span class="token function">namei</span><span class="token punctuation">(</span><span class="token string">"/"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  p<span class="token operator">-></span>state <span class="token operator">=</span> RUNNABLE<span class="token punctuation">;</span>
+  
+  <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[userinit] process '%s' is RUNNABLE\n"</span><span class="token punctuation">,</span> p<span class="token operator">-></span>name<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>p<span class="token operator">-></span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="实验-5：验证初始化顺序的依赖性"><a href="#实验-5：验证初始化顺序的依赖性" class="headerlink" title="实验 5：验证初始化顺序的依赖性"></a>实验 5：验证初始化顺序的依赖性</h3><p><strong>尝试打乱初始化顺序</strong>，看看什么会崩溃：</p>
+<p><strong>实验 5a</strong>：把 <code>kinit()</code> 移到 <code>kvminit()</code> 之后</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// 预期结果：panic 或卡死</span>
+<span class="token comment" spellcheck="true">// 原因：kvminit() 需要 kalloc() 分配页表页</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p><strong>实验 5b</strong>：把 <code>kvminithart()</code> 移到 <code>procinit()</code> 之后</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// 预期结果：可能可以正常工作，也可能崩溃</span>
+<span class="token comment" spellcheck="true">// 原因：procinit() 调用 kvmmap() 修改页表，然后自己调用 kvminithart()</span>
+<span class="token comment" spellcheck="true">// 实际上 procinit() 末尾有 kvminithart()，所以 main 中不需要额外调用</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<p><strong>重要</strong>：做完实验后记得恢复代码！可以用 <code>git checkout -- kernel/main.c</code> 恢复。</p>
+<h3 id="实验-6：查看-forkret-中的文件系统初始化"><a href="#实验-6：查看-forkret-中的文件系统初始化" class="headerlink" title="实验 6：查看 forkret 中的文件系统初始化"></a>实验 6：查看 forkret 中的文件系统初始化</h3><p>在 <code>forkret()</code> 中添加打印：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">forkret</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">static</span> <span class="token keyword">int</span> first <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+  <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span><span class="token function">myproc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">-></span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>first<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    first <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[forkret] initializing file system...\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">fsinit</span><span class="token punctuation">(</span>ROOTDEV<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[forkret] file system initialized\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[forkret] returning to user space, pid=%d\n"</span><span class="token punctuation">,</span> <span class="token function">myproc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">-></span>pid<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token function">usertrapret</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>观察这些打印与 <code>main.c</code> 中打印的时序关系——<code>fsinit</code> 应该出现在 <code>scheduler</code> 之后。</p>
+<hr>
+<h2 id="十、思考题"><a href="#十、思考题" class="headerlink" title="十、思考题"></a>十、思考题</h2><ol>
+<li><p><strong><code>entry.S</code> 中的所有 CPU 核心同时开始执行。它们调用 <code>start()</code> 时是否会发生竞争？</strong></p>
+<blockquote>
+<p>不会。<code>start()</code> 中操作的都是每个 CPU 私有的 CSR 寄存器和私有的栈，没有共享数据的写入（全局变量 <code>mscratch0</code> 的写入位置按 hartid 分开）。所以多个核心同时执行 <code>start()</code> 是安全的。</p>
+</blockquote>
+</li>
+<li><p><strong>如果把 <code>main.c</code> 中的 <code>__sync_synchronize()</code> 去掉会怎样？</strong></p>
+<blockquote>
+<p>在弱内存序架构上，CPU 0 可能先把 <code>started = 1</code> 写入缓存，但之前的初始化数据还没有刷新到内存。其他 CPU 看到 <code>started == 1</code> 后开始运行，但可能读到未完成初始化的数据，导致不确定的崩溃。内存屏障确保所有在屏障之前的写入对其他 CPU 可见。</p>
+</blockquote>
+</li>
+<li><p><strong>为什么 <code>fsinit()</code> 不能在 <code>main()</code> 中调用？</strong></p>
+<blockquote>
+<p><code>fsinit()</code> 需要读磁盘超级块（调用 <code>bread()</code>）。<code>bread()</code> 向 virtio 磁盘发送请求后会调用 <code>sleep()</code> 等待磁盘完成。但 <code>main()</code> 不在任何进程的上下文中（<code>myproc()</code> 返回 NULL），<code>sleep()</code> 需要一个进程结构来保存状态。所以必须在第一个进程被调度后（<code>forkret</code> 中）才能安全调用。</p>
+</blockquote>
+</li>
+<li><p><strong><code>scheduler()</code> 中为什么要在循环开始时调用 <code>intr_on()</code>？</strong></p>
+<blockquote>
+<p>进程在被调度前通过 <code>acquire(&amp;p-&gt;lock)</code> 关闭了中断。当 <code>swtch</code> 返回到 scheduler 时，中断仍然是关的（因为还持有锁）。释放锁后中断恢复。但如果没有 RUNNABLE 进程，scheduler 会一直遍历，在 <code>acquire/release</code> 中反复开关中断。循环开头的 <code>intr_on()</code> 确保在寻找下一个进程时中断始终打开，这样设备中断（如磁盘完成）可以唤醒睡眠的进程。</p>
+</blockquote>
+</li>
+<li><p><strong>initcode 为什么是机器码硬编码在 C 数组中，而不是从文件系统加载？</strong></p>
+<blockquote>
+<p>这是一个”鸡和蛋”的问题：加载文件需要文件系统 → 初始化文件系统需要磁盘 I/O → 磁盘 I/O 需要 <code>sleep()</code> → <code>sleep()</code> 需要进程上下文 → 进程需要代码来运行 → 代码在文件系统中。用硬编码的 initcode 打破了这个循环依赖。</p>
+</blockquote>
+</li>
+<li><p><strong>RISC-V 的 <code>wfi</code> 指令有什么作用？<code>scheduler()</code> 中为什么要用它？</strong></p>
+<blockquote>
+<p><code>wfi</code>（Wait For Interrupt）让 CPU 进入低功耗等待状态，直到下一个中断到来。当没有 RUNNABLE 进程时，CPU 空转循环会浪费电力和产生热量。<code>wfi</code> 让 CPU “休眠”到下一个中断（如时钟中断或设备中断）才醒来，减少资源浪费。</p>
+</blockquote>
+</li>
+</ol>
+<hr>
+<h2 id="十一、本节小结"><a href="#十一、本节小结" class="headerlink" title="十一、本节小结"></a>十一、本节小结</h2><table>
+<thead>
+<tr>
+<th>概念</th>
+<th>要点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>启动入口</td>
+<td><code>entry.S</code>：设置栈，跳转到 <code>start()</code></td>
+</tr>
+<tr>
+<td>M-mode 初始化</td>
+<td><code>start.c</code>：配置 CSR，委托中断，<code>mret</code> 进入 S-mode</td>
+</tr>
+<tr>
+<td>多核协调</td>
+<td>CPU 0 做完整初始化，其他 CPU 自旋等待 <code>started</code></td>
+</tr>
+<tr>
+<td>初始化序列</td>
+<td>17 个 init 函数，有严格的依赖顺序</td>
+</tr>
+<tr>
+<td>内存管理先行</td>
+<td><code>kinit → kvminit → kvminithart</code>（先建立内存基础设施）</td>
+</tr>
+<tr>
+<td>第一个进程</td>
+<td><code>userinit</code> 创建 initcode → <code>exec("/init")</code> → shell</td>
+</tr>
+<tr>
+<td>文件系统延迟初始化</td>
+<td><code>fsinit()</code> 在 <code>forkret()</code> 中首次调用</td>
+</tr>
+<tr>
+<td>调度循环</td>
+<td><code>scheduler()</code> 永不返回，在 RUNNABLE 进程间轮转</td>
+</tr>
+<tr>
+<td>时钟中断</td>
+<td>M-mode <code>timervec</code> 处理后转发为 S-mode 软件中断</td>
+</tr>
+</tbody></table>
+<p><strong>下一节预告</strong>：第 4 节将深入分析物理内存管理——<code>kalloc.c</code> 的空闲链表机制，理解 xv6 如何分配和回收物理页。</p>
+<hr>
+<h2 id="附录：关键文件速查表"><a href="#附录：关键文件速查表" class="headerlink" title="附录：关键文件速查表"></a>附录：关键文件速查表</h2><table>
+<thead>
+<tr>
+<th>文件</th>
+<th>行数</th>
+<th>本节涉及内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>kernel/kernel.ld</code></td>
+<td>44</td>
+<td>链接器脚本：内核加载地址、段布局、关键符号</td>
+</tr>
+<tr>
+<td><code>kernel/entry.S</code></td>
+<td>20</td>
+<td>启动入口：设置栈指针、跳转到 start()</td>
+</tr>
+<tr>
+<td><code>kernel/start.c</code></td>
+<td>83</td>
+<td>M-mode 初始化：CSR 配置、时钟中断、mret</td>
+</tr>
+<tr>
+<td><code>kernel/main.c</code></td>
+<td>50</td>
+<td>S-mode 初始化序列：17 个 init 函数</td>
+</tr>
+<tr>
+<td><code>kernel/proc.c</code></td>
+<td>695</td>
+<td><code>userinit()</code>、<code>allocproc()</code>、<code>procinit()</code>、<code>scheduler()</code></td>
+</tr>
+<tr>
+<td><code>kernel/proc.h</code></td>
+<td>106</td>
+<td><code>struct proc</code>、<code>struct context</code>、<code>struct trapframe</code></td>
+</tr>
+<tr>
+<td><code>kernel/swtch.S</code></td>
+<td>42</td>
+<td>上下文切换：保存/恢复 callee-saved 寄存器</td>
+</tr>
+<tr>
+<td><code>kernel/kernelvec.S</code></td>
+<td>121</td>
+<td><code>timervec</code>：M-mode 时钟中断处理</td>
+</tr>
+<tr>
+<td><code>user/initcode.S</code></td>
+<td>28</td>
+<td>第一个用户程序：<code>exec("/init")</code></td>
+</tr>
+<tr>
+<td><code>user/init.c</code></td>
+<td>54</td>
+<td>init 进程：打开控制台、启动 shell</td>
+</tr>
+</tbody></table>
+<h2 id="附录：启动时间线"><a href="#附录：启动时间线" class="headerlink" title="附录：启动时间线"></a>附录：启动时间线</h2><p>以下是 xv6 从开始到 shell 提示符出现的完整时间线：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">时间 → 
+                                                                    
+CPU 0:  _entry → start<span class="token punctuation">(</span><span class="token punctuation">)</span> → mret → main<span class="token punctuation">(</span><span class="token punctuation">)</span>                           
+        │                         │                                 
+        │                         ├─consoleinit                     
+        │                         ├─printfinit                      
+        │                         ├─<span class="token string">"xv6 kernel is booting"</span>         
+        │                         ├─kinit <span class="token punctuation">(</span>物理页分配器<span class="token punctuation">)</span>             
+        │                         ├─kvminit <span class="token punctuation">(</span>内核页表<span class="token punctuation">)</span>               
+        │                         ├─kvminithart <span class="token punctuation">(</span>开启分页<span class="token punctuation">)</span>           
+        │                         ├─procinit <span class="token punctuation">(</span>进程表 + 内核栈<span class="token punctuation">)</span>       
+        │                         ├─trapinit + trapinithart         
+        │                         ├─plicinit + plicinithart         
+        │                         ├─binit + iinit + fileinit        
+        │                         ├─virtio_disk_init                
+        │                         ├─userinit <span class="token punctuation">(</span>创建 initcode 进程<span class="token punctuation">)</span>    
+        │                         ├─started<span class="token operator">=</span>1                       
+        │                         └─scheduler<span class="token punctuation">(</span><span class="token punctuation">)</span>                     
+        │                           ├─swtch → forkret               
+        │                           │         ├─fsinit <span class="token punctuation">(</span>文件系统<span class="token operator">!</span><span class="token punctuation">)</span>    
+        │                           │         └─usertrapret → sret   
+        │                           │           └─initcode <span class="token punctuation">(</span>用户态<span class="token punctuation">)</span>  
+        │                           │             └─exec<span class="token punctuation">(</span><span class="token string">"/init"</span><span class="token punctuation">)</span>    
+        │                           │               └─init.c         
+        │                           │                 ├─open console  
+        │                           │                 ├─dup<span class="token punctuation">(</span>0<span class="token punctuation">)</span> x2     
+        │                           │                 └─fork+exec sh  
+        │                           │                   └─$ ← shell  
+        │                           └─继续调度<span class="token punctuation">..</span>.                    
+                                                                    
+CPU 1:  _entry → start<span class="token punctuation">(</span><span class="token punctuation">)</span> → mret → main<span class="token punctuation">(</span><span class="token punctuation">)</span>                           
+        │                         │                                 
+        │                         ├─while<span class="token punctuation">(</span>started<span class="token operator">==</span>0<span class="token punctuation">)</span> 自旋等待      
+        │                         ├─<span class="token string">"hart 1 starting"</span>               
+        │                         ├─kvminithart                     
+        │                         ├─trapinithart                    
+        │                         ├─plicinithart                    
+        │                         └─scheduler<span class="token punctuation">(</span><span class="token punctuation">)</span> ← 参与调度          
+                                                                    
+CPU 2:  _entry → start<span class="token punctuation">(</span><span class="token punctuation">)</span> → mret → main<span class="token punctuation">(</span><span class="token punctuation">)</span>                           
+        │                         │                                 
+        │                         ├─while<span class="token punctuation">(</span>started<span class="token operator">==</span>0<span class="token punctuation">)</span> 自旋等待      
+        │                         ├─<span class="token string">"hart 2 starting"</span>               
+        │                         ├─kvminithart + trapinithart      
+        │                         ├─plicinithart                    
+        │                         └─scheduler<span class="token punctuation">(</span><span class="token punctuation">)</span> ← 参与调度          
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+
+                
+            </div>
+            <hr/>
+
+            
+
+    <div class="reprint" id="reprint-statement">
+        
+            <div class="reprint__author">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-user">
+                        文章作者:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    <a href="/about" rel="external nofollow noreferrer">404djl</a>
+                </span>
+            </div>
+            <div class="reprint__type">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-link">
+                        文章链接:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    <a href="https://404djl.github.io/2026/01/26/os03-xi-tong-qi-dong-liu-cheng/">https://404djl.github.io/2026/01/26/os03-xi-tong-qi-dong-liu-cheng/</a>
+                </span>
+            </div>
+            <div class="reprint__notice">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-copyright">
+                        版权声明:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    本博客所有文章除特別声明外，均采用
+                    <a href="https://creativecommons.org/licenses/by/4.0/deed.zh" rel="external nofollow noreferrer" target="_blank">CC BY 4.0</a>
+                    许可协议。转载请注明来源
+                    <a href="/about" target="_blank">404djl</a>
+                    !
+                </span>
+            </div>
+        
+    </div>
+
+    <script async defer>
+      document.addEventListener("copy", function (e) {
+        let toastHTML = '<span>复制成功，请遵循本文的转载规则</span><button class="btn-flat toast-action" onclick="navToReprintStatement()" style="font-size: smaller">查看</a>';
+        M.toast({html: toastHTML})
+      });
+
+      function navToReprintStatement() {
+        $("html, body").animate({scrollTop: $("#reprint-statement").offset().top - 80}, 800);
+      }
+    </script>
+
+
+
+            <div class="tag_share" style="display: block;">
+                <div class="post-meta__tag-list" style="display: inline-block;">
+                    
+                        <div class="article-tag">
+                            
+                                <a href="/tags/linux/">
+                                    <span class="chip bg-color">linux</span>
+                                </a>
+                            
+                                <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                                    <span class="chip bg-color">操作系统</span>
+                                </a>
+                            
+                        </div>
+                    
+                </div>
+                <div class="post_share" style="zoom: 80%; width: fit-content; display: inline-block; float: right; margin: -0.15rem 0;">
+                    <link rel="stylesheet" type="text/css" href="/libs/share/css/share.min.css">
+<div id="article-share">
+
+    
+    <div class="social-share" data-sites="twitter,facebook,google,qq,qzone,wechat,weibo,douban,linkedin" data-wechat-qrcode-helper="<p>微信扫一扫即可分享！</p>"></div>
+    <script src="/libs/share/js/social-share.min.js"></script>
+    
+
+    
+
+</div>
+
+                </div>
+            </div>
+            
+                <div id="reward">
+    <a href="#rewardModal" class="reward-link modal-trigger btn-floating btn-medium waves-effect waves-light red">赏</a>
+
+    <!-- Modal Structure -->
+    <div id="rewardModal" class="modal">
+        <div class="modal-content">
+            <a class="close modal-close"><i class="fas fa-times"></i></a>
+            <h4 class="reward-title">你的赏识是我前进的动力</h4>
+            <div class="reward-content">
+                <div class="reward-tabs">
+                    <ul class="tabs row">
+                        <li class="tab col s6 alipay-tab waves-effect waves-light"><a href="#alipay">支付宝</a></li>
+                        <li class="tab col s6 wechat-tab waves-effect waves-light"><a href="#wechat">微 信</a></li>
+                    </ul>
+                    <div id="alipay">
+                        <img src="/medias/reward/alipay.jpg" class="reward-img" alt="支付宝打赏二维码">
+                    </div>
+                    <div id="wechat">
+                        <img src="/medias/reward/wechat.png" class="reward-img" alt="微信打赏二维码">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(function () {
+        $('.tabs').tabs();
+    });
+</script>
+
+            
+        </div>
+    </div>
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+<article id="prenext-posts" class="prev-next articles">
+    <div class="row article-row">
+        
+        <div class="article col s12 m6" data-aos="fade-up">
+            <div class="article-badge left-badge text-color">
+                <i class="fas fa-chevron-left"></i>&nbsp;上一篇</div>
+            <div class="card">
+                <a href="/2026/01/27/os04-wu-li-nei-cun-guan-li/">
+                    <div class="card-image">
+                        
+                        
+                        <img src="/medias/featureimages/28.png" class="responsive-img" alt="OS04-物理内存管理">
+                        
+                        <span class="card-title">OS04-物理内存管理</span>
+                    </div>
+                </a>
+                <div class="card-content article-content">
+                    <div class="summary block-with-text">
+                        
+                            
+                        
+                    </div>
+                    <div class="publish-info">
+                        <span class="publish-date">
+                            <i class="far fa-clock fa-fw icon-date"></i>2026-01-27
+                        </span>
+                        <span class="publish-author">
+                            
+                            <i class="fas fa-bookmark fa-fw icon-category"></i>
+                            
+                            <a href="/categories/OS/" class="post-category">
+                                    OS
+                                </a>
+                            
+                            
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="card-action article-tags">
+                    
+                    <a href="/tags/linux/">
+                        <span class="chip bg-color">linux</span>
+                    </a>
+                    
+                    <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                        <span class="chip bg-color">操作系统</span>
+                    </a>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+        
+        <div class="article col s12 m6" data-aos="fade-up">
+            <div class="article-badge right-badge text-color">
+                下一篇&nbsp;<i class="fas fa-chevron-right"></i>
+            </div>
+            <div class="card">
+                <a href="/2026/01/19/os02-risc-v-ti-xi-jie-gou-ji-chu/">
+                    <div class="card-image">
+                        
+                        
+                        <img src="/medias/featureimages/16.png" class="responsive-img" alt="OS02-RISC-V体系结构基础">
+                        
+                        <span class="card-title">OS02-RISC-V体系结构基础</span>
+                    </div>
+                </a>
+                <div class="card-content article-content">
+                    <div class="summary block-with-text">
+                        
+                            
+                        
+                    </div>
+                    <div class="publish-info">
+                            <span class="publish-date">
+                                <i class="far fa-clock fa-fw icon-date"></i>2026-01-19
+                            </span>
+                        <span class="publish-author">
+                            
+                            <i class="fas fa-bookmark fa-fw icon-category"></i>
+                            
+                            <a href="/categories/OS/" class="post-category">
+                                    OS
+                                </a>
+                            
+                            
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="card-action article-tags">
+                    
+                    <a href="/tags/linux/">
+                        <span class="chip bg-color">linux</span>
+                    </a>
+                    
+                    <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                        <span class="chip bg-color">操作系统</span>
+                    </a>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+    </div>
+</article>
+
+</div>
+
+
+
+<!-- 代码块功能依赖 -->
+<script type="text/javascript" src="/libs/codeBlock/codeBlockFuction.js"></script>
+
+
+
+<!-- 代码语言 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeLang.js"></script>
+
+
+<!-- 代码块复制 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeCopy.js"></script>
+
+
+<!-- 代码块收缩 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeShrink.js"></script>
+
+
+
+    </div>
+    <div id="toc-aside" class="expanded col l3 hide-on-med-and-down">
+        <div class="toc-widget card" style="background-color: white;">
+            <div class="toc-title"><i class="far fa-list-alt"></i>&nbsp;&nbsp;目录</div>
+            <div id="toc-content"></div>
+        </div>
+    </div>
+</div>
+
+<!-- TOC 悬浮按钮. -->
+
+<div id="floating-toc-btn" class="hide-on-med-and-down">
+    <a class="btn-floating btn-large bg-color">
+        <i class="fas fa-list-ul"></i>
+    </a>
+</div>
+
+
+<script src="/libs/tocbot/tocbot.min.js"></script>
+<script>
+    $(function () {
+        tocbot.init({
+            tocSelector: '#toc-content',
+            contentSelector: '#articleContent',
+            headingsOffset: -($(window).height() * 0.4 - 45),
+            collapseDepth: Number('0'),
+            headingSelector: 'h2, h3, h4'
+        });
+
+        // Set scroll toc fixed.
+        let tocHeight = parseInt($(window).height() * 0.4 - 64);
+        let $tocWidget = $('.toc-widget');
+        $(window).scroll(function () {
+            let scroll = $(window).scrollTop();
+            /* add post toc fixed. */
+            if (scroll > tocHeight) {
+                $tocWidget.addClass('toc-fixed');
+            } else {
+                $tocWidget.removeClass('toc-fixed');
+            }
+        });
+
+        
+        /* 修复文章卡片 div 的宽度. */
+        let fixPostCardWidth = function (srcId, targetId) {
+            let srcDiv = $('#' + srcId);
+            if (srcDiv.length === 0) {
+                return;
+            }
+
+            let w = srcDiv.width();
+            if (w >= 450) {
+                w = w + 21;
+            } else if (w >= 350 && w < 450) {
+                w = w + 18;
+            } else if (w >= 300 && w < 350) {
+                w = w + 16;
+            } else {
+                w = w + 14;
+            }
+            $('#' + targetId).width(w);
+        };
+
+        // 切换TOC目录展开收缩的相关操作.
+        const expandedClass = 'expanded';
+        let $tocAside = $('#toc-aside');
+        let $mainContent = $('#main-content');
+        $('#floating-toc-btn .btn-floating').click(function () {
+            if ($tocAside.hasClass(expandedClass)) {
+                $tocAside.removeClass(expandedClass).hide();
+                $mainContent.removeClass('l9');
+            } else {
+                $tocAside.addClass(expandedClass).show();
+                $mainContent.addClass('l9');
+            }
+            fixPostCardWidth('artDetail', 'prenext-posts');
+        });
+        
+    });
+</script>
+
+    
+
+</main>
+
+
+
+
+    <footer class="page-footer" style="background: linear-gradient(to right, #ff5f6d, #ffc371); color: #fff;">
+    <div class="container" style="text-align: center; padding: 5px;">
+      <p>Copyright © 2024 - 2025 <a href="https://404djl.github.io" style="color: #fff; text-decoration: underline;">404djl</a> | Powered by <a href="https://hexo.io" target="_blank" style="color: #fff; text-decoration: underline;">Hexo</a> | Theme by <a href="https://github.com/blinkfox/hexo-theme-matery" target="_blank" style="color: #fff; text-decoration: underline;">Matery</a></p>
+      <p>
+        <p>📚 站点总字数: <span id="site-word-count"></span> 字</p> |
+        <span id="runtime"></span>
+      </p>
+    </div>
+    <div class="footer-contact" style="background: linear-gradient(to right, #ff5f6d, #ffc371); color: #fff;">
+        <a href="javascript:void(0);" class="tooltipped" target="_blank" data-tooltip="邮箱：3490002122@qq.com" data-position="top" data-delay="50">
+          <i class="fas fa-envelope"></i>
+        </a>
+        <a href="https://github.com/404djl" class="tooltipped" target="_blank" data-tooltip="GitHub：404djl" data-position="top" data-delay="50">
+          <i class="fab fa-github"></i>
+        </a>
+        <a href="javascript:void(0);" class="tooltipped" data-tooltip="微信：djl123456404" data-position="top" data-delay="50">
+          <i class="fab fa-weixin"></i>
+        </a>
+    </div>
+</footer>
+
+
+
+
+<script>
+    const blogStartDate = new Date("2024-12-16T00:00:00Z"); // 修改为你的博客起始日期
+  
+    function updateRuntime() {
+      const now = new Date();
+      const diff = now - blogStartDate;
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((diff / (1000 * 60)) % 60);
+      const seconds = Math.floor((diff / 1000) % 60);
+  
+      const runtimeText = `本站已安全运行 ${days} 天 ${hours} 小时 ${minutes} 分钟 ${seconds} 秒`;
+      document.getElementById("runtime").innerText = runtimeText;
+    }
+  
+    updateRuntime();
+    setInterval(updateRuntime, 1000);
+  </script>
+  
+  <script>
+    fetch('/index.html')
+      .then(response => response.text())
+      .then(html => {
+        const wordCountRegex = /<meta name="wordCount" content="(\d+)">/;
+        const match = wordCountRegex.exec(html);
+        if (match) {
+          document.getElementById('site-word-count').innerText = match[1];
+        }
+      });
+  </script>
+  
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var tooltips = document.querySelectorAll('.tooltipped');
+      M.Tooltip.init(tooltips);
+    });
+  </script>
+  
+
+    <!-- 搜索遮罩框 -->
+<div id="searchModal" class="modal">
+    <div class="modal-content">
+        <div class="search-header">
+            <span class="title"><i class="fas fa-search"></i>&nbsp;&nbsp;搜索</span>
+            <input type="search" id="searchInput" name="s" placeholder="请输入搜索的关键字"
+                   class="search-input">
+        </div>
+        <div id="searchResult"></div>
+    </div>
+</div>
+
+<script type="text/javascript">
+$(function () {
+    var searchFunc = function (path, search_id, content_id) {
+        'use strict';
+        $.ajax({
+            url: path,
+            dataType: "xml",
+            success: function (xmlResponse) {
+                // get the contents from search data
+                var datas = $("entry", xmlResponse).map(function () {
+                    return {
+                        title: $("title", this).text(),
+                        content: $("content", this).text(),
+                        url: $("url", this).text()
+                    };
+                }).get();
+                var $input = document.getElementById(search_id);
+                var $resultContent = document.getElementById(content_id);
+                $input.addEventListener('input', function () {
+                    var str = '<ul class=\"search-result-list\">';
+                    var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+                    $resultContent.innerHTML = "";
+                    if (this.value.trim().length <= 0) {
+                        return;
+                    }
+                    // perform local searching
+                    datas.forEach(function (data) {
+                        var isMatch = true;
+                        var data_title = data.title.trim().toLowerCase();
+                        var data_content = data.content.trim().replace(/<[^>]+>/g, "").toLowerCase();
+                        var data_url = data.url;
+                        data_url = data_url.indexOf('/') === 0 ? data.url : '/' + data_url;
+                        var index_title = -1;
+                        var index_content = -1;
+                        var first_occur = -1;
+                        // only match artiles with not empty titles and contents
+                        if (data_title !== '' && data_content !== '') {
+                            keywords.forEach(function (keyword, i) {
+                                index_title = data_title.indexOf(keyword);
+                                index_content = data_content.indexOf(keyword);
+                                if (index_title < 0 && index_content < 0) {
+                                    isMatch = false;
+                                } else {
+                                    if (index_content < 0) {
+                                        index_content = 0;
+                                    }
+                                    if (i === 0) {
+                                        first_occur = index_content;
+                                    }
+                                }
+                            });
+                        }
+                        // show search results
+                        if (isMatch) {
+                            str += "<li><a href='" + data_url + "' class='search-result-title'>" + data_title + "</a>";
+                            var content = data.content.trim().replace(/<[^>]+>/g, "");
+                            if (first_occur >= 0) {
+                                // cut out 100 characters
+                                var start = first_occur - 20;
+                                var end = first_occur + 80;
+                                if (start < 0) {
+                                    start = 0;
+                                }
+                                if (start === 0) {
+                                    end = 100;
+                                }
+                                if (end > content.length) {
+                                    end = content.length;
+                                }
+                                var match_content = content.substr(start, end);
+                                // highlight all keywords
+                                keywords.forEach(function (keyword) {
+                                    var regS = new RegExp(keyword, "gi");
+                                    match_content = match_content.replace(regS, "<em class=\"search-keyword\">" + keyword + "</em>");
+                                });
+
+                                str += "<p class=\"search-result\">" + match_content + "...</p>"
+                            }
+                            str += "</li>";
+                        }
+                    });
+                    str += "</ul>";
+                    $resultContent.innerHTML = str;
+                });
+            }
+        });
+    };
+
+    searchFunc('/search.xml', 'searchInput', 'searchResult');
+});
+</script>
+
+    <!-- 白天和黑夜主题 -->
+<div class="stars-con">
+    <div id="stars"></div>
+    <div id="stars2"></div>
+    <div id="stars3"></div>  
+</div>
+
+<script>
+    function switchNightMode() {
+        $('<div class="Cuteen_DarkSky"><div class="Cuteen_DarkPlanet"></div></div>').appendTo($('body')),
+        setTimeout(function () {
+            $('body').hasClass('DarkMode') 
+            ? ($('body').removeClass('DarkMode'), localStorage.setItem('isDark', '0'), $('#sum-moon-icon').removeClass("fa-sun").addClass('fa-moon')) 
+            : ($('body').addClass('DarkMode'), localStorage.setItem('isDark', '1'), $('#sum-moon-icon').addClass("fa-sun").removeClass('fa-moon')),
+            
+            setTimeout(function () {
+            $('.Cuteen_DarkSky').fadeOut(1e3, function () {
+                $(this).remove()
+            })
+            }, 2e3)
+        })
+    }
+</script>
+
+    <!-- 回到顶部按钮 -->
+<div id="backTop" class="top-scroll">
+    <a class="btn-floating btn-large waves-effect waves-light" href="#!">
+        <i class="fas fa-arrow-up"></i>
+    </a>
+</div>
+
+
+    <script src="/libs/materialize/materialize.min.js"></script>
+    <script src="/libs/masonry/masonry.pkgd.min.js"></script>
+    <script src="/libs/aos/aos.js"></script>
+    <script src="/libs/scrollprogress/scrollProgress.min.js"></script>
+    <script src="/libs/lightGallery/js/lightgallery-all.min.js"></script>
+    <script src="/js/matery.js"></script>
+
+    
+
+    
+    
+    
+
+    <!-- 雪花特效 -->
+     
+        <script type="text/javascript">
+            // 只在桌面版网页启用特效
+            var windowWidth = $(window).width();
+            if (windowWidth > 768) {
+                document.write('<script type="text/javascript" src="/libs/others/snow.js"><\/script>');
+            }
+        </script>
+    
+
+    <!-- 鼠标星星特效 -->
+    
+
+     
+        <script src="https://ssl.captcha.qq.com/TCaptcha.js"></script>
+        <script src="/libs/others/TencentCaptcha.js"></script>
+        <button id="TencentCaptcha" data-appid="xxxxxxxxxx" data-cbfn="callback" type="button" hidden></button>
+    
+
+    <!-- Baidu Analytics -->
+
+    <!-- Baidu Push -->
+
+<script>
+    (function () {
+        var bp = document.createElement('script');
+        var curProtocol = window.location.protocol.split(':')[0];
+        if (curProtocol === 'https') {
+            bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+        } else {
+            bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+        }
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(bp, s);
+    })();
+</script>
+
+    
+    <script src="/libs/others/clicklove.js" async="async"></script>
+    
+    
+    <script async src="/libs/others/busuanzi.pure.mini.js"></script>
+    
+
+    
+
+    
+
+    <!--腾讯兔小巢-->
+    
+    
+
+    
+
+    
+
+    
+    <script src="/libs/instantpage/instantpage.js" type="module"></script>
+    
+
+</body>
+
+</html>
