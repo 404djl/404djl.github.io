@@ -1,0 +1,1936 @@
+<!DOCTYPE HTML>
+<html lang="zh-CN">
+
+
+<head>
+    <meta charset="utf-8">
+    <meta name="keywords" content="OS15-Inode层与目录, 404djlのblog">
+    <meta name="description" content="第 15 节：Inode 层与目录
+学习目标：理解 xv6 文件系统中 inode 的磁盘结构与内存表示；掌握块分配（balloc/bfree）、inode 缓存操作（iget/ilock/iput）、数据读写（bmap/readi/wri">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="renderer" content="webkit|ie-stand|ie-comp">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="referrer" content="no-referrer-when-downgrade">
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+
+
+    <title>OS15-Inode层与目录 | 404djlのblog</title>
+    <link rel="icon" type="image/gif" href="/icons8-github.gif">
+    
+    <style>
+        body{
+            background-image: url(https://pic1.imgdb.cn/item/69b9682b1eedde6824938321.jpg);
+            background-repeat:no-repeat;
+            background-size: 100% 100%;
+            background-attachment:fixed;
+        }
+    </style>
+
+
+
+    <!-- bg-cover style     -->
+
+
+
+<link rel="stylesheet" type="text/css" href="/libs/awesome/css/all.min.css">
+<link rel="stylesheet" type="text/css" href="/libs/materialize/materialize.min.css">
+<link rel="stylesheet" type="text/css" href="/libs/aos/aos.css">
+<link rel="stylesheet" type="text/css" href="/libs/animate/animate.min.css">
+<link rel="stylesheet" type="text/css" href="/libs/lightGallery/css/lightgallery.min.css">
+<link rel="stylesheet" type="text/css" href="/css/matery.css">
+<link rel="stylesheet" type="text/css" href="/css/my.css">
+<link rel="stylesheet" type="text/css" href="/css/dark.css" media="none" onload="if(media!='all')media='all'">
+
+
+
+
+    <link rel="stylesheet" href="/libs/tocbot/tocbot.css">
+    <link rel="stylesheet" href="/css/post.css">
+
+
+
+
+    
+        <link rel="stylesheet" type="text/css" href="/css/reward.css">
+    
+
+
+
+    <script src="/libs/jquery/jquery-3.6.0.min.js"></script>
+
+<meta name="generator" content="Hexo 4.2.0">
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+<link rel="alternate" href="/atom.xml" title="404djlのblog" type="application/atom+xml">
+<link rel="stylesheet" href="/css/prism-tomorrow.css" type="text/css">
+<link rel="stylesheet" href="/css/prism-line-numbers.css" type="text/css">
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+</head>
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+
+
+
+<body>
+    <header class="navbar-fixed">
+    <nav id="headNav" class="bg-color nav-transparent">
+        <div id="navContainer" class="nav-wrapper container">
+            <div class="brand-logo">
+                <a href="/" class="waves-effect waves-light">
+                    
+                    <img src="/icons8-github.gif" class="logo-img" alt="LOGO">
+                    
+                    <span class="logo-span">404djlのblog</span>
+                </a>
+            </div>
+            
+
+<a href="#" data-target="mobile-nav" class="sidenav-trigger button-collapse"><i class="fas fa-bars"></i></a>
+<ul class="right nav-menu">
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/" class="waves-effect waves-light">
+      
+      <i class="fas fa-home" style="zoom: 0.6;"></i>
+      
+      <span>首页</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/tags" class="waves-effect waves-light">
+      
+      <i class="fas fa-tags" style="zoom: 0.6;"></i>
+      
+      <span>标签</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/categories" class="waves-effect waves-light">
+      
+      <i class="fas fa-bookmark" style="zoom: 0.6;"></i>
+      
+      <span>分类</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/archives" class="waves-effect waves-light">
+      
+      <i class="fas fa-archive" style="zoom: 0.6;"></i>
+      
+      <span>归档</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/about" class="waves-effect waves-light">
+      
+      <i class="fas fa-user-circle" style="zoom: 0.6;"></i>
+      
+      <span>关于</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/contact" class="waves-effect waves-light">
+      
+      <i class="fas fa-comments" style="zoom: 0.6;"></i>
+      
+      <span>留言板</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/friends" class="waves-effect waves-light">
+      
+      <i class="fas fa-address-book" style="zoom: 0.6;"></i>
+      
+      <span>友情链接</span>
+    </a>
+    
+  </li>
+  
+  <li>
+    <a href="#searchModal" class="modal-trigger waves-effect waves-light">
+      <i id="searchIcon" class="fas fa-search" title="搜索" style="zoom: 0.85;"></i>
+    </a>
+  </li>
+  <li>
+    <a href="javascript:;" class="waves-effect waves-light" onclick="switchNightMode()" title="深色/浅色模式" >
+      <i id="sum-moon-icon" class="fas fa-sun" style="zoom: 0.85;"></i>
+    </a>
+  </li>
+</ul>
+
+
+<div id="mobile-nav" class="side-nav sidenav">
+
+    <div class="mobile-head bg-color">
+        
+        <img src="/icons8-github.gif" class="logo-img circle responsive-img">
+        
+        <div class="logo-name">404djlのblog</div>
+        <div class="logo-desc">
+            
+            Never really desperate, only the lost of the soul
+            
+        </div>
+    </div>
+
+    <ul class="menu-list mobile-menu-list">
+        
+        <li class="m-nav-item">
+	  
+		<a href="/" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-home"></i>
+			
+			首页
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/tags" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-tags"></i>
+			
+			标签
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/categories" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-bookmark"></i>
+			
+			分类
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/archives" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-archive"></i>
+			
+			归档
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/about" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-user-circle"></i>
+			
+			关于
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/contact" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-comments"></i>
+			
+			留言板
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/friends" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-address-book"></i>
+			
+			友情链接
+		</a>
+          
+        </li>
+        
+        
+        <li><div class="divider"></div></li>
+        <li>
+            <a href="https://github.com/404djl/404djl.github.io" class="waves-effect waves-light" target="_blank">
+                <i class="fab fa-github-square fa-fw"></i>Fork Me
+            </a>
+        </li>
+        
+    </ul>
+</div>
+
+
+        </div>
+
+        
+            <style>
+    .nav-transparent .github-corner {
+        display: none !important;
+    }
+
+    .github-corner {
+        position: absolute;
+        z-index: 10;
+        top: 0;
+        right: 0;
+        border: 0;
+        transform: scale(1.1);
+    }
+
+    .github-corner svg {
+        color: #0f9d58;
+        fill: #fff;
+        height: 64px;
+        width: 64px;
+    }
+
+    .github-corner:hover .octo-arm {
+        animation: a 0.56s ease-in-out;
+    }
+
+    .github-corner .octo-arm {
+        animation: none;
+    }
+
+    @keyframes a {
+        0%,
+        to {
+            transform: rotate(0);
+        }
+        20%,
+        60% {
+            transform: rotate(-25deg);
+        }
+        40%,
+        80% {
+            transform: rotate(10deg);
+        }
+    }
+</style>
+
+<a href="https://github.com/404djl/404djl.github.io" class="github-corner tooltipped hide-on-med-and-down" target="_blank"
+   data-tooltip="Fork Me" data-position="left" data-delay="50">
+    <svg viewBox="0 0 250 250" aria-hidden="true">
+        <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+        <path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2"
+              fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+        <path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z"
+              fill="currentColor" class="octo-body"></path>
+    </svg>
+</a>
+        
+    </nav>
+
+</header>
+
+    
+
+
+
+<div class="bg-cover pd-header post-cover" style="background-image: url('/medias/featureimages/16.png')">
+    <div class="container" style="right: 0px;left: 0px;">
+        <div class="row">
+            <div class="col s12 m12 l12">
+                <div class="brand">
+                    <h1 class="description center-align post-title">OS15-Inode层与目录</h1>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+<main class="post-container content">
+
+    
+    <div class="row">
+    <div id="main-content" class="col s12 m12 l9">
+        <!-- 文章内容详情 -->
+<div id="artDetail">
+    <div class="card">
+        <div class="card-content article-info">
+            <div class="row tag-cate">
+                <div class="col s7">
+                    
+                    <div class="article-tag">
+                        
+                            <a href="/tags/linux/">
+                                <span class="chip bg-color">linux</span>
+                            </a>
+                        
+                            <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                                <span class="chip bg-color">操作系统</span>
+                            </a>
+                        
+                    </div>
+                    
+                </div>
+                <div class="col s5 right-align">
+                    
+                    <div class="post-cate">
+                        <i class="fas fa-bookmark fa-fw icon-category"></i>
+                        
+                            <a href="/categories/OS/" class="post-category">
+                                OS
+                            </a>
+                        
+                    </div>
+                    
+                </div>
+            </div>
+
+            <div class="post-info">
+                
+                <div class="post-date info-break-policy">
+                    <i class="far fa-calendar-minus fa-fw"></i>发布日期:&nbsp;&nbsp;
+                    2026-03-18
+                </div>
+                
+
+                
+                <div class="post-date info-break-policy">
+                    <i class="far fa-calendar-check fa-fw"></i>更新日期:&nbsp;&nbsp;
+                    2026-03-28
+                </div>
+                
+
+                
+                <div class="info-break-policy">
+                    <i class="far fa-file-word fa-fw"></i>文章字数:&nbsp;&nbsp;
+                    5.7k
+                </div>
+                
+
+                
+                <div class="info-break-policy">
+                    <i class="far fa-clock fa-fw"></i>阅读时长:&nbsp;&nbsp;
+                    25 分
+                </div>
+                
+
+                
+            </div>
+        </div>
+        <hr class="clearfix">
+
+        
+
+        
+
+        <div class="card-content article-card-content">
+            <div id="articleContent">
+                <h1 id="第-15-节：Inode-层与目录"><a href="#第-15-节：Inode-层与目录" class="headerlink" title="第 15 节：Inode 层与目录"></a>第 15 节：Inode 层与目录</h1><blockquote>
+<p><strong>学习目标</strong>：理解 xv6 文件系统中 inode 的磁盘结构与内存表示；掌握块分配（<code>balloc/bfree</code>）、inode 缓存操作（<code>iget/ilock/iput</code>）、数据读写（<code>bmap/readi/writei</code>）的完整实现；深入分析目录操作（<code>dirlookup/dirlink</code>）和路径解析（<code>namex</code>）的递归逻辑。</p>
+<p><strong>预计用时</strong>：4-5 小时（<code>fs.c</code> 是本课程最大的单文件，671 行）</p>
+<p><strong>前置要求</strong>：完成第 13 节（块缓存：<code>bread/bwrite/brelse</code>）和第 14 节（日志层：<code>log_write/begin_op/end_op</code>）；理解 <code>sleeplock</code> 的使用方式（第 12 节）</p>
+</blockquote>
+<hr>
+<h2 id="一、理论：文件系统分层与-inode-的核心概念"><a href="#一、理论：文件系统分层与-inode-的核心概念" class="headerlink" title="一、理论：文件系统分层与 inode 的核心概念"></a>一、理论：文件系统分层与 inode 的核心概念</h2><h3 id="1-1-本节在文件系统中的位置"><a href="#1-1-本节在文件系统中的位置" class="headerlink" title="1.1 本节在文件系统中的位置"></a>1.1 本节在文件系统中的位置</h3><pre class="line-numbers language-bash"><code class="language-bash">第 5 层  路径名（pathname）     ← namei<span class="token punctuation">(</span><span class="token punctuation">)</span>, nameiparent<span class="token punctuation">(</span><span class="token punctuation">)</span>     本节
+第 4 层  目录（directory）      ← dirlookup<span class="token punctuation">(</span><span class="token punctuation">)</span>, dirlink<span class="token punctuation">(</span><span class="token punctuation">)</span>     本节
+第 3 层  Inode（inode）         ← ialloc<span class="token punctuation">(</span><span class="token punctuation">)</span>, readi<span class="token punctuation">(</span><span class="token punctuation">)</span>, writei<span class="token punctuation">(</span><span class="token punctuation">)</span>本节
+第 2 层  块分配（block alloc）   ← balloc<span class="token punctuation">(</span><span class="token punctuation">)</span>, bfree<span class="token punctuation">(</span><span class="token punctuation">)</span>          本节
+─────────────── 以上均在 kernel/fs.c ─────────────────────────
+第 1 层  日志（logging）         ← begin_op<span class="token punctuation">(</span><span class="token punctuation">)</span>, log_write<span class="token punctuation">(</span><span class="token punctuation">)</span>    第 14 节
+第 0 层  块缓存（buffer cache）  ← bread<span class="token punctuation">(</span><span class="token punctuation">)</span>, bwrite<span class="token punctuation">(</span><span class="token punctuation">)</span>          第 13 节
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="1-2-Inode-是什么？"><a href="#1-2-Inode-是什么？" class="headerlink" title="1.2 Inode 是什么？"></a>1.2 Inode 是什么？</h3><p><strong>Inode</strong>（Index Node，索引节点）是文件的元数据容器，它描述一个文件的”属性”，并通过块地址数组指向文件的实际数据。</p>
+<p>一个 inode <strong>不包含</strong>文件名——文件名存储在目录中。inode 只关心”文件有什么内容”，目录负责回答”这个名字对应哪个 inode”。</p>
+<pre class="line-numbers language-bash"><code class="language-bash">文件名（在目录中）      目录条目             inode                    数据块
+<span class="token string">"README"</span>          →   <span class="token punctuation">{</span>inum<span class="token operator">=</span>5, name<span class="token operator">=</span><span class="token string">"README"</span><span class="token punctuation">}</span> → inode <span class="token comment" spellcheck="true">#5 → [块45][块46][块47]</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<h3 id="1-3-磁盘上的-inode：struct-dinode"><a href="#1-3-磁盘上的-inode：struct-dinode" class="headerlink" title="1.3 磁盘上的 inode：struct dinode"></a>1.3 磁盘上的 inode：<code>struct dinode</code></h3><pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// kernel/fs.h</span>
+
+<span class="token keyword">struct</span> dinode <span class="token punctuation">{</span>
+  <span class="token keyword">short</span> type<span class="token punctuation">;</span>            <span class="token comment" spellcheck="true">// 文件类型：0=未分配, T_FILE=2, T_DIR=1, T_DEVICE=3</span>
+  <span class="token keyword">short</span> major<span class="token punctuation">;</span>           <span class="token comment" spellcheck="true">// 主设备号（仅 T_DEVICE）</span>
+  <span class="token keyword">short</span> minor<span class="token punctuation">;</span>           <span class="token comment" spellcheck="true">// 次设备号（仅 T_DEVICE）</span>
+  <span class="token keyword">short</span> nlink<span class="token punctuation">;</span>           <span class="token comment" spellcheck="true">// 硬链接数（多少个目录条目指向本 inode）</span>
+  uint  size<span class="token punctuation">;</span>            <span class="token comment" spellcheck="true">// 文件大小（字节数）</span>
+  uint  addrs<span class="token punctuation">[</span>NDIRECT<span class="token operator">+</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token comment" spellcheck="true">// 数据块地址数组（12 个直接 + 1 个间接）</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token macro property">#<span class="token directive keyword">define</span> NDIRECT   12</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> NINDIRECT (BSIZE / sizeof(uint))   </span><span class="token comment" spellcheck="true">// = 1024/4 = 256</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> MAXFILE   (NDIRECT + NINDIRECT)    </span><span class="token comment" spellcheck="true">// = 12 + 256 = 268 块</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>块地址数组的混合索引结构</strong>：</p>
+<pre><code>ip-&gt;addrs[0]  ~ ip-&gt;addrs[11]   直接块号（12个）
+ip-&gt;addrs[12]                   一级间接块号
+                                  └─ 间接块内存放 256 个数据块号
+
+最大文件大小 = (12 + 256) × 1024 字节 = 268 KB
+</code></pre>
+<p><strong>磁盘 inode 布局</strong>：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// 每个块能存储的 inode 数</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> IPB  (BSIZE / sizeof(struct dinode))   </span><span class="token comment" spellcheck="true">// = 1024 / 64 = 16</span>
+
+<span class="token comment" spellcheck="true">// inode i 所在的磁盘块号</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> IBLOCK(i, sb)  ((i) / IPB + sb.inodestart)</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>例如 inode #5：所在块 = 5/16 + inodestart = 0 + 32（inodestart=32）= 块 32；块内偏移 = 5%16 = 第 5 个 dinode。</p>
+<h3 id="1-4-内存中的-inode：struct-inode"><a href="#1-4-内存中的-inode：struct-inode" class="headerlink" title="1.4 内存中的 inode：struct inode"></a>1.4 内存中的 inode：<code>struct inode</code></h3><pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// kernel/file.h</span>
+
+<span class="token keyword">struct</span> inode <span class="token punctuation">{</span>
+  uint dev<span class="token punctuation">;</span>            <span class="token comment" spellcheck="true">// 设备号（与对应磁盘块上的设备一致）</span>
+  uint inum<span class="token punctuation">;</span>           <span class="token comment" spellcheck="true">// inode 编号（1-based，对应磁盘上的位置）</span>
+  <span class="token keyword">int</span>  ref<span class="token punctuation">;</span>            <span class="token comment" spellcheck="true">// 内存引用计数（有多少指针指向此 inode）</span>
+  <span class="token keyword">struct</span> sleeplock lock<span class="token punctuation">;</span> <span class="token comment" spellcheck="true">// 保护以下所有字段（valid 及之后）</span>
+
+  <span class="token keyword">int</span>   valid<span class="token punctuation">;</span>         <span class="token comment" spellcheck="true">// 是否已从磁盘读入（0 = 未读，1 = 已读）</span>
+  <span class="token comment" spellcheck="true">// 以下字段是磁盘 dinode 的内存副本：</span>
+  <span class="token keyword">short</span> type<span class="token punctuation">;</span>
+  <span class="token keyword">short</span> major<span class="token punctuation">;</span>
+  <span class="token keyword">short</span> minor<span class="token punctuation">;</span>
+  <span class="token keyword">short</span> nlink<span class="token punctuation">;</span>
+  uint  size<span class="token punctuation">;</span>
+  uint  addrs<span class="token punctuation">[</span>NDIRECT<span class="token operator">+</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>两层计数的区别</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>含义</th>
+<th>由谁保护</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>ip-&gt;ref</code></td>
+<td>内存引用计数：有多少 <code>struct inode *</code> 指针在使用</td>
+<td><code>icache.lock</code>（自旋锁）</td>
+</tr>
+<tr>
+<td><code>ip-&gt;nlink</code></td>
+<td>磁盘链接数：有多少目录条目硬链接到此 inode</td>
+<td><code>ip-&gt;lock</code>（睡眠锁）</td>
+</tr>
+</tbody></table>
+<p><code>ref == 0</code>：inode 缓存条目空闲，可以被复用<br><code>nlink == 0</code> 且 <code>ref == 0</code>：文件彻底删除，<code>iput()</code> 会截断并释放磁盘 inode</p>
+<h3 id="1-5-inode-缓存（icache）"><a href="#1-5-inode-缓存（icache）" class="headerlink" title="1.5 inode 缓存（icache）"></a>1.5 inode 缓存（icache）</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">struct</span> <span class="token punctuation">{</span>
+  <span class="token keyword">struct</span> spinlock lock<span class="token punctuation">;</span>         <span class="token comment" spellcheck="true">// 保护 icache 条目分配</span>
+  <span class="token keyword">struct</span> inode inode<span class="token punctuation">[</span>NINODE<span class="token punctuation">]</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// NINODE = 50 个缓存槽</span>
+<span class="token punctuation">}</span> icache<span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<p>inode 缓存是一个固定大小的数组（不是像 <code>bcache</code> 那样的 LRU 链表）。通过 <code>ref</code> 引用计数管理生命周期。</p>
+<hr>
+<h2 id="二、源码精读：块分配层"><a href="#二、源码精读：块分配层" class="headerlink" title="二、源码精读：块分配层"></a>二、源码精读：块分配层</h2><h3 id="2-1-balloc-——分配一个空闲数据块"><a href="#2-1-balloc-——分配一个空闲数据块" class="headerlink" title="2.1 balloc()——分配一个空闲数据块"></a>2.1 <code>balloc()</code>——分配一个空闲数据块</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">static</span> uint <span class="token function">balloc</span><span class="token punctuation">(</span>uint dev<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">int</span> b<span class="token punctuation">,</span> bi<span class="token punctuation">,</span> m<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> buf <span class="token operator">*</span>bp<span class="token punctuation">;</span>
+
+  bp <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  <span class="token keyword">for</span><span class="token punctuation">(</span>b <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> b <span class="token operator">&lt;</span> sb<span class="token punctuation">.</span>size<span class="token punctuation">;</span> b <span class="token operator">+</span><span class="token operator">=</span> BPB<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// BPB = 位图每块能表示的块数 = BSIZE*8 = 8192</span>
+    bp <span class="token operator">=</span> <span class="token function">bread</span><span class="token punctuation">(</span>dev<span class="token punctuation">,</span> <span class="token function">BBLOCK</span><span class="token punctuation">(</span>b<span class="token punctuation">,</span> sb<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 读位图块（BBLOCK 计算位图块号）</span>
+    <span class="token keyword">for</span><span class="token punctuation">(</span>bi <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> bi <span class="token operator">&lt;</span> BPB <span class="token operator">&amp;&amp;</span> b <span class="token operator">+</span> bi <span class="token operator">&lt;</span> sb<span class="token punctuation">.</span>size<span class="token punctuation">;</span> bi<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      m <span class="token operator">=</span> <span class="token number">1</span> <span class="token operator">&lt;&lt;</span> <span class="token punctuation">(</span>bi <span class="token operator">%</span> <span class="token number">8</span><span class="token punctuation">)</span><span class="token punctuation">;</span>              <span class="token comment" spellcheck="true">// 当前位的掩码</span>
+      <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span>bp<span class="token operator">-></span>data<span class="token punctuation">[</span>bi<span class="token operator">/</span><span class="token number">8</span><span class="token punctuation">]</span> <span class="token operator">&amp;</span> m<span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token comment" spellcheck="true">// 该位为 0 = 空闲</span>
+        bp<span class="token operator">-></span>data<span class="token punctuation">[</span>bi<span class="token operator">/</span><span class="token number">8</span><span class="token punctuation">]</span> <span class="token operator">|</span><span class="token operator">=</span> m<span class="token punctuation">;</span>          <span class="token comment" spellcheck="true">// 置 1 = 标记已用</span>
+        <span class="token function">log_write</span><span class="token punctuation">(</span>bp<span class="token punctuation">)</span><span class="token punctuation">;</span>                 <span class="token comment" spellcheck="true">// 写入日志（事务保护）</span>
+        <span class="token function">brelse</span><span class="token punctuation">(</span>bp<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token function">bzero</span><span class="token punctuation">(</span>dev<span class="token punctuation">,</span> b <span class="token operator">+</span> bi<span class="token punctuation">)</span><span class="token punctuation">;</span>            <span class="token comment" spellcheck="true">// 将新分配的块清零（安全）</span>
+        <span class="token keyword">return</span> b <span class="token operator">+</span> bi<span class="token punctuation">;</span>                 <span class="token comment" spellcheck="true">// 返回块号</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    <span class="token function">brelse</span><span class="token punctuation">(</span>bp<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"balloc: out of blocks"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>位图设计</strong>：每个数据块对应位图中的一个 bit（0=空闲，1=已用）。<code>BBLOCK(b, sb)</code> 计算块 <code>b</code> 对应的位图块号：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token macro property">#<span class="token directive keyword">define</span> BPB      (BSIZE * 8)                        </span><span class="token comment" spellcheck="true">// 每个位图块表示 8192 个块</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> BBLOCK(b, sb)  ((b)/BPB + sb.bmapstart)     </span><span class="token comment" spellcheck="true">// 块 b 在哪个位图块</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p><code>bzero()</code> 在分配后将新块清零：防止旧数据泄露给新文件（信息安全考虑）。</p>
+<h3 id="2-2-bfree-——释放一个数据块"><a href="#2-2-bfree-——释放一个数据块" class="headerlink" title="2.2 bfree()——释放一个数据块"></a>2.2 <code>bfree()</code>——释放一个数据块</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">bfree</span><span class="token punctuation">(</span><span class="token keyword">int</span> dev<span class="token punctuation">,</span> uint b<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">struct</span> buf <span class="token operator">*</span>bp<span class="token punctuation">;</span>
+  <span class="token keyword">int</span> bi<span class="token punctuation">,</span> m<span class="token punctuation">;</span>
+
+  bp <span class="token operator">=</span> <span class="token function">bread</span><span class="token punctuation">(</span>dev<span class="token punctuation">,</span> <span class="token function">BBLOCK</span><span class="token punctuation">(</span>b<span class="token punctuation">,</span> sb<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 读位图块</span>
+  bi <span class="token operator">=</span> b <span class="token operator">%</span> BPB<span class="token punctuation">;</span>                    <span class="token comment" spellcheck="true">// 块 b 在位图块内的 bit 偏移</span>
+  m  <span class="token operator">=</span> <span class="token number">1</span> <span class="token operator">&lt;&lt;</span> <span class="token punctuation">(</span>bi <span class="token operator">%</span> <span class="token number">8</span><span class="token punctuation">)</span><span class="token punctuation">;</span>             <span class="token comment" spellcheck="true">// 掩码</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span>bp<span class="token operator">-></span>data<span class="token punctuation">[</span>bi<span class="token operator">/</span><span class="token number">8</span><span class="token punctuation">]</span> <span class="token operator">&amp;</span> m<span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span>
+    <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"freeing free block"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 重复释放检测</span>
+  bp<span class="token operator">-></span>data<span class="token punctuation">[</span>bi<span class="token operator">/</span><span class="token number">8</span><span class="token punctuation">]</span> <span class="token operator">&amp;</span><span class="token operator">=</span> <span class="token operator">~</span>m<span class="token punctuation">;</span>           <span class="token comment" spellcheck="true">// 清 0 = 标记为空闲</span>
+  <span class="token function">log_write</span><span class="token punctuation">(</span>bp<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token function">brelse</span><span class="token punctuation">(</span>bp<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>注意</strong>：<code>bfree()</code> 只清除位图，不清零块内容（安全建议：应先清零，但 xv6 为简洁省略）。</p>
+<hr>
+<h2 id="三、源码精读：inode-操作"><a href="#三、源码精读：inode-操作" class="headerlink" title="三、源码精读：inode 操作"></a>三、源码精读：inode 操作</h2><h3 id="3-1-iinit-——初始化-inode-缓存"><a href="#3-1-iinit-——初始化-inode-缓存" class="headerlink" title="3.1 iinit()——初始化 inode 缓存"></a>3.1 <code>iinit()</code>——初始化 inode 缓存</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">iinit</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token function">initlock</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>icache<span class="token punctuation">.</span>lock<span class="token punctuation">,</span> <span class="token string">"icache"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">for</span><span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> NINODE<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span>
+    <span class="token function">initsleeplock</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>icache<span class="token punctuation">.</span>inode<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">.</span>lock<span class="token punctuation">,</span> <span class="token string">"inode"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="3-2-ialloc-——在磁盘上分配新-inode"><a href="#3-2-ialloc-——在磁盘上分配新-inode" class="headerlink" title="3.2 ialloc()——在磁盘上分配新 inode"></a>3.2 <code>ialloc()</code>——在磁盘上分配新 inode</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">struct</span> inode<span class="token operator">*</span> <span class="token function">ialloc</span><span class="token punctuation">(</span>uint dev<span class="token punctuation">,</span> <span class="token keyword">short</span> type<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">int</span> inum<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> buf <span class="token operator">*</span>bp<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> dinode <span class="token operator">*</span>dip<span class="token punctuation">;</span>
+
+  <span class="token keyword">for</span><span class="token punctuation">(</span>inum <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span> inum <span class="token operator">&lt;</span> sb<span class="token punctuation">.</span>ninodes<span class="token punctuation">;</span> inum<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// 遍历所有 inode（inode 编号从 1 开始，0 是无效值）</span>
+    bp  <span class="token operator">=</span> <span class="token function">bread</span><span class="token punctuation">(</span>dev<span class="token punctuation">,</span> <span class="token function">IBLOCK</span><span class="token punctuation">(</span>inum<span class="token punctuation">,</span> sb<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>       <span class="token comment" spellcheck="true">// 读包含 inum 的 inode 块</span>
+    dip <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">struct</span> dinode<span class="token operator">*</span><span class="token punctuation">)</span>bp<span class="token operator">-></span>data <span class="token operator">+</span> inum<span class="token operator">%</span>IPB<span class="token punctuation">;</span> <span class="token comment" spellcheck="true">// 块内偏移</span>
+
+    <span class="token keyword">if</span><span class="token punctuation">(</span>dip<span class="token operator">-></span>type <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>   <span class="token comment" spellcheck="true">// type == 0 表示未分配</span>
+      <span class="token function">memset</span><span class="token punctuation">(</span>dip<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span><span class="token operator">*</span>dip<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 清零整个 dinode</span>
+      dip<span class="token operator">-></span>type <span class="token operator">=</span> type<span class="token punctuation">;</span>              <span class="token comment" spellcheck="true">// 设置文件类型（占用该 inode）</span>
+      <span class="token function">log_write</span><span class="token punctuation">(</span>bp<span class="token punctuation">)</span><span class="token punctuation">;</span>                 <span class="token comment" spellcheck="true">// 日志记录分配操作</span>
+      <span class="token function">brelse</span><span class="token punctuation">(</span>bp<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">return</span> <span class="token function">iget</span><span class="token punctuation">(</span>dev<span class="token punctuation">,</span> inum<span class="token punctuation">)</span><span class="token punctuation">;</span>        <span class="token comment" spellcheck="true">// 将 inode 加入内存缓存并返回</span>
+    <span class="token punctuation">}</span>
+    <span class="token function">brelse</span><span class="token punctuation">(</span>bp<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"ialloc: no inodes"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 磁盘 inode 区耗尽</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong><code>ialloc()</code> 返回未锁定但已引用的 inode</strong>。注释里说 “Returns an unlocked but allocated and referenced inode”——这很重要：调用者得到一个 <code>ref &gt; 0</code> 的 inode，但需要自己调用 <code>ilock()</code> 才能读写它。</p>
+<h3 id="3-3-iget-——查找或创建内存-inode（不加锁）"><a href="#3-3-iget-——查找或创建内存-inode（不加锁）" class="headerlink" title="3.3 iget()——查找或创建内存 inode（不加锁）"></a>3.3 <code>iget()</code>——查找或创建内存 inode（不加锁）</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">static</span> <span class="token keyword">struct</span> inode<span class="token operator">*</span> <span class="token function">iget</span><span class="token punctuation">(</span>uint dev<span class="token punctuation">,</span> uint inum<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">struct</span> inode <span class="token operator">*</span>ip<span class="token punctuation">,</span> <span class="token operator">*</span>empty<span class="token punctuation">;</span>
+
+  <span class="token function">acquire</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>icache<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ① 检查是否已缓存（有 ref > 0 的同 dev/inum 条目）</span>
+  empty <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  <span class="token keyword">for</span><span class="token punctuation">(</span>ip <span class="token operator">=</span> <span class="token operator">&amp;</span>icache<span class="token punctuation">.</span>inode<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">;</span> ip <span class="token operator">&lt;</span> <span class="token operator">&amp;</span>icache<span class="token punctuation">.</span>inode<span class="token punctuation">[</span>NINODE<span class="token punctuation">]</span><span class="token punctuation">;</span> ip<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>ip<span class="token operator">-></span>ref <span class="token operator">></span> <span class="token number">0</span> <span class="token operator">&amp;&amp;</span> ip<span class="token operator">-></span>dev <span class="token operator">==</span> dev <span class="token operator">&amp;&amp;</span> ip<span class="token operator">-></span>inum <span class="token operator">==</span> inum<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      ip<span class="token operator">-></span>ref<span class="token operator">++</span><span class="token punctuation">;</span>                  <span class="token comment" spellcheck="true">// 已缓存，增加引用计数</span>
+      <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>icache<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">return</span> ip<span class="token punctuation">;</span>                  <span class="token comment" spellcheck="true">// 直接返回（不从磁盘读，valid 可能已是 1）</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>empty <span class="token operator">==</span> <span class="token number">0</span> <span class="token operator">&amp;&amp;</span> ip<span class="token operator">-></span>ref <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span>
+      empty <span class="token operator">=</span> ip<span class="token punctuation">;</span>                 <span class="token comment" spellcheck="true">// 记录空闲槽位（备用）</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token comment" spellcheck="true">// ② 未缓存，使用空闲槽位</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>empty <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span>
+    <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"iget: no inodes"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  ip <span class="token operator">=</span> empty<span class="token punctuation">;</span>
+  ip<span class="token operator">-></span>dev   <span class="token operator">=</span> dev<span class="token punctuation">;</span>
+  ip<span class="token operator">-></span>inum  <span class="token operator">=</span> inum<span class="token punctuation">;</span>
+  ip<span class="token operator">-></span>ref   <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+  ip<span class="token operator">-></span>valid <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 数据尚未从磁盘读入</span>
+  <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>icache<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">return</span> ip<span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 返回已引用但未锁定、未读磁盘的 inode</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong><code>iget()</code> 只处理内存引用，不做磁盘 I/O</strong>。这是一个重要的设计选择：在路径遍历时，我们可能会查找很多 inode，但不一定需要读取所有 inode 的内容——只需要记住”存在”并增加引用计数，真正需要内容时才 <code>ilock()</code>。</p>
+<p>**<code>iget()</code> vs <code>idup()</code>**：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">struct</span> inode<span class="token operator">*</span> <span class="token function">idup</span><span class="token punctuation">(</span><span class="token keyword">struct</span> inode <span class="token operator">*</span>ip<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token function">acquire</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>icache<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  ip<span class="token operator">-></span>ref<span class="token operator">++</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 已有指针，只增加引用计数</span>
+  <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>icache<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">return</span> ip<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<ul>
+<li><code>iget(dev, inum)</code>：通过设备号和 inode 编号查找（或新建）缓存条目</li>
+<li><code>idup(ip)</code>：已有 inode 指针，仅增加引用计数（如 <code>fork</code> 复制 <code>cwd</code>）</li>
+</ul>
+<h3 id="3-4-ilock-——锁定-inode-并从磁盘读取"><a href="#3-4-ilock-——锁定-inode-并从磁盘读取" class="headerlink" title="3.4 ilock()——锁定 inode 并从磁盘读取"></a>3.4 <code>ilock()</code>——锁定 inode 并从磁盘读取</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">ilock</span><span class="token punctuation">(</span><span class="token keyword">struct</span> inode <span class="token operator">*</span>ip<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">struct</span> buf <span class="token operator">*</span>bp<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> dinode <span class="token operator">*</span>dip<span class="token punctuation">;</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span>ip <span class="token operator">==</span> <span class="token number">0</span> <span class="token operator">||</span> ip<span class="token operator">-></span>ref <span class="token operator">&lt;</span> <span class="token number">1</span><span class="token punctuation">)</span>
+    <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"ilock"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token function">acquiresleep</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>ip<span class="token operator">-></span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 获取 sleeplock（可能阻塞）</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span>ip<span class="token operator">-></span>valid <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// 尚未从磁盘读入，现在读</span>
+    bp  <span class="token operator">=</span> <span class="token function">bread</span><span class="token punctuation">(</span>ip<span class="token operator">-></span>dev<span class="token punctuation">,</span> <span class="token function">IBLOCK</span><span class="token punctuation">(</span>ip<span class="token operator">-></span>inum<span class="token punctuation">,</span> sb<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    dip <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">struct</span> dinode<span class="token operator">*</span><span class="token punctuation">)</span>bp<span class="token operator">-></span>data <span class="token operator">+</span> ip<span class="token operator">-></span>inum <span class="token operator">%</span> IPB<span class="token punctuation">;</span>
+    ip<span class="token operator">-></span>type  <span class="token operator">=</span> dip<span class="token operator">-></span>type<span class="token punctuation">;</span>
+    ip<span class="token operator">-></span>major <span class="token operator">=</span> dip<span class="token operator">-></span>major<span class="token punctuation">;</span>
+    ip<span class="token operator">-></span>minor <span class="token operator">=</span> dip<span class="token operator">-></span>minor<span class="token punctuation">;</span>
+    ip<span class="token operator">-></span>nlink <span class="token operator">=</span> dip<span class="token operator">-></span>nlink<span class="token punctuation">;</span>
+    ip<span class="token operator">-></span>size  <span class="token operator">=</span> dip<span class="token operator">-></span>size<span class="token punctuation">;</span>
+    <span class="token function">memmove</span><span class="token punctuation">(</span>ip<span class="token operator">-></span>addrs<span class="token punctuation">,</span> dip<span class="token operator">-></span>addrs<span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>ip<span class="token operator">-></span>addrs<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">brelse</span><span class="token punctuation">(</span>bp<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    ip<span class="token operator">-></span>valid <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>ip<span class="token operator">-></span>type <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span>
+      <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"ilock: no type"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// type == 0 表示 inode 未分配（错误）</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong><code>ilock()</code> 与 <code>iget()</code> 分离的意义</strong>：</p>
+<p>许多操作需要持有 inode 引用（防止被释放）但不需要锁定内容，例如：</p>
+<ul>
+<li><code>open()</code> 打开文件后，文件描述符持有 <code>ip-&gt;ref++</code>，但只有 <code>read/write</code> 时才短暂 <code>ilock()</code></li>
+<li>路径解析遍历时，持有父目录 inode 的引用，但可以与子 inode 分别锁</li>
+</ul>
+<p>如果 <code>iget()</code> 本身就加锁，路径遍历时就会同时持有多把 sleeplock，死锁风险大增。</p>
+<h3 id="3-5-iunlock-和-iput-——解锁与释放引用"><a href="#3-5-iunlock-和-iput-——解锁与释放引用" class="headerlink" title="3.5 iunlock() 和 iput()——解锁与释放引用"></a>3.5 <code>iunlock()</code> 和 <code>iput()</code>——解锁与释放引用</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">iunlock</span><span class="token punctuation">(</span><span class="token keyword">struct</span> inode <span class="token operator">*</span>ip<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>ip <span class="token operator">==</span> <span class="token number">0</span> <span class="token operator">||</span> <span class="token operator">!</span><span class="token function">holdingsleep</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>ip<span class="token operator">-></span>lock<span class="token punctuation">)</span> <span class="token operator">||</span> ip<span class="token operator">-></span>ref <span class="token operator">&lt;</span> <span class="token number">1</span><span class="token punctuation">)</span>
+    <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"iunlock"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token function">releasesleep</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>ip<span class="token operator">-></span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">void</span> <span class="token function">iput</span><span class="token punctuation">(</span><span class="token keyword">struct</span> inode <span class="token operator">*</span>ip<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token function">acquire</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>icache<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span>ip<span class="token operator">-></span>ref <span class="token operator">==</span> <span class="token number">1</span> <span class="token operator">&amp;&amp;</span> ip<span class="token operator">-></span>valid <span class="token operator">&amp;&amp;</span> ip<span class="token operator">-></span>nlink <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// ref 将变为 0，且没有目录链接 → 文件被删除，释放磁盘资源</span>
+    <span class="token comment" spellcheck="true">// ref == 1 意味着没有其他进程持有此 inode，acquiresleep 不会阻塞</span>
+    <span class="token function">acquiresleep</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>ip<span class="token operator">-></span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>icache<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token function">itrunc</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>     <span class="token comment" spellcheck="true">// 释放所有数据块</span>
+    ip<span class="token operator">-></span>type <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// type = 0 表示 inode 空闲</span>
+    <span class="token function">iupdate</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 将 type=0 写入磁盘（即释放磁盘 inode）</span>
+    ip<span class="token operator">-></span>valid <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+
+    <span class="token function">releasesleep</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>ip<span class="token operator">-></span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">acquire</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>icache<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+
+  ip<span class="token operator">-></span>ref<span class="token operator">--</span><span class="token punctuation">;</span>
+  <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>icache<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>**<code>iput()</code> 中的”延迟删除”**：</p>
+<p>当文件被 <code>unlink()</code> 但还有进程打开时（如 <code>rm</code> 一个正在被 <code>cat</code> 读的文件）：</p>
+<ul>
+<li><code>nlink</code> 减到 0（目录中无链接）</li>
+<li><code>ref</code> 仍 &gt; 0（进程持有文件描述符）</li>
+<li><code>iput()</code> 此时不删除，因为 <code>ref &gt; 1</code></li>
+</ul>
+<p>直到最后一个 <code>close()</code> 使 <code>ref</code> 减到 1，调用 <code>iput()</code> 时才真正释放磁盘资源。这是 Unix “打开的文件不会消失” 语义的实现基础。</p>
+<p>**常用组合：<code>iunlockput(ip)</code>**：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">iunlockput</span><span class="token punctuation">(</span><span class="token keyword">struct</span> inode <span class="token operator">*</span>ip<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token function">iunlock</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token function">iput</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><code>iunlock</code> + <code>iput</code> 频繁组合使用，xv6 提供这个便利函数。</p>
+<h3 id="3-6-iupdate-——将内存-inode-同步回磁盘"><a href="#3-6-iupdate-——将内存-inode-同步回磁盘" class="headerlink" title="3.6 iupdate()——将内存 inode 同步回磁盘"></a>3.6 <code>iupdate()</code>——将内存 inode 同步回磁盘</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">iupdate</span><span class="token punctuation">(</span><span class="token keyword">struct</span> inode <span class="token operator">*</span>ip<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">struct</span> buf <span class="token operator">*</span>bp<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> dinode <span class="token operator">*</span>dip<span class="token punctuation">;</span>
+
+  bp  <span class="token operator">=</span> <span class="token function">bread</span><span class="token punctuation">(</span>ip<span class="token operator">-></span>dev<span class="token punctuation">,</span> <span class="token function">IBLOCK</span><span class="token punctuation">(</span>ip<span class="token operator">-></span>inum<span class="token punctuation">,</span> sb<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  dip <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">struct</span> dinode<span class="token operator">*</span><span class="token punctuation">)</span>bp<span class="token operator">-></span>data <span class="token operator">+</span> ip<span class="token operator">-></span>inum <span class="token operator">%</span> IPB<span class="token punctuation">;</span>
+  dip<span class="token operator">-></span>type  <span class="token operator">=</span> ip<span class="token operator">-></span>type<span class="token punctuation">;</span>
+  dip<span class="token operator">-></span>major <span class="token operator">=</span> ip<span class="token operator">-></span>major<span class="token punctuation">;</span>
+  dip<span class="token operator">-></span>minor <span class="token operator">=</span> ip<span class="token operator">-></span>minor<span class="token punctuation">;</span>
+  dip<span class="token operator">-></span>nlink <span class="token operator">=</span> ip<span class="token operator">-></span>nlink<span class="token punctuation">;</span>
+  dip<span class="token operator">-></span>size  <span class="token operator">=</span> ip<span class="token operator">-></span>size<span class="token punctuation">;</span>
+  <span class="token function">memmove</span><span class="token punctuation">(</span>dip<span class="token operator">-></span>addrs<span class="token punctuation">,</span> ip<span class="token operator">-></span>addrs<span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>ip<span class="token operator">-></span>addrs<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token function">log_write</span><span class="token punctuation">(</span>bp<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 通过日志写回（事务保护）</span>
+  <span class="token function">brelse</span><span class="token punctuation">(</span>bp<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><code>iupdate()</code> 是<strong>写透（write-through）</strong>：每次在内存中修改 inode 字段（<code>type</code>、<code>size</code>、<code>addrs[]</code> 等），都立即调用 <code>iupdate()</code> 将变更写入日志。这保证了崩溃时不会丢失 inode 元数据的修改。</p>
+<hr>
+<h2 id="四、源码精读：文件数据读写"><a href="#四、源码精读：文件数据读写" class="headerlink" title="四、源码精读：文件数据读写"></a>四、源码精读：文件数据读写</h2><h3 id="4-1-bmap-——逻辑块号-→-物理块号（必要时分配）"><a href="#4-1-bmap-——逻辑块号-→-物理块号（必要时分配）" class="headerlink" title="4.1 bmap()——逻辑块号 → 物理块号（必要时分配）"></a>4.1 <code>bmap()</code>——逻辑块号 → 物理块号（必要时分配）</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">static</span> uint <span class="token function">bmap</span><span class="token punctuation">(</span><span class="token keyword">struct</span> inode <span class="token operator">*</span>ip<span class="token punctuation">,</span> uint bn<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  uint addr<span class="token punctuation">,</span> <span class="token operator">*</span>a<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> buf <span class="token operator">*</span>bp<span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ① 直接块（0 ~ NDIRECT-1）</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>bn <span class="token operator">&lt;</span> NDIRECT<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span>addr <span class="token operator">=</span> ip<span class="token operator">-></span>addrs<span class="token punctuation">[</span>bn<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span>
+      ip<span class="token operator">-></span>addrs<span class="token punctuation">[</span>bn<span class="token punctuation">]</span> <span class="token operator">=</span> addr <span class="token operator">=</span> <span class="token function">balloc</span><span class="token punctuation">(</span>ip<span class="token operator">-></span>dev<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 按需分配</span>
+    <span class="token keyword">return</span> addr<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  bn <span class="token operator">-</span><span class="token operator">=</span> NDIRECT<span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ② 一级间接块（NDIRECT ~ NDIRECT+NINDIRECT-1）</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>bn <span class="token operator">&lt;</span> NINDIRECT<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// 加载（或分配）间接块本身</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span>addr <span class="token operator">=</span> ip<span class="token operator">-></span>addrs<span class="token punctuation">[</span>NDIRECT<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span>
+      ip<span class="token operator">-></span>addrs<span class="token punctuation">[</span>NDIRECT<span class="token punctuation">]</span> <span class="token operator">=</span> addr <span class="token operator">=</span> <span class="token function">balloc</span><span class="token punctuation">(</span>ip<span class="token operator">-></span>dev<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    bp <span class="token operator">=</span> <span class="token function">bread</span><span class="token punctuation">(</span>ip<span class="token operator">-></span>dev<span class="token punctuation">,</span> addr<span class="token punctuation">)</span><span class="token punctuation">;</span>       <span class="token comment" spellcheck="true">// 读间接块</span>
+    a  <span class="token operator">=</span> <span class="token punctuation">(</span>uint<span class="token operator">*</span><span class="token punctuation">)</span>bp<span class="token operator">-></span>data<span class="token punctuation">;</span>            <span class="token comment" spellcheck="true">// 间接块内容是 256 个块号</span>
+
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span>addr <span class="token operator">=</span> a<span class="token punctuation">[</span>bn<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      a<span class="token punctuation">[</span>bn<span class="token punctuation">]</span> <span class="token operator">=</span> addr <span class="token operator">=</span> <span class="token function">balloc</span><span class="token punctuation">(</span>ip<span class="token operator">-></span>dev<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 按需分配数据块</span>
+      <span class="token function">log_write</span><span class="token punctuation">(</span>bp<span class="token punctuation">)</span><span class="token punctuation">;</span>                   <span class="token comment" spellcheck="true">// 间接块被修改，写日志</span>
+    <span class="token punctuation">}</span>
+    <span class="token function">brelse</span><span class="token punctuation">(</span>bp<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> addr<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"bmap: out of range"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong><code>bmap()</code> 的关键特性——按需分配（demand allocation）</strong>：</p>
+<p><code>bmap()</code> 在块不存在时自动分配，这使得 <code>readi/writei</code> 可以统一调用 <code>bmap()</code> 处理所有情况，不需要区分”块已存在”和”块需要创建”。</p>
+<p><strong>间接块的两级磁盘访问</strong>：对于大文件的末尾数据（块号 ≥ 12），需要：</p>
+<ol>
+<li>读间接块（1 次磁盘读）</li>
+<li>读间接块内记录的数据块号，再读数据块（1 次磁盘读）</li>
+</ol>
+<p>总共比直接块多 1 次磁盘 I/O。</p>
+<h3 id="4-2-readi-——从-inode-读数据"><a href="#4-2-readi-——从-inode-读数据" class="headerlink" title="4.2 readi()——从 inode 读数据"></a>4.2 <code>readi()</code>——从 inode 读数据</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">int</span> <span class="token function">readi</span><span class="token punctuation">(</span><span class="token keyword">struct</span> inode <span class="token operator">*</span>ip<span class="token punctuation">,</span> <span class="token keyword">int</span> user_dst<span class="token punctuation">,</span> uint64 dst<span class="token punctuation">,</span> uint off<span class="token punctuation">,</span> uint n<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  uint tot<span class="token punctuation">,</span> m<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> buf <span class="token operator">*</span>bp<span class="token punctuation">;</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span>off <span class="token operator">></span> ip<span class="token operator">-></span>size <span class="token operator">||</span> off <span class="token operator">+</span> n <span class="token operator">&lt;</span> off<span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>off <span class="token operator">+</span> n <span class="token operator">></span> ip<span class="token operator">-></span>size<span class="token punctuation">)</span>
+    n <span class="token operator">=</span> ip<span class="token operator">-></span>size <span class="token operator">-</span> off<span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 截断到文件末尾</span>
+
+  <span class="token keyword">for</span><span class="token punctuation">(</span>tot<span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">;</span> tot<span class="token operator">&lt;</span>n<span class="token punctuation">;</span> tot<span class="token operator">+</span><span class="token operator">=</span>m<span class="token punctuation">,</span> off<span class="token operator">+</span><span class="token operator">=</span>m<span class="token punctuation">,</span> dst<span class="token operator">+</span><span class="token operator">=</span>m<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    bp <span class="token operator">=</span> <span class="token function">bread</span><span class="token punctuation">(</span>ip<span class="token operator">-></span>dev<span class="token punctuation">,</span> <span class="token function">bmap</span><span class="token punctuation">(</span>ip<span class="token punctuation">,</span> off<span class="token operator">/</span>BSIZE<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 读包含 off 的块</span>
+    m  <span class="token operator">=</span> <span class="token function">min</span><span class="token punctuation">(</span>n <span class="token operator">-</span> tot<span class="token punctuation">,</span> BSIZE <span class="token operator">-</span> off<span class="token operator">%</span>BSIZE<span class="token punctuation">)</span><span class="token punctuation">;</span>      <span class="token comment" spellcheck="true">// 本次从此块读取的字节数</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">either_copyout</span><span class="token punctuation">(</span>user_dst<span class="token punctuation">,</span> dst<span class="token punctuation">,</span> bp<span class="token operator">-></span>data <span class="token operator">+</span> <span class="token punctuation">(</span>off <span class="token operator">%</span> BSIZE<span class="token punctuation">)</span><span class="token punctuation">,</span> m<span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">brelse</span><span class="token punctuation">(</span>bp<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">break</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token function">brelse</span><span class="token punctuation">(</span>bp<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">return</span> tot<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>循环逻辑解析</strong>：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">读取 <span class="token punctuation">[</span>off, off+n<span class="token punctuation">)</span> 字节：
+
+第一次迭代：
+  块号 <span class="token operator">=</span> off / BSIZE（off 所在的块）
+  m    <span class="token operator">=</span> min<span class="token punctuation">(</span>n, BSIZE - off%BSIZE<span class="token punctuation">)</span>（到块边界的字节数）
+  从 bp-<span class="token operator">></span>data<span class="token punctuation">[</span>off%BSIZE<span class="token punctuation">]</span> 位置开始读 m 字节
+
+中间迭代：
+  块号 <span class="token operator">=</span> <span class="token punctuation">(</span>aligned<span class="token punctuation">)</span> off / BSIZE（完整块）
+  m    <span class="token operator">=</span> min<span class="token punctuation">(</span>remaining, BSIZE<span class="token punctuation">)</span> <span class="token operator">=</span> BSIZE（通常读满整块）
+
+最后一次迭代：
+  块号 <span class="token operator">=</span> <span class="token punctuation">(</span>off+n-1<span class="token punctuation">)</span> / BSIZE
+  m    <span class="token operator">=</span> 剩余字节（可能不满整块）
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>**<code>either_copyout()</code>**：根据 <code>user_dst</code> 标志，将数据拷贝到用户空间（<code>copyout</code>）或内核空间（<code>memmove</code>）。这使 <code>readi()</code> 能同时服务用户程序（<code>sys_read</code>）和内核代码（如路径解析中读目录）。</p>
+<h3 id="4-3-writei-——向-inode-写数据"><a href="#4-3-writei-——向-inode-写数据" class="headerlink" title="4.3 writei()——向 inode 写数据"></a>4.3 <code>writei()</code>——向 inode 写数据</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">int</span> <span class="token function">writei</span><span class="token punctuation">(</span><span class="token keyword">struct</span> inode <span class="token operator">*</span>ip<span class="token punctuation">,</span> <span class="token keyword">int</span> user_src<span class="token punctuation">,</span> uint64 src<span class="token punctuation">,</span> uint off<span class="token punctuation">,</span> uint n<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  uint tot<span class="token punctuation">,</span> m<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> buf <span class="token operator">*</span>bp<span class="token punctuation">;</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span>off <span class="token operator">></span> ip<span class="token operator">-></span>size <span class="token operator">||</span> off <span class="token operator">+</span> n <span class="token operator">&lt;</span> off<span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>off <span class="token operator">+</span> n <span class="token operator">></span> MAXFILE<span class="token operator">*</span>BSIZE<span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 超过最大文件大小（268 KB）</span>
+
+  <span class="token keyword">for</span><span class="token punctuation">(</span>tot<span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">;</span> tot<span class="token operator">&lt;</span>n<span class="token punctuation">;</span> tot<span class="token operator">+</span><span class="token operator">=</span>m<span class="token punctuation">,</span> off<span class="token operator">+</span><span class="token operator">=</span>m<span class="token punctuation">,</span> src<span class="token operator">+</span><span class="token operator">=</span>m<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    bp <span class="token operator">=</span> <span class="token function">bread</span><span class="token punctuation">(</span>ip<span class="token operator">-></span>dev<span class="token punctuation">,</span> <span class="token function">bmap</span><span class="token punctuation">(</span>ip<span class="token punctuation">,</span> off<span class="token operator">/</span>BSIZE<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 读/分配目标块</span>
+    m  <span class="token operator">=</span> <span class="token function">min</span><span class="token punctuation">(</span>n <span class="token operator">-</span> tot<span class="token punctuation">,</span> BSIZE <span class="token operator">-</span> off<span class="token operator">%</span>BSIZE<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">either_copyin</span><span class="token punctuation">(</span>bp<span class="token operator">-></span>data <span class="token operator">+</span> <span class="token punctuation">(</span>off <span class="token operator">%</span> BSIZE<span class="token punctuation">)</span><span class="token punctuation">,</span> user_src<span class="token punctuation">,</span> src<span class="token punctuation">,</span> m<span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">brelse</span><span class="token punctuation">(</span>bp<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">break</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token function">log_write</span><span class="token punctuation">(</span>bp<span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// ← 关键：写入日志（不直接 bwrite）</span>
+    <span class="token function">brelse</span><span class="token punctuation">(</span>bp<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span>n <span class="token operator">></span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>off <span class="token operator">></span> ip<span class="token operator">-></span>size<span class="token punctuation">)</span>
+      ip<span class="token operator">-></span>size <span class="token operator">=</span> off<span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 文件扩大，更新 size</span>
+    <span class="token function">iupdate</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>         <span class="token comment" spellcheck="true">// 将 size（及可能新增的 addrs[]）写入日志</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token keyword">return</span> n<span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 实际写入字节数（可能 &lt; n，若 either_copyin 失败）</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong><code>writei()</code> 与 <code>readi()</code> 的关键区别</strong>：</p>
+<ul>
+<li><code>writei()</code> 调用 <code>log_write(bp)</code> 将修改记录到日志；<code>readi()</code> 只读不写日志</li>
+<li><code>writei()</code> 可能调用 <code>bmap()</code> 分配新块（<code>bmap()</code> 内部调用 <code>balloc()</code>），因此必须在事务（<code>begin_op/end_op</code>）内调用</li>
+<li><code>writei()</code> 写完后调用 <code>iupdate(ip)</code> 同步 inode 元数据（<code>size</code> 字段）</li>
+</ul>
+<h3 id="4-4-itrunc-——截断文件，释放所有数据块"><a href="#4-4-itrunc-——截断文件，释放所有数据块" class="headerlink" title="4.4 itrunc()——截断文件，释放所有数据块"></a>4.4 <code>itrunc()</code>——截断文件，释放所有数据块</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">itrunc</span><span class="token punctuation">(</span><span class="token keyword">struct</span> inode <span class="token operator">*</span>ip<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">int</span> i<span class="token punctuation">,</span> j<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> buf <span class="token operator">*</span>bp<span class="token punctuation">;</span>
+  uint <span class="token operator">*</span>a<span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ① 释放所有直接块</span>
+  <span class="token keyword">for</span><span class="token punctuation">(</span>i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> NDIRECT<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>ip<span class="token operator">-></span>addrs<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">bfree</span><span class="token punctuation">(</span>ip<span class="token operator">-></span>dev<span class="token punctuation">,</span> ip<span class="token operator">-></span>addrs<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      ip<span class="token operator">-></span>addrs<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token comment" spellcheck="true">// ② 释放一级间接块</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>ip<span class="token operator">-></span>addrs<span class="token punctuation">[</span>NDIRECT<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    bp <span class="token operator">=</span> <span class="token function">bread</span><span class="token punctuation">(</span>ip<span class="token operator">-></span>dev<span class="token punctuation">,</span> ip<span class="token operator">-></span>addrs<span class="token punctuation">[</span>NDIRECT<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 读间接块</span>
+    a  <span class="token operator">=</span> <span class="token punctuation">(</span>uint<span class="token operator">*</span><span class="token punctuation">)</span>bp<span class="token operator">-></span>data<span class="token punctuation">;</span>
+    <span class="token keyword">for</span><span class="token punctuation">(</span>j <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> j <span class="token operator">&lt;</span> NINDIRECT<span class="token punctuation">;</span> j<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">if</span><span class="token punctuation">(</span>a<span class="token punctuation">[</span>j<span class="token punctuation">]</span><span class="token punctuation">)</span>
+        <span class="token function">bfree</span><span class="token punctuation">(</span>ip<span class="token operator">-></span>dev<span class="token punctuation">,</span> a<span class="token punctuation">[</span>j<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 释放每个数据块</span>
+    <span class="token punctuation">}</span>
+    <span class="token function">brelse</span><span class="token punctuation">(</span>bp<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">bfree</span><span class="token punctuation">(</span>ip<span class="token operator">-></span>dev<span class="token punctuation">,</span> ip<span class="token operator">-></span>addrs<span class="token punctuation">[</span>NDIRECT<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 释放间接块本身</span>
+    ip<span class="token operator">-></span>addrs<span class="token punctuation">[</span>NDIRECT<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+
+  ip<span class="token operator">-></span>size <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  <span class="token function">iupdate</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 将清零后的 addrs[] 和 size = 0 写回磁盘</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><code>itrunc()</code> 在 <code>iput()</code> 中当 <code>nlink == 0</code> 时被调用，也在 <code>sys_open()</code> 以 <code>O_TRUNC</code> 打开文件时调用。</p>
+<hr>
+<h2 id="五、源码精读：目录操作"><a href="#五、源码精读：目录操作" class="headerlink" title="五、源码精读：目录操作"></a>五、源码精读：目录操作</h2><h3 id="5-1-dirlookup-——在目录中查找名字"><a href="#5-1-dirlookup-——在目录中查找名字" class="headerlink" title="5.1 dirlookup()——在目录中查找名字"></a>5.1 <code>dirlookup()</code>——在目录中查找名字</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">struct</span> inode<span class="token operator">*</span> <span class="token function">dirlookup</span><span class="token punctuation">(</span><span class="token keyword">struct</span> inode <span class="token operator">*</span>dp<span class="token punctuation">,</span> <span class="token keyword">char</span> <span class="token operator">*</span>name<span class="token punctuation">,</span> uint <span class="token operator">*</span>poff<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  uint off<span class="token punctuation">,</span> inum<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> dirent de<span class="token punctuation">;</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span>dp<span class="token operator">-></span>type <span class="token operator">!=</span> T_DIR<span class="token punctuation">)</span>
+    <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"dirlookup not DIR"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// 目录内容是连续的 struct dirent 条目</span>
+  <span class="token comment" spellcheck="true">// struct dirent { ushort inum; char name[DIRSIZ]; }（DIRSIZ=14）</span>
+  <span class="token keyword">for</span><span class="token punctuation">(</span>off <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> off <span class="token operator">&lt;</span> dp<span class="token operator">-></span>size<span class="token punctuation">;</span> off <span class="token operator">+</span><span class="token operator">=</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>de<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">readi</span><span class="token punctuation">(</span>dp<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token punctuation">(</span>uint64<span class="token punctuation">)</span><span class="token operator">&amp;</span>de<span class="token punctuation">,</span> off<span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>de<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>de<span class="token punctuation">)</span><span class="token punctuation">)</span>
+      <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"dirlookup read"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>de<span class="token punctuation">.</span>inum <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span>
+      <span class="token keyword">continue</span><span class="token punctuation">;</span>               <span class="token comment" spellcheck="true">// inum == 0 表示该条目已删除（空洞）</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">namecmp</span><span class="token punctuation">(</span>name<span class="token punctuation">,</span> de<span class="token punctuation">.</span>name<span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">if</span><span class="token punctuation">(</span>poff<span class="token punctuation">)</span>
+        <span class="token operator">*</span>poff <span class="token operator">=</span> off<span class="token punctuation">;</span>          <span class="token comment" spellcheck="true">// 返回条目的字节偏移（供 unlink 使用）</span>
+      inum <span class="token operator">=</span> de<span class="token punctuation">.</span>inum<span class="token punctuation">;</span>
+      <span class="token keyword">return</span> <span class="token function">iget</span><span class="token punctuation">(</span>dp<span class="token operator">-></span>dev<span class="token punctuation">,</span> inum<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 返回对应 inode（未锁定，ref++）</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 未找到</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>目录本质上是一个文件</strong>，其数据内容是 <code>struct dirent</code> 的紧密排列：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">目录数据块内容（字节偏移）：
+  <span class="token punctuation">[</span>0<span class="token punctuation">]</span>   <span class="token keyword">:</span> dirent <span class="token punctuation">{</span>inum<span class="token operator">=</span>1, name<span class="token operator">=</span><span class="token string">"."</span><span class="token punctuation">}</span>      （本目录自身）
+  <span class="token punctuation">[</span>16<span class="token punctuation">]</span>  <span class="token keyword">:</span> dirent <span class="token punctuation">{</span>inum<span class="token operator">=</span>1, name<span class="token operator">=</span><span class="token string">".."</span><span class="token punctuation">}</span>     （父目录）
+  <span class="token punctuation">[</span>32<span class="token punctuation">]</span>  <span class="token keyword">:</span> dirent <span class="token punctuation">{</span>inum<span class="token operator">=</span>5, name<span class="token operator">=</span><span class="token string">"README"</span><span class="token punctuation">}</span> （文件条目）
+  <span class="token punctuation">[</span>48<span class="token punctuation">]</span>  <span class="token keyword">:</span> dirent <span class="token punctuation">{</span>inum<span class="token operator">=</span>0, name<span class="token operator">=</span><span class="token string">""</span><span class="token punctuation">}</span>       （被删除的条目，inum<span class="token operator">=</span>0 跳过）
+  <span class="token punctuation">[</span>64<span class="token punctuation">]</span>  <span class="token keyword">:</span> dirent <span class="token punctuation">{</span>inum<span class="token operator">=</span>7, name<span class="token operator">=</span><span class="token string">"ls"</span><span class="token punctuation">}</span>     （另一个文件）
+  <span class="token punctuation">..</span>.
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><code>struct dirent</code> 大小 = <code>sizeof(ushort) + DIRSIZ</code> = 2 + 14 = <strong>16 字节</strong>。</p>
+<h3 id="5-2-dirlink-——在目录中添加新条目"><a href="#5-2-dirlink-——在目录中添加新条目" class="headerlink" title="5.2 dirlink()——在目录中添加新条目"></a>5.2 <code>dirlink()</code>——在目录中添加新条目</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">int</span> <span class="token function">dirlink</span><span class="token punctuation">(</span><span class="token keyword">struct</span> inode <span class="token operator">*</span>dp<span class="token punctuation">,</span> <span class="token keyword">char</span> <span class="token operator">*</span>name<span class="token punctuation">,</span> uint inum<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">int</span> off<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> dirent de<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> inode <span class="token operator">*</span>ip<span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ① 检查名字是否已存在（重复则失败）</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span>ip <span class="token operator">=</span> <span class="token function">dirlookup</span><span class="token punctuation">(</span>dp<span class="token punctuation">,</span> name<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token function">iput</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token comment" spellcheck="true">// ② 找第一个空槽（inum == 0 的条目）或目录末尾</span>
+  <span class="token keyword">for</span><span class="token punctuation">(</span>off <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> off <span class="token operator">&lt;</span> dp<span class="token operator">-></span>size<span class="token punctuation">;</span> off <span class="token operator">+</span><span class="token operator">=</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>de<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">readi</span><span class="token punctuation">(</span>dp<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token punctuation">(</span>uint64<span class="token punctuation">)</span><span class="token operator">&amp;</span>de<span class="token punctuation">,</span> off<span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>de<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>de<span class="token punctuation">)</span><span class="token punctuation">)</span>
+      <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"dirlink read"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>de<span class="token punctuation">.</span>inum <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span>
+      <span class="token keyword">break</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 找到空槽</span>
+  <span class="token punctuation">}</span>
+  <span class="token comment" spellcheck="true">// off == dp->size 表示没有空槽，在末尾追加（writei 会自动扩大 dp->size）</span>
+
+  <span class="token comment" spellcheck="true">// ③ 写入新条目</span>
+  <span class="token function">strncpy</span><span class="token punctuation">(</span>de<span class="token punctuation">.</span>name<span class="token punctuation">,</span> name<span class="token punctuation">,</span> DIRSIZ<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  de<span class="token punctuation">.</span>inum <span class="token operator">=</span> inum<span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">writei</span><span class="token punctuation">(</span>dp<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token punctuation">(</span>uint64<span class="token punctuation">)</span><span class="token operator">&amp;</span>de<span class="token punctuation">,</span> off<span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>de<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>de<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"dirlink"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong><code>dirlink()</code> 复用删除条目的空槽</strong>：<code>unlink()</code> 只将条目的 <code>inum</code> 清零（软删除），<code>dirlink()</code> 会优先填充这些空槽，避免目录无限增长。</p>
+<hr>
+<h2 id="六、源码精读：路径解析"><a href="#六、源码精读：路径解析" class="headerlink" title="六、源码精读：路径解析"></a>六、源码精读：路径解析</h2><h3 id="6-1-skipelem-——从路径中提取一个组件"><a href="#6-1-skipelem-——从路径中提取一个组件" class="headerlink" title="6.1 skipelem()——从路径中提取一个组件"></a>6.1 <code>skipelem()</code>——从路径中提取一个组件</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">static</span> <span class="token keyword">char</span><span class="token operator">*</span> <span class="token function">skipelem</span><span class="token punctuation">(</span><span class="token keyword">char</span> <span class="token operator">*</span>path<span class="token punctuation">,</span> <span class="token keyword">char</span> <span class="token operator">*</span>name<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">char</span> <span class="token operator">*</span>s<span class="token punctuation">;</span>
+  <span class="token keyword">int</span> len<span class="token punctuation">;</span>
+
+  <span class="token keyword">while</span><span class="token punctuation">(</span><span class="token operator">*</span>path <span class="token operator">==</span> <span class="token string">'/'</span><span class="token punctuation">)</span>   <span class="token comment" spellcheck="true">// 跳过前导斜杠</span>
+    path<span class="token operator">++</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">*</span>path <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span>        <span class="token comment" spellcheck="true">// 路径结束</span>
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+
+  s <span class="token operator">=</span> path<span class="token punctuation">;</span>
+  <span class="token keyword">while</span><span class="token punctuation">(</span><span class="token operator">*</span>path <span class="token operator">!=</span> <span class="token string">'/'</span> <span class="token operator">&amp;&amp;</span> <span class="token operator">*</span>path <span class="token operator">!=</span> <span class="token number">0</span><span class="token punctuation">)</span>  <span class="token comment" spellcheck="true">// 找到下一个 / 或结尾</span>
+    path<span class="token operator">++</span><span class="token punctuation">;</span>
+  len <span class="token operator">=</span> path <span class="token operator">-</span> s<span class="token punctuation">;</span>                     <span class="token comment" spellcheck="true">// 当前组件的长度</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span>len <span class="token operator">>=</span> DIRSIZ<span class="token punctuation">)</span>
+    <span class="token function">memmove</span><span class="token punctuation">(</span>name<span class="token punctuation">,</span> s<span class="token punctuation">,</span> DIRSIZ<span class="token punctuation">)</span><span class="token punctuation">;</span>         <span class="token comment" spellcheck="true">// 截断到 DIRSIZ（14 字节）</span>
+  <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    <span class="token function">memmove</span><span class="token punctuation">(</span>name<span class="token punctuation">,</span> s<span class="token punctuation">,</span> len<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    name<span class="token punctuation">[</span>len<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>                    <span class="token comment" spellcheck="true">// 添加终止符</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token keyword">while</span><span class="token punctuation">(</span><span class="token operator">*</span>path <span class="token operator">==</span> <span class="token string">'/'</span><span class="token punctuation">)</span>   <span class="token comment" spellcheck="true">// 跳过组件后的多余斜杠</span>
+    path<span class="token operator">++</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">return</span> path<span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 返回剩余路径（调用者用于下次迭代）</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>示例：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">skipelem<span class="token punctuation">(</span><span class="token string">"a/bb/c"</span>,  name<span class="token punctuation">)</span> → name<span class="token operator">=</span><span class="token string">"a"</span>,  返回 <span class="token string">"bb/c"</span>
+skipelem<span class="token punctuation">(</span><span class="token string">"///a//bb"</span>, name<span class="token punctuation">)</span> → name<span class="token operator">=</span><span class="token string">"a"</span>,  返回 <span class="token string">"bb"</span>
+skipelem<span class="token punctuation">(</span><span class="token string">"a"</span>,       name<span class="token punctuation">)</span> → name<span class="token operator">=</span><span class="token string">"a"</span>,  返回 <span class="token string">""</span>
+skipelem<span class="token punctuation">(</span><span class="token string">""</span>,        name<span class="token punctuation">)</span> → 返回 0（无更多组件）
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="6-2-namex-——核心路径解析函数"><a href="#6-2-namex-——核心路径解析函数" class="headerlink" title="6.2 namex()——核心路径解析函数"></a>6.2 <code>namex()</code>——核心路径解析函数</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">static</span> <span class="token keyword">struct</span> inode<span class="token operator">*</span> <span class="token function">namex</span><span class="token punctuation">(</span><span class="token keyword">char</span> <span class="token operator">*</span>path<span class="token punctuation">,</span> <span class="token keyword">int</span> nameiparent<span class="token punctuation">,</span> <span class="token keyword">char</span> <span class="token operator">*</span>name<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">struct</span> inode <span class="token operator">*</span>ip<span class="token punctuation">,</span> <span class="token operator">*</span>next<span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ① 确定起始 inode</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">*</span>path <span class="token operator">==</span> <span class="token string">'/'</span><span class="token punctuation">)</span>
+    ip <span class="token operator">=</span> <span class="token function">iget</span><span class="token punctuation">(</span>ROOTDEV<span class="token punctuation">,</span> ROOTINO<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 绝对路径：从根目录（inum=1）开始</span>
+  <span class="token keyword">else</span>
+    ip <span class="token operator">=</span> <span class="token function">idup</span><span class="token punctuation">(</span><span class="token function">myproc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">-></span>cwd<span class="token punctuation">)</span><span class="token punctuation">;</span>     <span class="token comment" spellcheck="true">// 相对路径：从当前工作目录开始</span>
+
+  <span class="token comment" spellcheck="true">// ② 逐组件遍历</span>
+  <span class="token keyword">while</span><span class="token punctuation">(</span><span class="token punctuation">(</span>path <span class="token operator">=</span> <span class="token function">skipelem</span><span class="token punctuation">(</span>path<span class="token punctuation">,</span> name<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token function">ilock</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>                    <span class="token comment" spellcheck="true">// 锁定当前目录（读 type 和 size 需要锁）</span>
+
+    <span class="token keyword">if</span><span class="token punctuation">(</span>ip<span class="token operator">-></span>type <span class="token operator">!=</span> T_DIR<span class="token punctuation">)</span> <span class="token punctuation">{</span>       <span class="token comment" spellcheck="true">// 中间组件必须是目录</span>
+      <span class="token function">iunlockput</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token keyword">if</span><span class="token punctuation">(</span>nameiparent <span class="token operator">&amp;&amp;</span> <span class="token operator">*</span>path <span class="token operator">==</span> <span class="token string">'\0'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment" spellcheck="true">// 调用方要求返回父目录，且 name 已是最后一个组件</span>
+      <span class="token function">iunlock</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>               <span class="token comment" spellcheck="true">// 解锁但保持引用（返回给调用者）</span>
+      <span class="token keyword">return</span> ip<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span>next <span class="token operator">=</span> <span class="token function">dirlookup</span><span class="token punctuation">(</span>ip<span class="token punctuation">,</span> name<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">iunlockput</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>            <span class="token comment" spellcheck="true">// 名字不存在</span>
+      <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token function">iunlockput</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>              <span class="token comment" spellcheck="true">// 释放当前目录（找到下一层了）</span>
+    ip <span class="token operator">=</span> next<span class="token punctuation">;</span>                   <span class="token comment" spellcheck="true">// 移动到下一层 inode</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span>nameiparent<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token function">iput</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// nameiparent 要求返回父目录，但路径无父（如 nameiparent "/"）</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">return</span> ip<span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 返回最终 inode（未锁定，ref > 0）</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong><code>namex()</code> 的并发陷阱——为何 <code>ilock</code> 和 <code>iget</code> 分开？</strong></p>
+<p>考虑路径 <code>/a/b</code>，遍历第一步：</p>
+<ol>
+<li><code>ilock(root_dir)</code> — 锁定根目录</li>
+<li><code>dirlookup(root_dir, "a", 0)</code> — 在根目录里查找 “a”，返回 <code>next = iget(dev, a_inum)</code>（<code>ref++</code>，未锁）</li>
+<li><code>iunlockput(root_dir)</code> — <strong>释放根目录锁，同时减少 ref</strong></li>
+<li><code>ip = next</code>（即 <code>/a</code> 的 inode）</li>
+</ol>
+<p>步骤 3 之前，另一个进程可能删除 <code>/a</code>（<code>nlink → 0</code>），但因为步骤 2 已经 <code>iget</code> 增加了 ref，<code>iput()</code> 不会立即释放，确保指针有效。这就是 <strong>分离引用（ref）和锁定（lock）</strong> 的意义：在不持锁时也能安全持有指针。</p>
+<h3 id="6-3-namei-和-nameiparent"><a href="#6-3-namei-和-nameiparent" class="headerlink" title="6.3 namei() 和 nameiparent()"></a>6.3 <code>namei()</code> 和 <code>nameiparent()</code></h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">struct</span> inode<span class="token operator">*</span> <span class="token function">namei</span><span class="token punctuation">(</span><span class="token keyword">char</span> <span class="token operator">*</span>path<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">char</span> name<span class="token punctuation">[</span>DIRSIZ<span class="token punctuation">]</span><span class="token punctuation">;</span>
+  <span class="token keyword">return</span> <span class="token function">namex</span><span class="token punctuation">(</span>path<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> name<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment" spellcheck="true">// nameiparent=0：返回路径最终的 inode</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">struct</span> inode<span class="token operator">*</span> <span class="token function">nameiparent</span><span class="token punctuation">(</span><span class="token keyword">char</span> <span class="token operator">*</span>path<span class="token punctuation">,</span> <span class="token keyword">char</span> <span class="token operator">*</span>name<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">return</span> <span class="token function">namex</span><span class="token punctuation">(</span>path<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> name<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment" spellcheck="true">// nameiparent=1：返回最后一个组件的父目录，并将最后一个组件名写入 name</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>使用场景</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>函数</th>
+<th>用途</th>
+<th>示例</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>namei("/etc/passwd")</code></td>
+<td>获取文件的 inode</td>
+<td><code>sys_open("/etc/passwd", ...)</code></td>
+</tr>
+<tr>
+<td><code>nameiparent("/etc/passwd", name)</code></td>
+<td>获取父目录 <code>/etc</code>，<code>name="passwd"</code></td>
+<td><code>sys_create</code>、<code>sys_unlink</code></td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="七、inode-操作的完整时序：以创建文件为例"><a href="#七、inode-操作的完整时序：以创建文件为例" class="headerlink" title="七、inode 操作的完整时序：以创建文件为例"></a>七、inode 操作的完整时序：以创建文件为例</h2><pre class="line-numbers language-bash"><code class="language-bash">sys_open<span class="token punctuation">(</span><span class="token string">"/test"</span>, O_CREATE <span class="token operator">|</span> O_WRONLY<span class="token punctuation">)</span>
+  │
+  ├── begin_op<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  │
+  ├── nameiparent<span class="token punctuation">(</span><span class="token string">"/test"</span>, name<span class="token punctuation">)</span>   name<span class="token operator">=</span><span class="token string">"test"</span>
+  │     └── namex: iget<span class="token punctuation">(</span>root<span class="token punctuation">)</span> → ilock<span class="token punctuation">(</span>root<span class="token punctuation">)</span> → 解析完成，返回 root（未锁）
+  │
+  ├── ilock<span class="token punctuation">(</span>dp<span class="token punctuation">)</span>   （锁定父目录 <span class="token operator">=</span> 根目录）
+  │
+  ├── dirlookup<span class="token punctuation">(</span>dp, <span class="token string">"test"</span>, 0<span class="token punctuation">)</span> → 返回 0（<span class="token string">"test"</span> 不存在）
+  │
+  ├── ialloc<span class="token punctuation">(</span>dp-<span class="token operator">></span>dev, T_FILE<span class="token punctuation">)</span>
+  │     └── 扫描 dinode，找空闲 inum，置 type<span class="token operator">=</span>T_FILE，log_write
+  │     └── iget<span class="token punctuation">(</span>dev, inum<span class="token punctuation">)</span> → 返回 ip（ref<span class="token operator">=</span>1，valid<span class="token operator">=</span>0，未锁）
+  │
+  ├── ilock<span class="token punctuation">(</span>ip<span class="token punctuation">)</span>
+  │     └── valid<span class="token operator">=</span>0 → bread inode块，读 dinode → valid<span class="token operator">=</span>1
+  │
+  ├── ip-<span class="token operator">></span>major<span class="token operator">=</span>0, ip-<span class="token operator">></span>minor<span class="token operator">=</span>0, ip-<span class="token operator">></span>nlink<span class="token operator">=</span>1
+  ├── iupdate<span class="token punctuation">(</span>ip<span class="token punctuation">)</span>              → 将 nlink<span class="token operator">=</span>1 写入日志
+  │
+  ├── dirlink<span class="token punctuation">(</span>dp, <span class="token string">"test"</span>, ip-<span class="token operator">></span>inum<span class="token punctuation">)</span>
+  │     └── 找空槽，writei 写 <span class="token punctuation">{</span>inum, <span class="token string">"test"</span><span class="token punctuation">}</span> 到目录数据块 → log_write
+  │
+  ├── iunlock<span class="token punctuation">(</span>dp<span class="token punctuation">)</span>
+  │
+  └── end_op<span class="token punctuation">(</span><span class="token punctuation">)</span>                 → 最后一个操作触发 commit<span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<hr>
+<h2 id="八、动手实验"><a href="#八、动手实验" class="headerlink" title="八、动手实验"></a>八、动手实验</h2><h3 id="实验-1：追踪-inode-分配与目录操作"><a href="#实验-1：追踪-inode-分配与目录操作" class="headerlink" title="实验 1：追踪 inode 分配与目录操作"></a>实验 1：追踪 inode 分配与目录操作</h3><p>在以下位置添加 <code>printf</code> 追踪：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// ialloc() 中</span>
+<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"ialloc: allocated inum=%d type=%d\n"</span><span class="token punctuation">,</span> inum<span class="token punctuation">,</span> type<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment" spellcheck="true">// iget() 中（命中缓存）</span>
+<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"iget: cache hit inum=%d ref=%d\n"</span><span class="token punctuation">,</span> ip<span class="token operator">-></span>inum<span class="token punctuation">,</span> ip<span class="token operator">-></span>ref<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment" spellcheck="true">// iget() 中（缓存未命中）</span>
+<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"iget: new cache entry inum=%d\n"</span><span class="token punctuation">,</span> inum<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment" spellcheck="true">// ilock() 从磁盘读 inode 时</span>
+<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"ilock: reading inum=%d from disk\n"</span><span class="token punctuation">,</span> ip<span class="token operator">-></span>inum<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment" spellcheck="true">// dirlink() 中</span>
+<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"dirlink: adding '%s' → inum=%d\n"</span><span class="token punctuation">,</span> name<span class="token punctuation">,</span> inum<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>在 xv6 中运行 <code>echo hello &gt; test.txt &amp;&amp; cat test.txt</code>，分析输出：</p>
+<ul>
+<li>创建 <code>test.txt</code> 需要分配哪些 inode？（hint: inode #1 是根目录）</li>
+<li>目录更新（<code>dirlink</code>）写了哪个 inode 块？</li>
+</ul>
+<h3 id="实验-2：画出一个包含-268-个数据块的文件的-inode-结构"><a href="#实验-2：画出一个包含-268-个数据块的文件的-inode-结构" class="headerlink" title="实验 2：画出一个包含 268 个数据块的文件的 inode 结构"></a>实验 2：画出一个包含 268 个数据块的文件的 inode 结构</h3><p>手工绘制 <code>ip-&gt;addrs[]</code> 的完整结构：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">ip-<span class="token operator">></span>addrs<span class="token punctuation">[</span>0<span class="token punctuation">]</span>  →  数据块 0（块号 <span class="token operator">=</span> 某物理块）
+ip-<span class="token operator">></span>addrs<span class="token punctuation">[</span>1<span class="token punctuation">]</span>  →  数据块 1
+<span class="token punctuation">..</span>.
+ip-<span class="token operator">></span>addrs<span class="token punctuation">[</span>11<span class="token punctuation">]</span> →  数据块 11
+ip-<span class="token operator">></span>addrs<span class="token punctuation">[</span>12<span class="token punctuation">]</span> →  间接块（物理块 X）
+                    X<span class="token punctuation">[</span>0<span class="token punctuation">]</span>  → 数据块 12
+                    X<span class="token punctuation">[</span>1<span class="token punctuation">]</span>  → 数据块 13
+                    <span class="token punctuation">..</span>.
+                    X<span class="token punctuation">[</span>255<span class="token punctuation">]</span>→ 数据块 267
+
+// 此时 size <span class="token operator">=</span> 268 * 1024 <span class="token operator">=</span> 274432 字节
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>问题</strong>：</p>
+<ol>
+<li>读取第 15 个数据块（块偏移 14）需要几次 <code>bread()</code> 调用？（hint: 间接块是块 12 之后的）</li>
+<li><code>itrunc()</code> 释放这个文件需要几次 <code>bfree()</code> 调用？</li>
+</ol>
+<h3 id="实验-3：手动追踪路径解析-init"><a href="#实验-3：手动追踪路径解析-init" class="headerlink" title="实验 3：手动追踪路径解析 /init"></a>实验 3：手动追踪路径解析 <code>/init</code></h3><p>用纸笔单步执行 <code>namei("/init")</code> 的过程：</p>
+<ul>
+<li>初始：<code>ip = iget(ROOTDEV, ROOTINO=1)</code> → 根目录</li>
+<li>迭代 1：<code>skipelem("/init", name)</code> → <code>name="init"</code>，剩余路径 <code>""</code><ul>
+<li><code>ilock(ip=root)</code></li>
+<li><code>dirlookup(root, "init", 0)</code> → 扫描根目录的 dirent，找到 <code>{inum=?, name="init"}</code></li>
+<li><code>iunlockput(root)</code></li>
+<li><code>ip = iget(dev, inum_of_init)</code></li>
+</ul>
+</li>
+<li>迭代 2：<code>skipelem("", name)</code> → 返回 0，循环结束</li>
+<li>返回 <code>ip</code>（init 的 inode，ref=1，valid=0）</li>
+</ul>
+<p><strong>实验扩展</strong>：在 <code>namex()</code> 中加 <code>printf</code> 打印每步：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"namex: current ip inum=%d, name='%s'\n"</span><span class="token punctuation">,</span> ip<span class="token operator">-></span>inum<span class="token punctuation">,</span> name<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<p>运行 <code>ls /</code>，观察所有顶层文件的路径解析过程。</p>
+<h3 id="实验-4：理解-inode-的两层计数"><a href="#实验-4：理解-inode-的两层计数" class="headerlink" title="实验 4：理解 inode 的两层计数"></a>实验 4：理解 inode 的两层计数</h3><p><strong>观察 <code>unlink</code> + 持续打开文件的场景</strong>：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// 使用如下 shell 命令序列（xv6 shell 支持后台运行）：</span>
+<span class="token comment" spellcheck="true">// 步骤 1：打开文件</span>
+<span class="token comment" spellcheck="true">// 步骤 2：删除文件（减少 nlink）</span>
+<span class="token comment" spellcheck="true">// 步骤 3：观察 inode 何时真正被释放</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<p>在 <code>iput()</code> 的 <code>nlink==0</code> 分支加日志：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">if</span><span class="token punctuation">(</span>ip<span class="token operator">-></span>ref <span class="token operator">==</span> <span class="token number">1</span> <span class="token operator">&amp;&amp;</span> ip<span class="token operator">-></span>valid <span class="token operator">&amp;&amp;</span> ip<span class="token operator">-></span>nlink <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+  <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"iput: freeing inode inum=%d (nlink=0, last ref)\n"</span><span class="token punctuation">,</span> ip<span class="token operator">-></span>inum<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment" spellcheck="true">// ...</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>思考题</strong>：</p>
+<ul>
+<li>如果进程 A 打开了文件 X，然后进程 B 调用 <code>unlink(X)</code>，此时 <code>ip-&gt;nlink</code> 和 <code>ip-&gt;ref</code> 分别是多少？</li>
+<li>进程 A 关闭文件 X 后，<code>iput()</code> 发现 <code>nlink == 0 &amp;&amp; ref == 1</code>，会做什么？</li>
+</ul>
+<hr>
+<h2 id="九、本节小结"><a href="#九、本节小结" class="headerlink" title="九、本节小结"></a>九、本节小结</h2><table>
+<thead>
+<tr>
+<th>概念</th>
+<th>要点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>struct dinode</code></td>
+<td>磁盘 inode：type/nlink/size/addrs[13]（12 直接 + 1 间接）</td>
+</tr>
+<tr>
+<td><code>struct inode</code></td>
+<td>内存 inode：磁盘字段 + ref/valid/lock（sleeplock）</td>
+</tr>
+<tr>
+<td><code>balloc/bfree</code></td>
+<td>位图管理数据块；<code>balloc</code> 按需清零新块</td>
+</tr>
+<tr>
+<td><code>ialloc</code></td>
+<td>扫描 dinode 找 type=0，设置类型，<code>log_write</code></td>
+</tr>
+<tr>
+<td><code>iget</code></td>
+<td>查找或创建缓存条目，仅增加引用计数，不加锁不读磁盘</td>
+</tr>
+<tr>
+<td><code>idup</code></td>
+<td>已有指针时仅 <code>ref++</code></td>
+</tr>
+<tr>
+<td><code>ilock</code></td>
+<td>获取 sleeplock；若 <code>valid=0</code> 则从磁盘读 dinode</td>
+</tr>
+<tr>
+<td><code>iput</code></td>
+<td>减少 ref；<code>nlink==0 &amp;&amp; ref→0</code> 时截断并释放磁盘 inode</td>
+</tr>
+<tr>
+<td><code>iupdate</code></td>
+<td>将内存 inode 字段同步回磁盘（write-through，经日志）</td>
+</tr>
+<tr>
+<td><code>bmap</code></td>
+<td>逻辑块号→物理块号，按需分配（<code>balloc</code>）</td>
+</tr>
+<tr>
+<td><code>readi/writei</code></td>
+<td>循环分块读写，跨块透明，<code>writei</code> 经 <code>log_write</code></td>
+</tr>
+<tr>
+<td><code>itrunc</code></td>
+<td>释放所有直接块 + 间接块 + 间接块本身</td>
+</tr>
+<tr>
+<td><code>dirlookup</code></td>
+<td>线性扫描 dirent，按名字匹配，返回 <code>iget</code> 的 inode</td>
+</tr>
+<tr>
+<td><code>dirlink</code></td>
+<td>找空槽或追加，<code>writei</code> 写入 {inum, name}</td>
+</tr>
+<tr>
+<td><code>skipelem</code></td>
+<td>从路径提取一个组件，返回剩余路径</td>
+</tr>
+<tr>
+<td><code>namex</code></td>
+<td>循环 <code>skipelem + ilock + dirlookup</code>，逐层解析路径</td>
+</tr>
+<tr>
+<td><code>ref</code> vs <code>nlink</code></td>
+<td><code>ref</code>：内存引用（<code>icache.lock</code> 保护）；<code>nlink</code>：磁盘链接数（<code>ip-&gt;lock</code> 保护）</td>
+</tr>
+</tbody></table>
+<p><strong>使用 inode 的正确模式</strong>：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// 打开/查找文件：</span>
+ip <span class="token operator">=</span> <span class="token function">namei</span><span class="token punctuation">(</span>path<span class="token punctuation">)</span><span class="token punctuation">;</span>          <span class="token comment" spellcheck="true">// 或 ialloc()</span>
+<span class="token function">ilock</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>                 <span class="token comment" spellcheck="true">// 锁定（此时读取 valid 字段并按需读磁盘）</span>
+<span class="token comment" spellcheck="true">// ... 读写 ip->size, ip->addrs, readi(), writei() ...</span>
+<span class="token function">iunlock</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>               <span class="token comment" spellcheck="true">// 解锁（不释放引用，如文件描述符长期持有）</span>
+
+<span class="token comment" spellcheck="true">// 完全释放：</span>
+<span class="token function">iput</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>                  <span class="token comment" spellcheck="true">// 减少 ref，nlink=0 时释放磁盘资源</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<blockquote>
+<p><strong>下一节预告</strong>：第 16 节（文件描述符与系统调用层）将在 inode 层之上构建 <code>struct file</code>、全局文件表和系统调用接口（<code>sys_open/read/write/close</code>），把 inode、管道、设备统一成”一切皆文件”的抽象。</p>
+</blockquote>
+
+                
+            </div>
+            <hr/>
+
+            
+
+    <div class="reprint" id="reprint-statement">
+        
+            <div class="reprint__author">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-user">
+                        文章作者:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    <a href="/about" rel="external nofollow noreferrer">404djl</a>
+                </span>
+            </div>
+            <div class="reprint__type">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-link">
+                        文章链接:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    <a href="https://404djl.github.io/2026/03/18/os15-inode-ceng-yu-mu-lu/">https://404djl.github.io/2026/03/18/os15-inode-ceng-yu-mu-lu/</a>
+                </span>
+            </div>
+            <div class="reprint__notice">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-copyright">
+                        版权声明:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    本博客所有文章除特別声明外，均采用
+                    <a href="https://creativecommons.org/licenses/by/4.0/deed.zh" rel="external nofollow noreferrer" target="_blank">CC BY 4.0</a>
+                    许可协议。转载请注明来源
+                    <a href="/about" target="_blank">404djl</a>
+                    !
+                </span>
+            </div>
+        
+    </div>
+
+    <script async defer>
+      document.addEventListener("copy", function (e) {
+        let toastHTML = '<span>复制成功，请遵循本文的转载规则</span><button class="btn-flat toast-action" onclick="navToReprintStatement()" style="font-size: smaller">查看</a>';
+        M.toast({html: toastHTML})
+      });
+
+      function navToReprintStatement() {
+        $("html, body").animate({scrollTop: $("#reprint-statement").offset().top - 80}, 800);
+      }
+    </script>
+
+
+
+            <div class="tag_share" style="display: block;">
+                <div class="post-meta__tag-list" style="display: inline-block;">
+                    
+                        <div class="article-tag">
+                            
+                                <a href="/tags/linux/">
+                                    <span class="chip bg-color">linux</span>
+                                </a>
+                            
+                                <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                                    <span class="chip bg-color">操作系统</span>
+                                </a>
+                            
+                        </div>
+                    
+                </div>
+                <div class="post_share" style="zoom: 80%; width: fit-content; display: inline-block; float: right; margin: -0.15rem 0;">
+                    <link rel="stylesheet" type="text/css" href="/libs/share/css/share.min.css">
+<div id="article-share">
+
+    
+    <div class="social-share" data-sites="twitter,facebook,google,qq,qzone,wechat,weibo,douban,linkedin" data-wechat-qrcode-helper="<p>微信扫一扫即可分享！</p>"></div>
+    <script src="/libs/share/js/social-share.min.js"></script>
+    
+
+    
+
+</div>
+
+                </div>
+            </div>
+            
+                <div id="reward">
+    <a href="#rewardModal" class="reward-link modal-trigger btn-floating btn-medium waves-effect waves-light red">赏</a>
+
+    <!-- Modal Structure -->
+    <div id="rewardModal" class="modal">
+        <div class="modal-content">
+            <a class="close modal-close"><i class="fas fa-times"></i></a>
+            <h4 class="reward-title">你的赏识是我前进的动力</h4>
+            <div class="reward-content">
+                <div class="reward-tabs">
+                    <ul class="tabs row">
+                        <li class="tab col s6 alipay-tab waves-effect waves-light"><a href="#alipay">支付宝</a></li>
+                        <li class="tab col s6 wechat-tab waves-effect waves-light"><a href="#wechat">微 信</a></li>
+                    </ul>
+                    <div id="alipay">
+                        <img src="/medias/reward/alipay.jpg" class="reward-img" alt="支付宝打赏二维码">
+                    </div>
+                    <div id="wechat">
+                        <img src="/medias/reward/wechat.png" class="reward-img" alt="微信打赏二维码">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(function () {
+        $('.tabs').tabs();
+    });
+</script>
+
+            
+        </div>
+    </div>
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+<article id="prenext-posts" class="prev-next articles">
+    <div class="row article-row">
+        
+        <div class="article col s12 m6" data-aos="fade-up">
+            <div class="article-badge left-badge text-color">
+                <i class="fas fa-chevron-left"></i>&nbsp;上一篇</div>
+            <div class="card">
+                <a href="/2026/03/28/os10-xi-tong-diao-yong-shi-xian/">
+                    <div class="card-image">
+                        
+                        
+                        <img src="/medias/featureimages/37.png" class="responsive-img" alt="OS10-系统调用实现">
+                        
+                        <span class="card-title">OS10-系统调用实现</span>
+                    </div>
+                </a>
+                <div class="card-content article-content">
+                    <div class="summary block-with-text">
+                        
+                            
+                        
+                    </div>
+                    <div class="publish-info">
+                        <span class="publish-date">
+                            <i class="far fa-clock fa-fw icon-date"></i>2026-03-28
+                        </span>
+                        <span class="publish-author">
+                            
+                            <i class="fas fa-bookmark fa-fw icon-category"></i>
+                            
+                            <a href="/categories/OS/" class="post-category">
+                                    OS
+                                </a>
+                            
+                            
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="card-action article-tags">
+                    
+                    <a href="/tags/linux/">
+                        <span class="chip bg-color">linux</span>
+                    </a>
+                    
+                    <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                        <span class="chip bg-color">操作系统</span>
+                    </a>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+        
+        <div class="article col s12 m6" data-aos="fade-up">
+            <div class="article-badge right-badge text-color">
+                下一篇&nbsp;<i class="fas fa-chevron-right"></i>
+            </div>
+            <div class="card">
+                <a href="/2026/03/18/os14-ri-zhi-ceng-yu-beng-kui-hui-fu/">
+                    <div class="card-image">
+                        
+                        
+                        <img src="/medias/featureimages/4.png" class="responsive-img" alt="OS14-日志层与崩溃恢复">
+                        
+                        <span class="card-title">OS14-日志层与崩溃恢复</span>
+                    </div>
+                </a>
+                <div class="card-content article-content">
+                    <div class="summary block-with-text">
+                        
+                            
+                        
+                    </div>
+                    <div class="publish-info">
+                            <span class="publish-date">
+                                <i class="far fa-clock fa-fw icon-date"></i>2026-03-18
+                            </span>
+                        <span class="publish-author">
+                            
+                            <i class="fas fa-bookmark fa-fw icon-category"></i>
+                            
+                            <a href="/categories/OS/" class="post-category">
+                                    OS
+                                </a>
+                            
+                            
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="card-action article-tags">
+                    
+                    <a href="/tags/linux/">
+                        <span class="chip bg-color">linux</span>
+                    </a>
+                    
+                    <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                        <span class="chip bg-color">操作系统</span>
+                    </a>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+    </div>
+</article>
+
+</div>
+
+
+
+<!-- 代码块功能依赖 -->
+<script type="text/javascript" src="/libs/codeBlock/codeBlockFuction.js"></script>
+
+
+
+<!-- 代码语言 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeLang.js"></script>
+
+
+<!-- 代码块复制 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeCopy.js"></script>
+
+
+<!-- 代码块收缩 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeShrink.js"></script>
+
+
+
+    </div>
+    <div id="toc-aside" class="expanded col l3 hide-on-med-and-down">
+        <div class="toc-widget card" style="background-color: white;">
+            <div class="toc-title"><i class="far fa-list-alt"></i>&nbsp;&nbsp;目录</div>
+            <div id="toc-content"></div>
+        </div>
+    </div>
+</div>
+
+<!-- TOC 悬浮按钮. -->
+
+<div id="floating-toc-btn" class="hide-on-med-and-down">
+    <a class="btn-floating btn-large bg-color">
+        <i class="fas fa-list-ul"></i>
+    </a>
+</div>
+
+
+<script src="/libs/tocbot/tocbot.min.js"></script>
+<script>
+    $(function () {
+        tocbot.init({
+            tocSelector: '#toc-content',
+            contentSelector: '#articleContent',
+            headingsOffset: -($(window).height() * 0.4 - 45),
+            collapseDepth: Number('0'),
+            headingSelector: 'h2, h3, h4'
+        });
+
+        // Set scroll toc fixed.
+        let tocHeight = parseInt($(window).height() * 0.4 - 64);
+        let $tocWidget = $('.toc-widget');
+        $(window).scroll(function () {
+            let scroll = $(window).scrollTop();
+            /* add post toc fixed. */
+            if (scroll > tocHeight) {
+                $tocWidget.addClass('toc-fixed');
+            } else {
+                $tocWidget.removeClass('toc-fixed');
+            }
+        });
+
+        
+        /* 修复文章卡片 div 的宽度. */
+        let fixPostCardWidth = function (srcId, targetId) {
+            let srcDiv = $('#' + srcId);
+            if (srcDiv.length === 0) {
+                return;
+            }
+
+            let w = srcDiv.width();
+            if (w >= 450) {
+                w = w + 21;
+            } else if (w >= 350 && w < 450) {
+                w = w + 18;
+            } else if (w >= 300 && w < 350) {
+                w = w + 16;
+            } else {
+                w = w + 14;
+            }
+            $('#' + targetId).width(w);
+        };
+
+        // 切换TOC目录展开收缩的相关操作.
+        const expandedClass = 'expanded';
+        let $tocAside = $('#toc-aside');
+        let $mainContent = $('#main-content');
+        $('#floating-toc-btn .btn-floating').click(function () {
+            if ($tocAside.hasClass(expandedClass)) {
+                $tocAside.removeClass(expandedClass).hide();
+                $mainContent.removeClass('l9');
+            } else {
+                $tocAside.addClass(expandedClass).show();
+                $mainContent.addClass('l9');
+            }
+            fixPostCardWidth('artDetail', 'prenext-posts');
+        });
+        
+    });
+</script>
+
+    
+
+</main>
+
+
+
+
+    <footer class="page-footer" style="background: linear-gradient(to right, #ff5f6d, #ffc371); color: #fff;">
+    <div class="container" style="text-align: center; padding: 5px;">
+      <p>Copyright © 2024 - 2025 <a href="https://404djl.github.io" style="color: #fff; text-decoration: underline;">404djl</a> | Powered by <a href="https://hexo.io" target="_blank" style="color: #fff; text-decoration: underline;">Hexo</a> | Theme by <a href="https://github.com/blinkfox/hexo-theme-matery" target="_blank" style="color: #fff; text-decoration: underline;">Matery</a></p>
+      <p>
+        <p>📚 站点总字数: <span id="site-word-count"></span> 字</p> |
+        <span id="runtime"></span>
+      </p>
+    </div>
+    <div class="footer-contact" style="background: linear-gradient(to right, #ff5f6d, #ffc371); color: #fff;">
+        <a href="javascript:void(0);" class="tooltipped" target="_blank" data-tooltip="邮箱：3490002122@qq.com" data-position="top" data-delay="50">
+          <i class="fas fa-envelope"></i>
+        </a>
+        <a href="https://github.com/404djl" class="tooltipped" target="_blank" data-tooltip="GitHub：404djl" data-position="top" data-delay="50">
+          <i class="fab fa-github"></i>
+        </a>
+        <a href="javascript:void(0);" class="tooltipped" data-tooltip="微信：djl123456404" data-position="top" data-delay="50">
+          <i class="fab fa-weixin"></i>
+        </a>
+    </div>
+</footer>
+
+
+
+
+<script>
+    const blogStartDate = new Date("2024-12-16T00:00:00Z"); // 修改为你的博客起始日期
+  
+    function updateRuntime() {
+      const now = new Date();
+      const diff = now - blogStartDate;
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((diff / (1000 * 60)) % 60);
+      const seconds = Math.floor((diff / 1000) % 60);
+  
+      const runtimeText = `本站已安全运行 ${days} 天 ${hours} 小时 ${minutes} 分钟 ${seconds} 秒`;
+      document.getElementById("runtime").innerText = runtimeText;
+    }
+  
+    updateRuntime();
+    setInterval(updateRuntime, 1000);
+  </script>
+  
+  <script>
+    fetch('/index.html')
+      .then(response => response.text())
+      .then(html => {
+        const wordCountRegex = /<meta name="wordCount" content="(\d+)">/;
+        const match = wordCountRegex.exec(html);
+        if (match) {
+          document.getElementById('site-word-count').innerText = match[1];
+        }
+      });
+  </script>
+  
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var tooltips = document.querySelectorAll('.tooltipped');
+      M.Tooltip.init(tooltips);
+    });
+  </script>
+  
+
+    <!-- 搜索遮罩框 -->
+<div id="searchModal" class="modal">
+    <div class="modal-content">
+        <div class="search-header">
+            <span class="title"><i class="fas fa-search"></i>&nbsp;&nbsp;搜索</span>
+            <input type="search" id="searchInput" name="s" placeholder="请输入搜索的关键字"
+                   class="search-input">
+        </div>
+        <div id="searchResult"></div>
+    </div>
+</div>
+
+<script type="text/javascript">
+$(function () {
+    var searchFunc = function (path, search_id, content_id) {
+        'use strict';
+        $.ajax({
+            url: path,
+            dataType: "xml",
+            success: function (xmlResponse) {
+                // get the contents from search data
+                var datas = $("entry", xmlResponse).map(function () {
+                    return {
+                        title: $("title", this).text(),
+                        content: $("content", this).text(),
+                        url: $("url", this).text()
+                    };
+                }).get();
+                var $input = document.getElementById(search_id);
+                var $resultContent = document.getElementById(content_id);
+                $input.addEventListener('input', function () {
+                    var str = '<ul class=\"search-result-list\">';
+                    var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+                    $resultContent.innerHTML = "";
+                    if (this.value.trim().length <= 0) {
+                        return;
+                    }
+                    // perform local searching
+                    datas.forEach(function (data) {
+                        var isMatch = true;
+                        var data_title = data.title.trim().toLowerCase();
+                        var data_content = data.content.trim().replace(/<[^>]+>/g, "").toLowerCase();
+                        var data_url = data.url;
+                        data_url = data_url.indexOf('/') === 0 ? data.url : '/' + data_url;
+                        var index_title = -1;
+                        var index_content = -1;
+                        var first_occur = -1;
+                        // only match artiles with not empty titles and contents
+                        if (data_title !== '' && data_content !== '') {
+                            keywords.forEach(function (keyword, i) {
+                                index_title = data_title.indexOf(keyword);
+                                index_content = data_content.indexOf(keyword);
+                                if (index_title < 0 && index_content < 0) {
+                                    isMatch = false;
+                                } else {
+                                    if (index_content < 0) {
+                                        index_content = 0;
+                                    }
+                                    if (i === 0) {
+                                        first_occur = index_content;
+                                    }
+                                }
+                            });
+                        }
+                        // show search results
+                        if (isMatch) {
+                            str += "<li><a href='" + data_url + "' class='search-result-title'>" + data_title + "</a>";
+                            var content = data.content.trim().replace(/<[^>]+>/g, "");
+                            if (first_occur >= 0) {
+                                // cut out 100 characters
+                                var start = first_occur - 20;
+                                var end = first_occur + 80;
+                                if (start < 0) {
+                                    start = 0;
+                                }
+                                if (start === 0) {
+                                    end = 100;
+                                }
+                                if (end > content.length) {
+                                    end = content.length;
+                                }
+                                var match_content = content.substr(start, end);
+                                // highlight all keywords
+                                keywords.forEach(function (keyword) {
+                                    var regS = new RegExp(keyword, "gi");
+                                    match_content = match_content.replace(regS, "<em class=\"search-keyword\">" + keyword + "</em>");
+                                });
+
+                                str += "<p class=\"search-result\">" + match_content + "...</p>"
+                            }
+                            str += "</li>";
+                        }
+                    });
+                    str += "</ul>";
+                    $resultContent.innerHTML = str;
+                });
+            }
+        });
+    };
+
+    searchFunc('/search.xml', 'searchInput', 'searchResult');
+});
+</script>
+
+    <!-- 白天和黑夜主题 -->
+<div class="stars-con">
+    <div id="stars"></div>
+    <div id="stars2"></div>
+    <div id="stars3"></div>  
+</div>
+
+<script>
+    function switchNightMode() {
+        $('<div class="Cuteen_DarkSky"><div class="Cuteen_DarkPlanet"></div></div>').appendTo($('body')),
+        setTimeout(function () {
+            $('body').hasClass('DarkMode') 
+            ? ($('body').removeClass('DarkMode'), localStorage.setItem('isDark', '0'), $('#sum-moon-icon').removeClass("fa-sun").addClass('fa-moon')) 
+            : ($('body').addClass('DarkMode'), localStorage.setItem('isDark', '1'), $('#sum-moon-icon').addClass("fa-sun").removeClass('fa-moon')),
+            
+            setTimeout(function () {
+            $('.Cuteen_DarkSky').fadeOut(1e3, function () {
+                $(this).remove()
+            })
+            }, 2e3)
+        })
+    }
+</script>
+
+    <!-- 回到顶部按钮 -->
+<div id="backTop" class="top-scroll">
+    <a class="btn-floating btn-large waves-effect waves-light" href="#!">
+        <i class="fas fa-arrow-up"></i>
+    </a>
+</div>
+
+
+    <script src="/libs/materialize/materialize.min.js"></script>
+    <script src="/libs/masonry/masonry.pkgd.min.js"></script>
+    <script src="/libs/aos/aos.js"></script>
+    <script src="/libs/scrollprogress/scrollProgress.min.js"></script>
+    <script src="/libs/lightGallery/js/lightgallery-all.min.js"></script>
+    <script src="/js/matery.js"></script>
+
+    
+
+    
+    
+    
+
+    <!-- 雪花特效 -->
+     
+        <script type="text/javascript">
+            // 只在桌面版网页启用特效
+            var windowWidth = $(window).width();
+            if (windowWidth > 768) {
+                document.write('<script type="text/javascript" src="/libs/others/snow.js"><\/script>');
+            }
+        </script>
+    
+
+    <!-- 鼠标星星特效 -->
+    
+
+     
+        <script src="https://ssl.captcha.qq.com/TCaptcha.js"></script>
+        <script src="/libs/others/TencentCaptcha.js"></script>
+        <button id="TencentCaptcha" data-appid="xxxxxxxxxx" data-cbfn="callback" type="button" hidden></button>
+    
+
+    <!-- Baidu Analytics -->
+
+    <!-- Baidu Push -->
+
+<script>
+    (function () {
+        var bp = document.createElement('script');
+        var curProtocol = window.location.protocol.split(':')[0];
+        if (curProtocol === 'https') {
+            bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+        } else {
+            bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+        }
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(bp, s);
+    })();
+</script>
+
+    
+    <script src="/libs/others/clicklove.js" async="async"></script>
+    
+    
+    <script async src="/libs/others/busuanzi.pure.mini.js"></script>
+    
+
+    
+
+    
+
+    <!--腾讯兔小巢-->
+    
+    
+
+    
+
+    
+
+    
+    <script src="/libs/instantpage/instantpage.js" type="module"></script>
+    
+
+</body>
+
+</html>

@@ -1,0 +1,1802 @@
+<!DOCTYPE HTML>
+<html lang="zh-CN">
+
+
+<head>
+    <meta charset="utf-8">
+    <meta name="keywords" content="OS13-磁盘驱动与块缓存, 404djlのblog">
+    <meta name="description" content="第 13 节：磁盘驱动与块缓存
+学习目标：理解文件系统最底层的两个抽象层——VirtIO 磁盘驱动和块缓冲区缓存（block buffer cache）；掌握 VirtIO 协议的描述符环机制；深入分析 bio.c 中 LRU 缓存的设计；">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="renderer" content="webkit|ie-stand|ie-comp">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="referrer" content="no-referrer-when-downgrade">
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+
+
+    <title>OS13-磁盘驱动与块缓存 | 404djlのblog</title>
+    <link rel="icon" type="image/gif" href="/icons8-github.gif">
+    
+    <style>
+        body{
+            background-image: url(https://pic1.imgdb.cn/item/69b9682b1eedde6824938321.jpg);
+            background-repeat:no-repeat;
+            background-size: 100% 100%;
+            background-attachment:fixed;
+        }
+    </style>
+
+
+
+    <!-- bg-cover style     -->
+
+
+
+<link rel="stylesheet" type="text/css" href="/libs/awesome/css/all.min.css">
+<link rel="stylesheet" type="text/css" href="/libs/materialize/materialize.min.css">
+<link rel="stylesheet" type="text/css" href="/libs/aos/aos.css">
+<link rel="stylesheet" type="text/css" href="/libs/animate/animate.min.css">
+<link rel="stylesheet" type="text/css" href="/libs/lightGallery/css/lightgallery.min.css">
+<link rel="stylesheet" type="text/css" href="/css/matery.css">
+<link rel="stylesheet" type="text/css" href="/css/my.css">
+<link rel="stylesheet" type="text/css" href="/css/dark.css" media="none" onload="if(media!='all')media='all'">
+
+
+
+
+    <link rel="stylesheet" href="/libs/tocbot/tocbot.css">
+    <link rel="stylesheet" href="/css/post.css">
+
+
+
+
+    
+        <link rel="stylesheet" type="text/css" href="/css/reward.css">
+    
+
+
+
+    <script src="/libs/jquery/jquery-3.6.0.min.js"></script>
+
+<meta name="generator" content="Hexo 4.2.0">
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+<link rel="alternate" href="/atom.xml" title="404djlのblog" type="application/atom+xml">
+<link rel="stylesheet" href="/css/prism-tomorrow.css" type="text/css">
+<link rel="stylesheet" href="/css/prism-line-numbers.css" type="text/css">
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+</head>
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+
+
+
+<body>
+    <header class="navbar-fixed">
+    <nav id="headNav" class="bg-color nav-transparent">
+        <div id="navContainer" class="nav-wrapper container">
+            <div class="brand-logo">
+                <a href="/" class="waves-effect waves-light">
+                    
+                    <img src="/icons8-github.gif" class="logo-img" alt="LOGO">
+                    
+                    <span class="logo-span">404djlのblog</span>
+                </a>
+            </div>
+            
+
+<a href="#" data-target="mobile-nav" class="sidenav-trigger button-collapse"><i class="fas fa-bars"></i></a>
+<ul class="right nav-menu">
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/" class="waves-effect waves-light">
+      
+      <i class="fas fa-home" style="zoom: 0.6;"></i>
+      
+      <span>首页</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/tags" class="waves-effect waves-light">
+      
+      <i class="fas fa-tags" style="zoom: 0.6;"></i>
+      
+      <span>标签</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/categories" class="waves-effect waves-light">
+      
+      <i class="fas fa-bookmark" style="zoom: 0.6;"></i>
+      
+      <span>分类</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/archives" class="waves-effect waves-light">
+      
+      <i class="fas fa-archive" style="zoom: 0.6;"></i>
+      
+      <span>归档</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/about" class="waves-effect waves-light">
+      
+      <i class="fas fa-user-circle" style="zoom: 0.6;"></i>
+      
+      <span>关于</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/contact" class="waves-effect waves-light">
+      
+      <i class="fas fa-comments" style="zoom: 0.6;"></i>
+      
+      <span>留言板</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/friends" class="waves-effect waves-light">
+      
+      <i class="fas fa-address-book" style="zoom: 0.6;"></i>
+      
+      <span>友情链接</span>
+    </a>
+    
+  </li>
+  
+  <li>
+    <a href="#searchModal" class="modal-trigger waves-effect waves-light">
+      <i id="searchIcon" class="fas fa-search" title="搜索" style="zoom: 0.85;"></i>
+    </a>
+  </li>
+  <li>
+    <a href="javascript:;" class="waves-effect waves-light" onclick="switchNightMode()" title="深色/浅色模式" >
+      <i id="sum-moon-icon" class="fas fa-sun" style="zoom: 0.85;"></i>
+    </a>
+  </li>
+</ul>
+
+
+<div id="mobile-nav" class="side-nav sidenav">
+
+    <div class="mobile-head bg-color">
+        
+        <img src="/icons8-github.gif" class="logo-img circle responsive-img">
+        
+        <div class="logo-name">404djlのblog</div>
+        <div class="logo-desc">
+            
+            Never really desperate, only the lost of the soul
+            
+        </div>
+    </div>
+
+    <ul class="menu-list mobile-menu-list">
+        
+        <li class="m-nav-item">
+	  
+		<a href="/" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-home"></i>
+			
+			首页
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/tags" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-tags"></i>
+			
+			标签
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/categories" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-bookmark"></i>
+			
+			分类
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/archives" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-archive"></i>
+			
+			归档
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/about" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-user-circle"></i>
+			
+			关于
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/contact" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-comments"></i>
+			
+			留言板
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/friends" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-address-book"></i>
+			
+			友情链接
+		</a>
+          
+        </li>
+        
+        
+        <li><div class="divider"></div></li>
+        <li>
+            <a href="https://github.com/404djl/404djl.github.io" class="waves-effect waves-light" target="_blank">
+                <i class="fab fa-github-square fa-fw"></i>Fork Me
+            </a>
+        </li>
+        
+    </ul>
+</div>
+
+
+        </div>
+
+        
+            <style>
+    .nav-transparent .github-corner {
+        display: none !important;
+    }
+
+    .github-corner {
+        position: absolute;
+        z-index: 10;
+        top: 0;
+        right: 0;
+        border: 0;
+        transform: scale(1.1);
+    }
+
+    .github-corner svg {
+        color: #0f9d58;
+        fill: #fff;
+        height: 64px;
+        width: 64px;
+    }
+
+    .github-corner:hover .octo-arm {
+        animation: a 0.56s ease-in-out;
+    }
+
+    .github-corner .octo-arm {
+        animation: none;
+    }
+
+    @keyframes a {
+        0%,
+        to {
+            transform: rotate(0);
+        }
+        20%,
+        60% {
+            transform: rotate(-25deg);
+        }
+        40%,
+        80% {
+            transform: rotate(10deg);
+        }
+    }
+</style>
+
+<a href="https://github.com/404djl/404djl.github.io" class="github-corner tooltipped hide-on-med-and-down" target="_blank"
+   data-tooltip="Fork Me" data-position="left" data-delay="50">
+    <svg viewBox="0 0 250 250" aria-hidden="true">
+        <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+        <path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2"
+              fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+        <path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z"
+              fill="currentColor" class="octo-body"></path>
+    </svg>
+</a>
+        
+    </nav>
+
+</header>
+
+    
+
+
+
+<div class="bg-cover pd-header post-cover" style="background-image: url('/medias/featureimages/30.png')">
+    <div class="container" style="right: 0px;left: 0px;">
+        <div class="row">
+            <div class="col s12 m12 l12">
+                <div class="brand">
+                    <h1 class="description center-align post-title">OS13-磁盘驱动与块缓存</h1>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+<main class="post-container content">
+
+    
+    <div class="row">
+    <div id="main-content" class="col s12 m12 l9">
+        <!-- 文章内容详情 -->
+<div id="artDetail">
+    <div class="card">
+        <div class="card-content article-info">
+            <div class="row tag-cate">
+                <div class="col s7">
+                    
+                    <div class="article-tag">
+                        
+                            <a href="/tags/linux/">
+                                <span class="chip bg-color">linux</span>
+                            </a>
+                        
+                            <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                                <span class="chip bg-color">操作系统</span>
+                            </a>
+                        
+                    </div>
+                    
+                </div>
+                <div class="col s5 right-align">
+                    
+                    <div class="post-cate">
+                        <i class="fas fa-bookmark fa-fw icon-category"></i>
+                        
+                            <a href="/categories/OS/" class="post-category">
+                                OS
+                            </a>
+                        
+                    </div>
+                    
+                </div>
+            </div>
+
+            <div class="post-info">
+                
+                <div class="post-date info-break-policy">
+                    <i class="far fa-calendar-minus fa-fw"></i>发布日期:&nbsp;&nbsp;
+                    2026-03-28
+                </div>
+                
+
+                
+                <div class="post-date info-break-policy">
+                    <i class="far fa-calendar-check fa-fw"></i>更新日期:&nbsp;&nbsp;
+                    2026-03-28
+                </div>
+                
+
+                
+                <div class="info-break-policy">
+                    <i class="far fa-file-word fa-fw"></i>文章字数:&nbsp;&nbsp;
+                    6.1k
+                </div>
+                
+
+                
+                <div class="info-break-policy">
+                    <i class="far fa-clock fa-fw"></i>阅读时长:&nbsp;&nbsp;
+                    26 分
+                </div>
+                
+
+                
+            </div>
+        </div>
+        <hr class="clearfix">
+
+        
+
+        
+
+        <div class="card-content article-card-content">
+            <div id="articleContent">
+                <h1 id="第-13-节：磁盘驱动与块缓存"><a href="#第-13-节：磁盘驱动与块缓存" class="headerlink" title="第 13 节：磁盘驱动与块缓存"></a>第 13 节：磁盘驱动与块缓存</h1><blockquote>
+<p><strong>学习目标</strong>：理解文件系统最底层的两个抽象层——VirtIO 磁盘驱动和块缓冲区缓存（block buffer cache）；掌握 VirtIO 协议的描述符环机制；深入分析 <code>bio.c</code> 中 LRU 缓存的设计；理解两层锁（<code>bcache.lock</code> + <code>buf.lock</code>）的协作关系。</p>
+<p><strong>预计用时</strong>：3-4 小时</p>
+<p><strong>前置要求</strong>：完成第 12 节（锁机制），理解自旋锁与睡眠锁的区别；完成第 11 节（Trap 与中断处理），了解外设中断的处理路径；理解 <code>sleep()/wakeup()</code> 同步机制</p>
+</blockquote>
+<hr>
+<h2 id="一、理论：文件系统的分层架构"><a href="#一、理论：文件系统的分层架构" class="headerlink" title="一、理论：文件系统的分层架构"></a>一、理论：文件系统的分层架构</h2><p>xv6 文件系统是一个经典的七层抽象：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">第 7 层  文件描述符（file descriptor）      ← sys_read/sys_write 的入口
+第 6 层  路径名（pathname）                 ← namei<span class="token punctuation">(</span><span class="token punctuation">)</span>，<span class="token string">"/a/b/c"</span> → inode
+第 5 层  目录（directory）                  ← dirlookup<span class="token punctuation">(</span><span class="token punctuation">)</span>, dirlink<span class="token punctuation">(</span><span class="token punctuation">)</span>
+第 4 层  Inode（inode）                    ← ialloc<span class="token punctuation">(</span><span class="token punctuation">)</span>, iget<span class="token punctuation">(</span><span class="token punctuation">)</span>, readi<span class="token punctuation">(</span><span class="token punctuation">)</span>, writei<span class="token punctuation">(</span><span class="token punctuation">)</span>
+第 3 层  日志（logging）                    ← begin_op<span class="token punctuation">(</span><span class="token punctuation">)</span>, end_op<span class="token punctuation">(</span><span class="token punctuation">)</span>, log_write<span class="token punctuation">(</span><span class="token punctuation">)</span>
+第 2 层  块缓存（buffer cache）             ← bread<span class="token punctuation">(</span><span class="token punctuation">)</span>, bwrite<span class="token punctuation">(</span><span class="token punctuation">)</span>, brelse<span class="token punctuation">(</span><span class="token punctuation">)</span>   ← 本节重点
+第 1 层  磁盘驱动（disk driver）            ← virtio_disk_rw<span class="token punctuation">(</span><span class="token punctuation">)</span>               ← 本节重点
+          ↕ 物理磁盘（VirtIO Block Device）
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>本节关注最底两层</strong>，它们的职责分别是：</p>
+<table>
+<thead>
+<tr>
+<th>层次</th>
+<th>职责</th>
+<th>核心文件</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>磁盘驱动</td>
+<td>通过 VirtIO MMIO 接口向 QEMU 虚拟磁盘发送读写命令，等待中断完成</td>
+<td><code>kernel/virtio_disk.c</code>、<code>kernel/virtio.h</code></td>
+</tr>
+<tr>
+<td>块缓存</td>
+<td>在内存中缓存磁盘块，减少磁盘访问；保证同一块在内存中只有一份拷贝；用 LRU 策略淘汰旧缓存</td>
+<td><code>kernel/bio.c</code>、<code>kernel/buf.h</code></td>
+</tr>
+</tbody></table>
+<h3 id="1-1-块设备-vs-字符设备"><a href="#1-1-块设备-vs-字符设备" class="headerlink" title="1.1 块设备 vs 字符设备"></a>1.1 块设备 vs 字符设备</h3><table>
+<thead>
+<tr>
+<th>特性</th>
+<th>块设备（block device）</th>
+<th>字符设备（char device）</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>访问粒度</td>
+<td>固定大小的块（xv6 中 BSIZE = 1024 字节）</td>
+<td>单个字符</td>
+</tr>
+<tr>
+<td>可寻址</td>
+<td>按块号随机访问</td>
+<td>顺序访问</td>
+</tr>
+<tr>
+<td>缓冲</td>
+<td>系统自动缓冲（bcache）</td>
+<td>通常不缓冲</td>
+</tr>
+<tr>
+<td>典型硬件</td>
+<td>磁盘、SSD、U 盘</td>
+<td>UART、键盘、鼠标</td>
+</tr>
+</tbody></table>
+<p>xv6 的磁盘是块设备：所有 I/O 以 1024 字节（1 KB）的块为单位进行。上层文件系统通过块号（<code>blockno</code>）寻址，从不直接操作字节偏移量。</p>
+<h3 id="1-2-VirtIO-协议简介"><a href="#1-2-VirtIO-协议简介" class="headerlink" title="1.2 VirtIO 协议简介"></a>1.2 VirtIO 协议简介</h3><p>QEMU 使用 <strong>VirtIO</strong>（Virtual I/O）标准让虚拟机与宿主机高效通信。xv6 使用的是 <strong>Legacy VirtIO MMIO</strong> 接口：</p>
+<ul>
+<li><strong>MMIO</strong>（Memory-Mapped I/O）：设备寄存器映射到固定物理地址（<code>VIRTIO0 = 0x10001000</code>），驱动通过普通内存读写操作控制设备</li>
+<li><strong>Virtqueue（虚拟队列）</strong>：驱动与设备之间的共享内存通信机制，xv6 使用其中的 Queue 0（blkq）</li>
+</ul>
+<p>VirtQueue 由三个区域组成：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">物理内存中（disk.pages，两个连续物理页）：
+
+页 0 <span class="token punctuation">(</span>4096 字节<span class="token punctuation">)</span>：
+  ┌────────────────────────────────────────────────┐
+  │  Descriptor Table（描述符表）                    │
+  │  8 项 × sizeof<span class="token punctuation">(</span>VRingDesc<span class="token punctuation">)</span> <span class="token operator">=</span> 8 × 16 <span class="token operator">=</span> 128 字节  │
+  │  从 disk.pages 起始                             │
+  ├────────────────────────────────────────────────┤
+  │  Available Ring（可用环）                        │
+  │  2 × uint16 头 + NUM × uint16 条目              │
+  │  从 desc 表之后 0x40 偏移处                      │
+  └────────────────────────────────────────────────┘
+
+页 1 <span class="token punctuation">(</span>4096 字节<span class="token punctuation">)</span>：
+  ┌────────────────────────────────────────────────┐
+  │  Used Ring（已用环）                             │
+  │  UsedArea 结构：flags<span class="token punctuation">(</span>2<span class="token punctuation">)</span> + id<span class="token punctuation">(</span>2<span class="token punctuation">)</span> + elems<span class="token punctuation">[</span>NUM<span class="token punctuation">]</span>  │
+  └────────────────────────────────────────────────┘
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>三个角色</strong>：</p>
+<ul>
+<li><strong>描述符表（Descriptor Table）</strong>：每个描述符描述一段内存（地址 + 长度 + 标志位 + 下一个描述符索引），多个描述符串成链表描述一次 I/O 请求</li>
+<li><strong>可用环（Available Ring）</strong>：驱动写入，告诉设备”我准备好了这些描述符链，请处理”</li>
+<li><strong>已用环（Used Ring）</strong>：设备写入，告诉驱动”我已完成这些描述符链对应的 I/O”</li>
+</ul>
+<hr>
+<h2 id="二、源码精读：kernel-virtio-h——VirtIO-数据结构"><a href="#二、源码精读：kernel-virtio-h——VirtIO-数据结构" class="headerlink" title="二、源码精读：kernel/virtio.h——VirtIO 数据结构"></a>二、源码精读：<code>kernel/virtio.h</code>——VirtIO 数据结构</h2><h3 id="2-1-MMIO-寄存器偏移量"><a href="#2-1-MMIO-寄存器偏移量" class="headerlink" title="2.1 MMIO 寄存器偏移量"></a>2.1 MMIO 寄存器偏移量</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// kernel/virtio.h（节选）</span>
+
+<span class="token comment" spellcheck="true">// VirtIO MMIO 寄存器（基地址 VIRTIO0 = 0x10001000）</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> VIRTIO_MMIO_MAGIC_VALUE     0x000  </span><span class="token comment" spellcheck="true">// 魔数，必须为 0x74726976（"virt"）</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> VIRTIO_MMIO_VERSION         0x004  </span><span class="token comment" spellcheck="true">// 版本号，Legacy = 1</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> VIRTIO_MMIO_DEVICE_ID       0x008  </span><span class="token comment" spellcheck="true">// 设备类型：1=网卡, 2=块设备</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> VIRTIO_MMIO_VENDOR_ID       0x00c  </span><span class="token comment" spellcheck="true">// 厂商 ID，QEMU = 0x554d4551（"QEMU"）</span>
+
+<span class="token comment" spellcheck="true">// 特性协商寄存器</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> VIRTIO_MMIO_DEVICE_FEATURES 0x010  </span><span class="token comment" spellcheck="true">// 设备支持的特性（只读）</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> VIRTIO_MMIO_DRIVER_FEATURES 0x020  </span><span class="token comment" spellcheck="true">// 驱动选择的特性（只写）</span>
+
+<span class="token comment" spellcheck="true">// 队列配置寄存器</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> VIRTIO_MMIO_QUEUE_SEL       0x030  </span><span class="token comment" spellcheck="true">// 选择队列号（write）</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> VIRTIO_MMIO_QUEUE_NUM_MAX   0x034  </span><span class="token comment" spellcheck="true">// 队列最大大小（read）</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> VIRTIO_MMIO_QUEUE_NUM       0x038  </span><span class="token comment" spellcheck="true">// 设置队列大小（write）</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> VIRTIO_MMIO_QUEUE_PFN       0x040  </span><span class="token comment" spellcheck="true">// 队列物理页帧号（read/write）</span>
+
+<span class="token comment" spellcheck="true">// 中断寄存器</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> VIRTIO_MMIO_INTERRUPT_STATUS 0x060 </span><span class="token comment" spellcheck="true">// 中断原因（read）</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> VIRTIO_MMIO_INTERRUPT_ACK    0x064 </span><span class="token comment" spellcheck="true">// 确认中断（write）</span>
+
+<span class="token comment" spellcheck="true">// 设备状态寄存器</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> VIRTIO_MMIO_STATUS          0x070  </span><span class="token comment" spellcheck="true">// 驱动-设备握手状态（read/write）</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>状态寄存器的标志位按顺序累积写入，实现驱动-设备握手协议：</p>
+<pre><code>ACKNOWLEDGE(1) → DRIVER(2) → FEATURES_OK(8) → DRIVER_OK(4)
+</code></pre>
+<h3 id="2-2-描述符结构：struct-VRingDesc"><a href="#2-2-描述符结构：struct-VRingDesc" class="headerlink" title="2.2 描述符结构：struct VRingDesc"></a>2.2 描述符结构：<code>struct VRingDesc</code></h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">struct</span> VRingDesc <span class="token punctuation">{</span>
+  uint64 addr<span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 内存缓冲区的物理地址</span>
+  uint32 len<span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 缓冲区长度（字节）</span>
+  uint16 flags<span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 标志：VRING_DESC_F_NEXT(1) = 链式；VRING_DESC_F_WRITE(2) = 设备写</span>
+  uint16 next<span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 下一个描述符的索引（flags &amp; NEXT 时有效）</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token macro property">#<span class="token directive keyword">define</span> VRING_DESC_F_NEXT  1  </span><span class="token comment" spellcheck="true">// 该描述符后面还有更多（链式）</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> VRING_DESC_F_WRITE 2  </span><span class="token comment" spellcheck="true">// 这段内存由设备写入（否则由设备读取）</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>一次磁盘读请求的三描述符链</strong>：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">描述符 idx<span class="token punctuation">[</span>0<span class="token punctuation">]</span>：请求头（驱动→设备，只读）
+  addr <span class="token operator">=</span> <span class="token operator">&amp;</span>buf0（含 type/reserved/sector）
+  len  <span class="token operator">=</span> sizeof<span class="token punctuation">(</span>struct virtio_blk_outhdr<span class="token punctuation">)</span> <span class="token operator">=</span> 16 字节
+  flags <span class="token operator">=</span> NEXT（还有下一个）
+
+描述符 idx<span class="token punctuation">[</span>1<span class="token punctuation">]</span>：数据缓冲区（读操作时由设备写入）
+  addr <span class="token operator">=</span> b-<span class="token operator">></span>data（1024 字节的块数据）
+  len  <span class="token operator">=</span> BSIZE <span class="token operator">=</span> 1024 字节
+  flags <span class="token operator">=</span> WRITE <span class="token operator">|</span> NEXT（设备写；还有下一个）
+
+描述符 idx<span class="token punctuation">[</span>2<span class="token punctuation">]</span>：状态字节（由设备写入）
+  addr <span class="token operator">=</span> <span class="token operator">&amp;</span>disk.info<span class="token punctuation">[</span>idx<span class="token punctuation">[</span>0<span class="token punctuation">]</span><span class="token punctuation">]</span>.status
+  len  <span class="token operator">=</span> 1 字节
+  flags <span class="token operator">=</span> WRITE（设备写 0<span class="token operator">=</span>OK，1<span class="token operator">=</span>ERR，2<span class="token operator">=</span>UNSUP）
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<hr>
+<h2 id="三、源码精读：kernel-virtio-disk-c——磁盘驱动"><a href="#三、源码精读：kernel-virtio-disk-c——磁盘驱动" class="headerlink" title="三、源码精读：kernel/virtio_disk.c——磁盘驱动"></a>三、源码精读：<code>kernel/virtio_disk.c</code>——磁盘驱动</h2><h3 id="3-1-disk-全局结构——驱动的核心状态"><a href="#3-1-disk-全局结构——驱动的核心状态" class="headerlink" title="3.1 disk 全局结构——驱动的核心状态"></a>3.1 <code>disk</code> 全局结构——驱动的核心状态</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">static</span> <span class="token keyword">struct</span> disk <span class="token punctuation">{</span>
+  <span class="token comment" spellcheck="true">// VirtQueue 共享内存区：两个连续物理页（必须页对齐）</span>
+  <span class="token keyword">char</span> pages<span class="token punctuation">[</span><span class="token number">2</span><span class="token operator">*</span>PGSIZE<span class="token punctuation">]</span><span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> VRingDesc <span class="token operator">*</span>desc<span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 描述符表，指向 pages 起始</span>
+  uint16 <span class="token operator">*</span>avail<span class="token punctuation">;</span>            <span class="token comment" spellcheck="true">// 可用环，紧跟描述符表后</span>
+  <span class="token keyword">struct</span> UsedArea <span class="token operator">*</span>used<span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 已用环，在第二个页</span>
+
+  <span class="token comment" spellcheck="true">// 驱动侧簿记</span>
+  <span class="token keyword">char</span> free<span class="token punctuation">[</span>NUM<span class="token punctuation">]</span><span class="token punctuation">;</span>           <span class="token comment" spellcheck="true">// free[i] = 1 表示 desc[i] 空闲（NUM = 8）</span>
+  uint16 used_idx<span class="token punctuation">;</span>          <span class="token comment" spellcheck="true">// 驱动已处理到 used->elems 的哪个位置</span>
+
+  <span class="token comment" spellcheck="true">// 飞行中（in-flight）I/O 的信息（按描述符链首索引）</span>
+  <span class="token keyword">struct</span> <span class="token punctuation">{</span>
+    <span class="token keyword">struct</span> buf <span class="token operator">*</span>b<span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 对应的缓冲区</span>
+    <span class="token keyword">char</span> status<span class="token punctuation">;</span>      <span class="token comment" spellcheck="true">// 设备完成后写入的状态字节</span>
+  <span class="token punctuation">}</span> info<span class="token punctuation">[</span>NUM<span class="token punctuation">]</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">struct</span> spinlock vdisk_lock<span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 保护整个 disk 结构的访问</span>
+<span class="token punctuation">}</span> <span class="token function">__attribute__</span> <span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token function">aligned</span> <span class="token punctuation">(</span>PGSIZE<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span> disk<span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>为什么 <code>disk.pages</code> 不用 <code>kalloc</code>？</strong></p>
+<p>VirtQueue 要求描述符表、可用环、已用环分布在<strong>两个连续的、页对齐的物理页</strong>上。<code>kalloc()</code> 每次只分配一页（4096 字节）且不保证连续。因此 <code>disk.pages</code> 声明为全局静态变量，编译器保证其在 BSS 段中，<code>__attribute__((aligned(PGSIZE)))</code> 强制页对齐，两个连续页天然满足要求。</p>
+<h3 id="3-2-virtio-disk-init-——初始化与握手"><a href="#3-2-virtio-disk-init-——初始化与握手" class="headerlink" title="3.2 virtio_disk_init()——初始化与握手"></a>3.2 <code>virtio_disk_init()</code>——初始化与握手</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">virtio_disk_init</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  uint32 status <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  <span class="token function">initlock</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>disk<span class="token punctuation">.</span>vdisk_lock<span class="token punctuation">,</span> <span class="token string">"virtio_disk"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ① 验证设备标识（防止误识别其他 MMIO 设备）</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token function">R</span><span class="token punctuation">(</span>VIRTIO_MMIO_MAGIC_VALUE<span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token number">0x74726976</span> <span class="token operator">||</span>   <span class="token comment" spellcheck="true">// "virt"</span>
+     <span class="token operator">*</span><span class="token function">R</span><span class="token punctuation">(</span>VIRTIO_MMIO_VERSION<span class="token punctuation">)</span>     <span class="token operator">!=</span> <span class="token number">1</span>            <span class="token operator">||</span>   <span class="token comment" spellcheck="true">// Legacy 版本</span>
+     <span class="token operator">*</span><span class="token function">R</span><span class="token punctuation">(</span>VIRTIO_MMIO_DEVICE_ID<span class="token punctuation">)</span>   <span class="token operator">!=</span> <span class="token number">2</span>            <span class="token operator">||</span>   <span class="token comment" spellcheck="true">// 块设备</span>
+     <span class="token operator">*</span><span class="token function">R</span><span class="token punctuation">(</span>VIRTIO_MMIO_VENDOR_ID<span class="token punctuation">)</span>   <span class="token operator">!=</span> <span class="token number">0x554d4551</span><span class="token punctuation">)</span>       <span class="token comment" spellcheck="true">// "QEMU"</span>
+    <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"could not find virtio disk"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ② 握手状态机：按 VirtIO 协议顺序写状态位</span>
+  status <span class="token operator">|</span><span class="token operator">=</span> VIRTIO_CONFIG_S_ACKNOWLEDGE<span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// "我知道你存在"</span>
+  <span class="token operator">*</span><span class="token function">R</span><span class="token punctuation">(</span>VIRTIO_MMIO_STATUS<span class="token punctuation">)</span> <span class="token operator">=</span> status<span class="token punctuation">;</span>
+
+  status <span class="token operator">|</span><span class="token operator">=</span> VIRTIO_CONFIG_S_DRIVER<span class="token punctuation">;</span>        <span class="token comment" spellcheck="true">// "我有驱动来处理你"</span>
+  <span class="token operator">*</span><span class="token function">R</span><span class="token punctuation">(</span>VIRTIO_MMIO_STATUS<span class="token punctuation">)</span> <span class="token operator">=</span> status<span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ③ 特性协商：从设备特性集中剔除 xv6 不支持的特性</span>
+  uint64 features <span class="token operator">=</span> <span class="token operator">*</span><span class="token function">R</span><span class="token punctuation">(</span>VIRTIO_MMIO_DEVICE_FEATURES<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  features <span class="token operator">&amp;</span><span class="token operator">=</span> <span class="token operator">~</span><span class="token punctuation">(</span><span class="token number">1</span> <span class="token operator">&lt;&lt;</span> VIRTIO_BLK_F_RO<span class="token punctuation">)</span><span class="token punctuation">;</span>        <span class="token comment" spellcheck="true">// 不使用只读模式</span>
+  features <span class="token operator">&amp;</span><span class="token operator">=</span> <span class="token operator">~</span><span class="token punctuation">(</span><span class="token number">1</span> <span class="token operator">&lt;&lt;</span> VIRTIO_BLK_F_SCSI<span class="token punctuation">)</span><span class="token punctuation">;</span>      <span class="token comment" spellcheck="true">// 不使用 SCSI 命令</span>
+  features <span class="token operator">&amp;</span><span class="token operator">=</span> <span class="token operator">~</span><span class="token punctuation">(</span><span class="token number">1</span> <span class="token operator">&lt;&lt;</span> VIRTIO_BLK_F_CONFIG_WCE<span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token comment" spellcheck="true">// 不使用回写缓存配置</span>
+  features <span class="token operator">&amp;</span><span class="token operator">=</span> <span class="token operator">~</span><span class="token punctuation">(</span><span class="token number">1</span> <span class="token operator">&lt;&lt;</span> VIRTIO_BLK_F_MQ<span class="token punctuation">)</span><span class="token punctuation">;</span>        <span class="token comment" spellcheck="true">// 不使用多队列</span>
+  features <span class="token operator">&amp;</span><span class="token operator">=</span> <span class="token operator">~</span><span class="token punctuation">(</span><span class="token number">1</span> <span class="token operator">&lt;&lt;</span> VIRTIO_F_ANY_LAYOUT<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  features <span class="token operator">&amp;</span><span class="token operator">=</span> <span class="token operator">~</span><span class="token punctuation">(</span><span class="token number">1</span> <span class="token operator">&lt;&lt;</span> VIRTIO_RING_F_EVENT_IDX<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  features <span class="token operator">&amp;</span><span class="token operator">=</span> <span class="token operator">~</span><span class="token punctuation">(</span><span class="token number">1</span> <span class="token operator">&lt;&lt;</span> VIRTIO_RING_F_INDIRECT_DESC<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token operator">*</span><span class="token function">R</span><span class="token punctuation">(</span>VIRTIO_MMIO_DRIVER_FEATURES<span class="token punctuation">)</span> <span class="token operator">=</span> features<span class="token punctuation">;</span>
+
+  status <span class="token operator">|</span><span class="token operator">=</span> VIRTIO_CONFIG_S_FEATURES_OK<span class="token punctuation">;</span>       <span class="token comment" spellcheck="true">// "特性协商完成"</span>
+  <span class="token operator">*</span><span class="token function">R</span><span class="token punctuation">(</span>VIRTIO_MMIO_STATUS<span class="token punctuation">)</span> <span class="token operator">=</span> status<span class="token punctuation">;</span>
+  status <span class="token operator">|</span><span class="token operator">=</span> VIRTIO_CONFIG_S_DRIVER_OK<span class="token punctuation">;</span>         <span class="token comment" spellcheck="true">// "驱动完全就绪"</span>
+  <span class="token operator">*</span><span class="token function">R</span><span class="token punctuation">(</span>VIRTIO_MMIO_STATUS<span class="token punctuation">)</span> <span class="token operator">=</span> status<span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ④ 配置 VirtQueue 0</span>
+  <span class="token operator">*</span><span class="token function">R</span><span class="token punctuation">(</span>VIRTIO_MMIO_GUEST_PAGE_SIZE<span class="token punctuation">)</span> <span class="token operator">=</span> PGSIZE<span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 告知设备页大小</span>
+  <span class="token operator">*</span><span class="token function">R</span><span class="token punctuation">(</span>VIRTIO_MMIO_QUEUE_SEL<span class="token punctuation">)</span>  <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>            <span class="token comment" spellcheck="true">// 选择队列 0</span>
+  <span class="token operator">*</span><span class="token function">R</span><span class="token punctuation">(</span>VIRTIO_MMIO_QUEUE_NUM<span class="token punctuation">)</span>  <span class="token operator">=</span> NUM<span class="token punctuation">;</span>          <span class="token comment" spellcheck="true">// 队列大小 = 8</span>
+  <span class="token function">memset</span><span class="token punctuation">(</span>disk<span class="token punctuation">.</span>pages<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>disk<span class="token punctuation">.</span>pages<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token operator">*</span><span class="token function">R</span><span class="token punctuation">(</span>VIRTIO_MMIO_QUEUE_PFN<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>uint64<span class="token punctuation">)</span>disk<span class="token punctuation">.</span>pages<span class="token punctuation">)</span> <span class="token operator">>></span> PGSHIFT<span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 告知物理页帧号</span>
+
+  <span class="token comment" spellcheck="true">// ⑤ 初始化描述符、可用环、已用环的指针</span>
+  disk<span class="token punctuation">.</span>desc  <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">struct</span> VRingDesc <span class="token operator">*</span><span class="token punctuation">)</span> disk<span class="token punctuation">.</span>pages<span class="token punctuation">;</span>
+  disk<span class="token punctuation">.</span>avail <span class="token operator">=</span> <span class="token punctuation">(</span>uint16<span class="token operator">*</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token keyword">char</span><span class="token operator">*</span><span class="token punctuation">)</span>disk<span class="token punctuation">.</span>desc <span class="token operator">+</span> NUM <span class="token operator">*</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span><span class="token keyword">struct</span> VRingDesc<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  disk<span class="token punctuation">.</span>used  <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">struct</span> UsedArea <span class="token operator">*</span><span class="token punctuation">)</span> <span class="token punctuation">(</span>disk<span class="token punctuation">.</span>pages <span class="token operator">+</span> PGSIZE<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ⑥ 标记所有描述符为空闲</span>
+  <span class="token keyword">for</span><span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> NUM<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> disk<span class="token punctuation">.</span>free<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>VirtIO 握手状态机</strong>是协议规定的正式初始化流程，驱动必须按顺序写入 STATUS 寄存器，设备根据当前状态决定响应方式。如果任意步骤失败，设备会在 STATUS 中设置 FAILED 位，驱动需要重置设备。</p>
+<h3 id="3-3-virtio-disk-rw-——提交-I-O-请求并等待完成"><a href="#3-3-virtio-disk-rw-——提交-I-O-请求并等待完成" class="headerlink" title="3.3 virtio_disk_rw()——提交 I/O 请求并等待完成"></a>3.3 <code>virtio_disk_rw()</code>——提交 I/O 请求并等待完成</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">virtio_disk_rw</span><span class="token punctuation">(</span><span class="token keyword">struct</span> buf <span class="token operator">*</span>b<span class="token punctuation">,</span> <span class="token keyword">int</span> write<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  uint64 sector <span class="token operator">=</span> b<span class="token operator">-></span>blockno <span class="token operator">*</span> <span class="token punctuation">(</span>BSIZE <span class="token operator">/</span> <span class="token number">512</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment" spellcheck="true">// BSIZE=1024，512 字节是磁盘扇区大小</span>
+  <span class="token comment" spellcheck="true">// 1 个块 = 2 个扇区</span>
+
+  <span class="token function">acquire</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>disk<span class="token punctuation">.</span>vdisk_lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ① 分配 3 个描述符（如果没有空闲则 sleep 等待）</span>
+  <span class="token keyword">int</span> idx<span class="token punctuation">[</span><span class="token number">3</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+  <span class="token keyword">while</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">alloc3_desc</span><span class="token punctuation">(</span>idx<span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token keyword">break</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 成功分配</span>
+    <span class="token function">sleep</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>disk<span class="token punctuation">.</span>free<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token operator">&amp;</span>disk<span class="token punctuation">.</span>vdisk_lock<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 等待有描述符释放</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token comment" spellcheck="true">// ② 填写请求头描述符（idx[0]）：type/reserved/sector</span>
+  <span class="token keyword">struct</span> virtio_blk_outhdr <span class="token punctuation">{</span>
+    uint32 type<span class="token punctuation">;</span>      <span class="token comment" spellcheck="true">// VIRTIO_BLK_T_IN(0)=读, VIRTIO_BLK_T_OUT(1)=写</span>
+    uint32 reserved<span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 必须为 0</span>
+    uint64 sector<span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 起始扇区号</span>
+  <span class="token punctuation">}</span> buf0<span class="token punctuation">;</span>
+
+  buf0<span class="token punctuation">.</span>type   <span class="token operator">=</span> write <span class="token operator">?</span> VIRTIO_BLK_T_OUT <span class="token punctuation">:</span> VIRTIO_BLK_T_IN<span class="token punctuation">;</span>
+  buf0<span class="token punctuation">.</span>reserved <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  buf0<span class="token punctuation">.</span>sector <span class="token operator">=</span> sector<span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// buf0 在内核栈上（非直接映射），需要 kvmpa() 转换为物理地址</span>
+  disk<span class="token punctuation">.</span>desc<span class="token punctuation">[</span>idx<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">.</span>addr  <span class="token operator">=</span> <span class="token punctuation">(</span>uint64<span class="token punctuation">)</span> <span class="token function">kvmpa</span><span class="token punctuation">(</span><span class="token punctuation">(</span>uint64<span class="token punctuation">)</span> <span class="token operator">&amp;</span>buf0<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  disk<span class="token punctuation">.</span>desc<span class="token punctuation">[</span>idx<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">.</span>len   <span class="token operator">=</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>buf0<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  disk<span class="token punctuation">.</span>desc<span class="token punctuation">[</span>idx<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">.</span>flags <span class="token operator">=</span> VRING_DESC_F_NEXT<span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 驱动→设备，有下一个</span>
+  disk<span class="token punctuation">.</span>desc<span class="token punctuation">[</span>idx<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">.</span>next  <span class="token operator">=</span> idx<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ③ 填写数据描述符（idx[1]）：b->data 缓冲区</span>
+  disk<span class="token punctuation">.</span>desc<span class="token punctuation">[</span>idx<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">.</span>addr  <span class="token operator">=</span> <span class="token punctuation">(</span>uint64<span class="token punctuation">)</span> b<span class="token operator">-></span>data<span class="token punctuation">;</span>
+  disk<span class="token punctuation">.</span>desc<span class="token punctuation">[</span>idx<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">.</span>len   <span class="token operator">=</span> BSIZE<span class="token punctuation">;</span>
+  disk<span class="token punctuation">.</span>desc<span class="token punctuation">[</span>idx<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">.</span>flags <span class="token operator">=</span> <span class="token punctuation">(</span>write <span class="token operator">?</span> <span class="token number">0</span> <span class="token punctuation">:</span> VRING_DESC_F_WRITE<span class="token punctuation">)</span> <span class="token operator">|</span> VRING_DESC_F_NEXT<span class="token punctuation">;</span>
+  <span class="token comment" spellcheck="true">// 读操作：WRITE 标志（设备写入 b->data）</span>
+  <span class="token comment" spellcheck="true">// 写操作：无 WRITE 标志（设备从 b->data 读取）</span>
+  disk<span class="token punctuation">.</span>desc<span class="token punctuation">[</span>idx<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">.</span>next  <span class="token operator">=</span> idx<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ④ 填写状态描述符（idx[2]）：设备写回状态字节</span>
+  disk<span class="token punctuation">.</span>info<span class="token punctuation">[</span>idx<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">.</span>status <span class="token operator">=</span> <span class="token number">0xff</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 预填非零值，完成后设备会覆盖为 0</span>
+  disk<span class="token punctuation">.</span>desc<span class="token punctuation">[</span>idx<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">.</span>addr  <span class="token operator">=</span> <span class="token punctuation">(</span>uint64<span class="token punctuation">)</span> <span class="token operator">&amp;</span>disk<span class="token punctuation">.</span>info<span class="token punctuation">[</span>idx<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">.</span>status<span class="token punctuation">;</span>
+  disk<span class="token punctuation">.</span>desc<span class="token punctuation">[</span>idx<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">.</span>len   <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+  disk<span class="token punctuation">.</span>desc<span class="token punctuation">[</span>idx<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">.</span>flags <span class="token operator">=</span> VRING_DESC_F_WRITE<span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 设备写状态</span>
+  disk<span class="token punctuation">.</span>desc<span class="token punctuation">[</span>idx<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">.</span>next  <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ⑤ 记录 buf 指针（中断处理时使用）</span>
+  b<span class="token operator">-></span>disk <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+  disk<span class="token punctuation">.</span>info<span class="token punctuation">[</span>idx<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">.</span>b <span class="token operator">=</span> b<span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ⑥ 通知设备：将描述符链首写入可用环</span>
+  disk<span class="token punctuation">.</span>avail<span class="token punctuation">[</span><span class="token number">2</span> <span class="token operator">+</span> <span class="token punctuation">(</span>disk<span class="token punctuation">.</span>avail<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span> <span class="token operator">%</span> NUM<span class="token punctuation">)</span><span class="token punctuation">]</span> <span class="token operator">=</span> idx<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+  <span class="token function">__sync_synchronize</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>            <span class="token comment" spellcheck="true">// 内存屏障：确保描述符写完再更新 avail[1]</span>
+  disk<span class="token punctuation">.</span>avail<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span> <span class="token operator">=</span> disk<span class="token punctuation">.</span>avail<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span> <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// avail[1] = 驱动端可用环生产者指针</span>
+
+  <span class="token operator">*</span><span class="token function">R</span><span class="token punctuation">(</span>VIRTIO_MMIO_QUEUE_NOTIFY<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 写 QUEUE_NOTIFY 寄存器触发设备处理</span>
+
+  <span class="token comment" spellcheck="true">// ⑦ 等待中断唤醒（b->disk 变为 0 表示 I/O 完成）</span>
+  <span class="token keyword">while</span><span class="token punctuation">(</span>b<span class="token operator">-></span>disk <span class="token operator">==</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token function">sleep</span><span class="token punctuation">(</span>b<span class="token punctuation">,</span> <span class="token operator">&amp;</span>disk<span class="token punctuation">.</span>vdisk_lock<span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 释放 vdisk_lock，睡眠等待</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token comment" spellcheck="true">// ⑧ 清理</span>
+  disk<span class="token punctuation">.</span>info<span class="token punctuation">[</span>idx<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">.</span>b <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  <span class="token function">free_chain</span><span class="token punctuation">(</span>idx<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 释放描述符链，wakeup(&amp;disk.free[0])</span>
+
+  <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>disk<span class="token punctuation">.</span>vdisk_lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>关键设计：<code>b-&gt;disk</code> 标志位</strong></p>
+<p><code>b-&gt;disk = 1</code> 是 I/O 进行中的标记。<code>virtio_disk_intr()</code> 完成时会将 <code>b-&gt;disk = 0</code> 并 <code>wakeup(b)</code>，<code>virtio_disk_rw()</code> 在 <code>while(b-&gt;disk == 1)</code> 上自旋检测（配合 <code>sleep</code>）。</p>
+<p>**为什么需要 <code>__sync_synchronize()</code>**：</p>
+<p>在通知设备（写 <code>QUEUE_NOTIFY</code>）之前，必须确保所有描述符的写入对设备（QEMU）可见。内存屏障阻止处理器/编译器将通知写操作重排序到描述符填充之前，这是驱动正确性的关键。</p>
+<h3 id="3-4-virtio-disk-intr-——中断处理"><a href="#3-4-virtio-disk-intr-——中断处理" class="headerlink" title="3.4 virtio_disk_intr()——中断处理"></a>3.4 <code>virtio_disk_intr()</code>——中断处理</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">virtio_disk_intr</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token function">acquire</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>disk<span class="token punctuation">.</span>vdisk_lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// 遍历已用环中所有新完成的条目</span>
+  <span class="token comment" spellcheck="true">// disk.used->id：设备端已用环生产者指针</span>
+  <span class="token comment" spellcheck="true">// disk.used_idx：驱动端已用环消费者指针</span>
+  <span class="token keyword">while</span><span class="token punctuation">(</span><span class="token punctuation">(</span>disk<span class="token punctuation">.</span>used_idx <span class="token operator">%</span> NUM<span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token punctuation">(</span>disk<span class="token punctuation">.</span>used<span class="token operator">-></span>id <span class="token operator">%</span> NUM<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token keyword">int</span> id <span class="token operator">=</span> disk<span class="token punctuation">.</span>used<span class="token operator">-></span>elems<span class="token punctuation">[</span>disk<span class="token punctuation">.</span>used_idx<span class="token punctuation">]</span><span class="token punctuation">.</span>id<span class="token punctuation">;</span>
+    <span class="token comment" spellcheck="true">// id = 完成的描述符链的首描述符索引</span>
+
+    <span class="token keyword">if</span><span class="token punctuation">(</span>disk<span class="token punctuation">.</span>info<span class="token punctuation">[</span>id<span class="token punctuation">]</span><span class="token punctuation">.</span>status <span class="token operator">!=</span> <span class="token number">0</span><span class="token punctuation">)</span>
+      <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"virtio_disk_intr status"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 状态非 0 表示 I/O 错误</span>
+
+    disk<span class="token punctuation">.</span>info<span class="token punctuation">[</span>id<span class="token punctuation">]</span><span class="token punctuation">.</span>b<span class="token operator">-></span>disk <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 标记 I/O 完成</span>
+    <span class="token function">wakeup</span><span class="token punctuation">(</span>disk<span class="token punctuation">.</span>info<span class="token punctuation">[</span>id<span class="token punctuation">]</span><span class="token punctuation">.</span>b<span class="token punctuation">)</span><span class="token punctuation">;</span>      <span class="token comment" spellcheck="true">// 唤醒在 virtio_disk_rw() 中睡眠的进程</span>
+
+    disk<span class="token punctuation">.</span>used_idx <span class="token operator">=</span> <span class="token punctuation">(</span>disk<span class="token punctuation">.</span>used_idx <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">%</span> NUM<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token comment" spellcheck="true">// 确认中断（写 INTERRUPT_ACK 清除中断状态）</span>
+  <span class="token operator">*</span><span class="token function">R</span><span class="token punctuation">(</span>VIRTIO_MMIO_INTERRUPT_ACK<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token operator">*</span><span class="token function">R</span><span class="token punctuation">(</span>VIRTIO_MMIO_INTERRUPT_STATUS<span class="token punctuation">)</span> <span class="token operator">&amp;</span> <span class="token number">0x3</span><span class="token punctuation">;</span>
+
+  <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>disk<span class="token punctuation">.</span>vdisk_lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>中断处理函数由 <code>devintr()</code> 调用（见第 11 节），在识别到 VIRTIO0_IRQ 后：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">devintr<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  ├── plic_claim<span class="token punctuation">(</span><span class="token punctuation">)</span> → irq <span class="token operator">=</span> VIRTIO0_IRQ<span class="token punctuation">(</span>1<span class="token punctuation">)</span>
+  ├── virtio_disk_intr<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  │       ├── 检查 used ring 新条目
+  │       ├── disk.info<span class="token punctuation">[</span>id<span class="token punctuation">]</span>.b-<span class="token operator">></span>disk <span class="token operator">=</span> 0
+  │       └── wakeup<span class="token punctuation">(</span>b<span class="token punctuation">)</span>  →  唤醒 virtio_disk_rw<span class="token punctuation">(</span><span class="token punctuation">)</span> 中 sleep<span class="token punctuation">(</span>b, <span class="token punctuation">..</span>.<span class="token punctuation">)</span> 的进程
+  └── plic_complete<span class="token punctuation">(</span>irq<span class="token punctuation">)</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<hr>
+<h2 id="四、源码精读：kernel-buf-h——缓冲区数据结构"><a href="#四、源码精读：kernel-buf-h——缓冲区数据结构" class="headerlink" title="四、源码精读：kernel/buf.h——缓冲区数据结构"></a>四、源码精读：<code>kernel/buf.h</code>——缓冲区数据结构</h2><pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// kernel/buf.h</span>
+
+<span class="token keyword">struct</span> buf <span class="token punctuation">{</span>
+  <span class="token keyword">int</span> valid<span class="token punctuation">;</span>            <span class="token comment" spellcheck="true">// 1 = 此缓冲区的数据已从磁盘读入</span>
+  <span class="token keyword">int</span> disk<span class="token punctuation">;</span>             <span class="token comment" spellcheck="true">// 1 = 磁盘 I/O 进行中（buf "属于" 设备）</span>
+  uint dev<span class="token punctuation">;</span>             <span class="token comment" spellcheck="true">// 设备号</span>
+  uint blockno<span class="token punctuation">;</span>         <span class="token comment" spellcheck="true">// 块号（决定缓冲区代表哪个磁盘块）</span>
+  <span class="token keyword">struct</span> sleeplock lock<span class="token punctuation">;</span> <span class="token comment" spellcheck="true">// 保护此缓冲区内容的睡眠锁</span>
+  uint refcnt<span class="token punctuation">;</span>          <span class="token comment" spellcheck="true">// 引用计数：有多少进程正在使用此缓冲区</span>
+  <span class="token keyword">struct</span> buf <span class="token operator">*</span>prev<span class="token punctuation">;</span>     <span class="token comment" spellcheck="true">// LRU 链表前驱</span>
+  <span class="token keyword">struct</span> buf <span class="token operator">*</span>next<span class="token punctuation">;</span>     <span class="token comment" spellcheck="true">// LRU 链表后继</span>
+  uchar data<span class="token punctuation">[</span>BSIZE<span class="token punctuation">]</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 块数据（BSIZE = 1024 字节）</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>字段语义详解</strong>：</p>
+<ul>
+<li><code>valid</code>：<code>0</code> 表示未从磁盘读取（新分配的缓冲区，<code>data[]</code> 内容无效）；<code>1</code> 表示已同步</li>
+<li><code>disk</code>：<code>1</code> 表示 I/O 进行中，此时 <code>data[]</code> 内容属于设备，驱动正在写入；<code>0</code> 表示 CPU 可自由读写</li>
+<li><code>lock</code>（sleeplock）：调用者通过 <code>bget()</code> 获得的缓冲区已被上锁，必须通过 <code>brelse()</code> 释放。持有 <code>buf.lock</code> 期间可以 sleep（如等待磁盘 I/O）</li>
+<li><code>refcnt</code>：由 <code>bcache.lock</code>（自旋锁）保护；<code>refcnt &gt; 0</code> 的缓冲区不能被 LRU 淘汰</li>
+</ul>
+<p><strong>NBUF 的值</strong>：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// kernel/param.h</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> MAXOPBLOCKS  10           </span><span class="token comment" spellcheck="true">// 单个文件系统操作最多写 10 个块</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> NBUF         (MAXOPBLOCKS*3)  </span><span class="token comment" spellcheck="true">// = 30 个缓冲区</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<p>30 个缓冲区看起来很少，但足够 xv6 的工作负载：日志层保证单个事务最多写 10 块，30 个缓冲区能同时支持 3 个并发事务在飞行中。</p>
+<hr>
+<h2 id="五、源码精读：kernel-bio-c——块缓存"><a href="#五、源码精读：kernel-bio-c——块缓存" class="headerlink" title="五、源码精读：kernel/bio.c——块缓存"></a>五、源码精读：<code>kernel/bio.c</code>——块缓存</h2><h3 id="5-1-bcache-全局结构"><a href="#5-1-bcache-全局结构" class="headerlink" title="5.1 bcache 全局结构"></a>5.1 <code>bcache</code> 全局结构</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// kernel/bio.c</span>
+
+<span class="token keyword">struct</span> <span class="token punctuation">{</span>
+  <span class="token keyword">struct</span> spinlock lock<span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 保护以下所有字段</span>
+  <span class="token keyword">struct</span> buf buf<span class="token punctuation">[</span>NBUF<span class="token punctuation">]</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 固定大小的缓冲区池（30 个）</span>
+
+  <span class="token comment" spellcheck="true">// 双向循环链表，按访问时间排序</span>
+  <span class="token comment" spellcheck="true">// head.next = 最近访问的（Most Recently Used）</span>
+  <span class="token comment" spellcheck="true">// head.prev = 最久未访问的（Least Recently Used）</span>
+  <span class="token keyword">struct</span> buf head<span class="token punctuation">;</span>
+<span class="token punctuation">}</span> bcache<span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>两层锁设计</strong>（第 12 节已铺垫）：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">bcache.lock（自旋锁）：
+  保护链表结构（head、prev/next 指针）和 refcnt 的修改
+  临界区：bget<span class="token punctuation">(</span><span class="token punctuation">)</span> 中的链表查找与淘汰、brelse<span class="token punctuation">(</span><span class="token punctuation">)</span> 中的链表移动
+
+buf.lock（sleeplock，每个 buf 一把）：
+  保护 buf 的内容（data<span class="token punctuation">[</span>valid, disk 等字段）
+  临界区：从磁盘读入或写出数据（可能需要 <span class="token function">sleep</span> 等待 I/O）
+  注意：持有 buf.lock 时不持有 bcache.lock（避免死锁）
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="5-2-binit-——初始化缓冲区双向循环链表"><a href="#5-2-binit-——初始化缓冲区双向循环链表" class="headerlink" title="5.2 binit()——初始化缓冲区双向循环链表"></a>5.2 <code>binit()</code>——初始化缓冲区双向循环链表</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">binit</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">struct</span> buf <span class="token operator">*</span>b<span class="token punctuation">;</span>
+  <span class="token function">initlock</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>bcache<span class="token punctuation">.</span>lock<span class="token punctuation">,</span> <span class="token string">"bcache"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// 构造双向循环链表：head ↔ buf[0] ↔ buf[1] ↔ ... ↔ buf[NBUF-1] ↔ head</span>
+  bcache<span class="token punctuation">.</span>head<span class="token punctuation">.</span>prev <span class="token operator">=</span> <span class="token operator">&amp;</span>bcache<span class="token punctuation">.</span>head<span class="token punctuation">;</span>
+  bcache<span class="token punctuation">.</span>head<span class="token punctuation">.</span>next <span class="token operator">=</span> <span class="token operator">&amp;</span>bcache<span class="token punctuation">.</span>head<span class="token punctuation">;</span>
+
+  <span class="token keyword">for</span><span class="token punctuation">(</span>b <span class="token operator">=</span> bcache<span class="token punctuation">.</span>buf<span class="token punctuation">;</span> b <span class="token operator">&lt;</span> bcache<span class="token punctuation">.</span>buf <span class="token operator">+</span> NBUF<span class="token punctuation">;</span> b<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// 将 b 插入 head 之后（变为链表最前端）</span>
+    b<span class="token operator">-></span>next <span class="token operator">=</span> bcache<span class="token punctuation">.</span>head<span class="token punctuation">.</span>next<span class="token punctuation">;</span>
+    b<span class="token operator">-></span>prev <span class="token operator">=</span> <span class="token operator">&amp;</span>bcache<span class="token punctuation">.</span>head<span class="token punctuation">;</span>
+    <span class="token function">initsleeplock</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>b<span class="token operator">-></span>lock<span class="token punctuation">,</span> <span class="token string">"buffer"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    bcache<span class="token punctuation">.</span>head<span class="token punctuation">.</span>next<span class="token operator">-></span>prev <span class="token operator">=</span> b<span class="token punctuation">;</span>
+    bcache<span class="token punctuation">.</span>head<span class="token punctuation">.</span>next <span class="token operator">=</span> b<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>初始化后的链表结构：</p>
+<pre class="line-numbers language-bash"><code class="language-bash"><span class="token function">head</span> ↔ buf<span class="token punctuation">[</span>29<span class="token punctuation">]</span> ↔ buf<span class="token punctuation">[</span>28<span class="token punctuation">]</span> ↔ <span class="token punctuation">..</span>. ↔ buf<span class="token punctuation">[</span>0<span class="token punctuation">]</span> ↔ head（循环）
+  ↑                                              ↑
+最近使用端（head.next）               最久未使用端（head.prev）
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<p>初始时所有缓冲区都未被使用（<code>refcnt=0</code>，<code>valid=0</code>），LRU 顺序无意义，因此插入顺序即为初始链表顺序。</p>
+<h3 id="5-3-bget-——核心：查找或分配缓冲区"><a href="#5-3-bget-——核心：查找或分配缓冲区" class="headerlink" title="5.3 bget()——核心：查找或分配缓冲区"></a>5.3 <code>bget()</code>——核心：查找或分配缓冲区</h3><p><code>bget()</code> 是块缓存最核心的函数，其他所有函数（<code>bread</code>、<code>bwrite</code>、<code>brelse</code>）都围绕它工作：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">static</span> <span class="token keyword">struct</span> buf<span class="token operator">*</span>
+<span class="token function">bget</span><span class="token punctuation">(</span>uint dev<span class="token punctuation">,</span> uint blockno<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">struct</span> buf <span class="token operator">*</span>b<span class="token punctuation">;</span>
+  <span class="token function">acquire</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>bcache<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ① 第一遍扫描：检查是否已缓存</span>
+  <span class="token keyword">for</span><span class="token punctuation">(</span>b <span class="token operator">=</span> bcache<span class="token punctuation">.</span>head<span class="token punctuation">.</span>next<span class="token punctuation">;</span> b <span class="token operator">!=</span> <span class="token operator">&amp;</span>bcache<span class="token punctuation">.</span>head<span class="token punctuation">;</span> b <span class="token operator">=</span> b<span class="token operator">-></span>next<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>b<span class="token operator">-></span>dev <span class="token operator">==</span> dev <span class="token operator">&amp;&amp;</span> b<span class="token operator">-></span>blockno <span class="token operator">==</span> blockno<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      b<span class="token operator">-></span>refcnt<span class="token operator">++</span><span class="token punctuation">;</span>               <span class="token comment" spellcheck="true">// 增加引用计数</span>
+      <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>bcache<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>     <span class="token comment" spellcheck="true">// 释放全局锁</span>
+      <span class="token function">acquiresleep</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>b<span class="token operator">-></span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 获取 buf 的睡眠锁（可能等待其他进程用完）</span>
+      <span class="token keyword">return</span> b<span class="token punctuation">;</span>                  <span class="token comment" spellcheck="true">// 缓存命中，返回已锁定的 buf</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token comment" spellcheck="true">// ② 第二遍扫描（从 LRU 端开始）：找一个 refcnt=0 的缓冲区淘汰</span>
+  <span class="token keyword">for</span><span class="token punctuation">(</span>b <span class="token operator">=</span> bcache<span class="token punctuation">.</span>head<span class="token punctuation">.</span>prev<span class="token punctuation">;</span> b <span class="token operator">!=</span> <span class="token operator">&amp;</span>bcache<span class="token punctuation">.</span>head<span class="token punctuation">;</span> b <span class="token operator">=</span> b<span class="token operator">-></span>prev<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>b<span class="token operator">-></span>refcnt <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      b<span class="token operator">-></span>dev     <span class="token operator">=</span> dev<span class="token punctuation">;</span>
+      b<span class="token operator">-></span>blockno <span class="token operator">=</span> blockno<span class="token punctuation">;</span>
+      b<span class="token operator">-></span>valid   <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 新分配，数据无效，bread() 需要从磁盘读</span>
+      b<span class="token operator">-></span>refcnt  <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+      <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>bcache<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token function">acquiresleep</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>b<span class="token operator">-></span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">return</span> b<span class="token punctuation">;</span>          <span class="token comment" spellcheck="true">// 缓存未命中，返回已初始化的 buf（数据待读取）</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"bget: no buffers"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment" spellcheck="true">// 所有 NBUF 个缓冲区都有 refcnt > 0 → 系统无法继续</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>两遍扫描的方向</strong>：</p>
+<ul>
+<li>第一遍<strong>从 head.next（最近）到 head.prev（最久）</strong>：查找时按新到旧遍历，找到即返回</li>
+<li>第二遍<strong>从 head.prev（最久）到 head.next（最近）</strong>：淘汰时选最久未用的（LRU 策略），从尾部向头部找第一个 <code>refcnt == 0</code> 的</li>
+</ul>
+<p><strong><code>refcnt == 0</code> 是淘汰的前提</strong>：只有没有进程在使用的缓冲区才可以被淘汰重用。如果某个块的缓冲区正在被使用（<code>refcnt &gt; 0</code>），另一个进程哪怕已经将其从缓存中”驱逐”并等不到它，也必须等待（<code>acquiresleep</code>）。</p>
+<p><strong><code>bget()</code> 返回时的状态</strong>：调用者得到的 <code>buf</code> 已持有 <code>buf-&gt;lock</code>（sleeplock），可以安全读写 <code>data[]</code>。<code>valid</code> 字段告诉调用者数据是否已从磁盘同步。</p>
+<h3 id="5-4-bread-——读取磁盘块"><a href="#5-4-bread-——读取磁盘块" class="headerlink" title="5.4 bread()——读取磁盘块"></a>5.4 <code>bread()</code>——读取磁盘块</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">struct</span> buf<span class="token operator">*</span>
+<span class="token function">bread</span><span class="token punctuation">(</span>uint dev<span class="token punctuation">,</span> uint blockno<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">struct</span> buf <span class="token operator">*</span>b<span class="token punctuation">;</span>
+  b <span class="token operator">=</span> <span class="token function">bget</span><span class="token punctuation">(</span>dev<span class="token punctuation">,</span> blockno<span class="token punctuation">)</span><span class="token punctuation">;</span>     <span class="token comment" spellcheck="true">// 获取（或分配）缓冲区，已持有 b->lock</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span>b<span class="token operator">-></span>valid<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token function">virtio_disk_rw</span><span class="token punctuation">(</span>b<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>     <span class="token comment" spellcheck="true">// valid=0 表示数据未读，触发磁盘读操作</span>
+    b<span class="token operator">-></span>valid <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>             <span class="token comment" spellcheck="true">// 读完后标记有效</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">return</span> b<span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 返回含有最新磁盘数据的、已锁定的 buf</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><code>bread()</code> 极其简洁。缓存命中时（<code>b-&gt;valid = 1</code>），完全不涉及磁盘 I/O，直接返回内存中的缓冲区。缓存未命中时，<code>virtio_disk_rw(b, 0)</code> 会在 <code>vdisk_lock</code> 下睡眠等待磁盘完成（见第 3.3 节）。</p>
+<h3 id="5-5-bwrite-——将缓冲区写回磁盘"><a href="#5-5-bwrite-——将缓冲区写回磁盘" class="headerlink" title="5.5 bwrite()——将缓冲区写回磁盘"></a>5.5 <code>bwrite()</code>——将缓冲区写回磁盘</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">bwrite</span><span class="token punctuation">(</span><span class="token keyword">struct</span> buf <span class="token operator">*</span>b<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span><span class="token function">holdingsleep</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>b<span class="token operator">-></span>lock<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"bwrite"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>          <span class="token comment" spellcheck="true">// 必须持有 buf 的睡眠锁才能写</span>
+  <span class="token function">virtio_disk_rw</span><span class="token punctuation">(</span>b<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>      <span class="token comment" spellcheck="true">// 写磁盘，等待完成</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>注意：<code>bwrite()</code> 直接将缓冲区写到磁盘，<strong>绕过了日志层</strong>。实际上上层（log 层）使用 <code>log_write()</code> 代替直接 <code>bwrite()</code>，以实现崩溃一致性（第 14 节会详述）。只有日志提交时才真正调用 <code>bwrite()</code>。</p>
+<h3 id="5-6-brelse-——释放缓冲区，更新-LRU"><a href="#5-6-brelse-——释放缓冲区，更新-LRU" class="headerlink" title="5.6 brelse()——释放缓冲区，更新 LRU"></a>5.6 <code>brelse()</code>——释放缓冲区，更新 LRU</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">brelse</span><span class="token punctuation">(</span><span class="token keyword">struct</span> buf <span class="token operator">*</span>b<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span><span class="token function">holdingsleep</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>b<span class="token operator">-></span>lock<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"brelse"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token function">releasesleep</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>b<span class="token operator">-></span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// ① 释放 buf 的睡眠锁</span>
+
+  <span class="token function">acquire</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>bcache<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// ② 获取全局锁（修改 LRU 链表）</span>
+  b<span class="token operator">-></span>refcnt<span class="token operator">--</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>b<span class="token operator">-></span>refcnt <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// 没有其他进程在用此 buf → 将其移到链表最前端（MRU 端）</span>
+    b<span class="token operator">-></span>next<span class="token operator">-></span>prev <span class="token operator">=</span> b<span class="token operator">-></span>prev<span class="token punctuation">;</span>
+    b<span class="token operator">-></span>prev<span class="token operator">-></span>next <span class="token operator">=</span> b<span class="token operator">-></span>next<span class="token punctuation">;</span>
+    b<span class="token operator">-></span>next <span class="token operator">=</span> bcache<span class="token punctuation">.</span>head<span class="token punctuation">.</span>next<span class="token punctuation">;</span>
+    b<span class="token operator">-></span>prev <span class="token operator">=</span> <span class="token operator">&amp;</span>bcache<span class="token punctuation">.</span>head<span class="token punctuation">;</span>
+    bcache<span class="token punctuation">.</span>head<span class="token punctuation">.</span>next<span class="token operator">-></span>prev <span class="token operator">=</span> b<span class="token punctuation">;</span>
+    bcache<span class="token punctuation">.</span>head<span class="token punctuation">.</span>next <span class="token operator">=</span> b<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>bcache<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><code>brelse()</code> 的 LRU 维护逻辑：每次释放一个缓冲区时，将其移到链表最前端（最近使用）。这样 LRU 端（<code>head.prev</code>）始终是最久未被 <code>brelse()</code> 过的缓冲区，是淘汰的首选目标。</p>
+<p><strong><code>brelse()</code> 的锁顺序</strong>：先释放 <code>buf.lock</code>（sleeplock），再获取 <code>bcache.lock</code>（spinlock）。这与 <code>bget()</code> 中先获取 <code>bcache.lock</code>、再获取 <code>buf.lock</code> 的顺序相符，避免死锁（见第 12 节锁顺序原则）。</p>
+<h3 id="5-7-bpin-和-bunpin-——为日志设计的固定机制"><a href="#5-7-bpin-和-bunpin-——为日志设计的固定机制" class="headerlink" title="5.7 bpin() 和 bunpin()——为日志设计的固定机制"></a>5.7 <code>bpin()</code> 和 <code>bunpin()</code>——为日志设计的固定机制</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">bpin</span><span class="token punctuation">(</span><span class="token keyword">struct</span> buf <span class="token operator">*</span>b<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token function">acquire</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>bcache<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  b<span class="token operator">-></span>refcnt<span class="token operator">++</span><span class="token punctuation">;</span>
+  <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>bcache<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">void</span> <span class="token function">bunpin</span><span class="token punctuation">(</span><span class="token keyword">struct</span> buf <span class="token operator">*</span>b<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token function">acquire</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>bcache<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  b<span class="token operator">-></span>refcnt<span class="token operator">--</span><span class="token punctuation">;</span>
+  <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>bcache<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>日志层（<code>log.c</code>）使用这两个函数防止缓冲区在事务提交前被淘汰：</p>
+<ul>
+<li><code>log_write(b)</code> 调用时，日志层会 <code>bpin(b)</code>：增加 <code>refcnt</code>，使 <code>refcnt</code> 永远 &gt; 0，<code>bget()</code> 的 LRU 淘汰路径绝不会选中此缓冲区</li>
+<li>事务提交后（数据写入磁盘日志位置），才调用 <code>bunpin(b)</code> 解除固定</li>
+</ul>
+<p>这避免了”日志还没提交，缓冲区已经被别人修改并淘汰”的崩溃一致性问题。</p>
+<hr>
+<h2 id="六、数据流全景：bread-的完整调用链"><a href="#六、数据流全景：bread-的完整调用链" class="headerlink" title="六、数据流全景：bread() 的完整调用链"></a>六、数据流全景：<code>bread()</code> 的完整调用链</h2><p>以 <code>bread(1, 32)</code>（读取设备 1 的第 32 号块）为例：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">bread<span class="token punctuation">(</span>dev<span class="token operator">=</span>1, blockno<span class="token operator">=</span>32<span class="token punctuation">)</span>
+  │
+  ├── bget<span class="token punctuation">(</span>1, 32<span class="token punctuation">)</span>
+  │     ├── acquire<span class="token punctuation">(</span><span class="token operator">&amp;</span>bcache.lock<span class="token punctuation">)</span>
+  │     │
+  │     ├── <span class="token punctuation">[</span>情况A：缓存命中<span class="token punctuation">]</span>
+  │     │     找到 b-<span class="token operator">></span>dev<span class="token operator">==</span>1 <span class="token operator">&amp;&amp;</span> b-<span class="token operator">></span>blockno<span class="token operator">==</span>32 的 buf
+  │     │     b-<span class="token operator">></span>refcnt++
+  │     │     release<span class="token punctuation">(</span><span class="token operator">&amp;</span>bcache.lock<span class="token punctuation">)</span>
+  │     │     acquiresleep<span class="token punctuation">(</span><span class="token operator">&amp;</span>b-<span class="token operator">></span>lock<span class="token punctuation">)</span>  ← 可能等待其他进程先用完
+  │     │     <span class="token keyword">return</span> b（valid<span class="token operator">=</span>1）
+  │     │
+  │     └── <span class="token punctuation">[</span>情况B：缓存未命中<span class="token punctuation">]</span>
+  │           从 head.prev 找 refcnt<span class="token operator">==</span>0 的 buf（LRU 淘汰）
+  │           b-<span class="token operator">></span>dev<span class="token operator">=</span>1, b-<span class="token operator">></span>blockno<span class="token operator">=</span>32, b-<span class="token operator">></span>valid<span class="token operator">=</span>0, b-<span class="token operator">></span>refcnt<span class="token operator">=</span>1
+  │           release<span class="token punctuation">(</span><span class="token operator">&amp;</span>bcache.lock<span class="token punctuation">)</span>
+  │           acquiresleep<span class="token punctuation">(</span><span class="token operator">&amp;</span>b-<span class="token operator">></span>lock<span class="token punctuation">)</span>
+  │           <span class="token keyword">return</span> b（valid<span class="token operator">=</span>0）
+  │
+  ├── <span class="token punctuation">[</span>情况A：valid<span class="token operator">=</span>1<span class="token punctuation">]</span> → 直接返回，无磁盘 I/O
+  │
+  └── <span class="token punctuation">[</span>情况B：valid<span class="token operator">=</span>0<span class="token punctuation">]</span>
+        virtio_disk_rw<span class="token punctuation">(</span>b, 0<span class="token punctuation">)</span>
+          ├── acquire<span class="token punctuation">(</span><span class="token operator">&amp;</span>disk.vdisk_lock<span class="token punctuation">)</span>
+          ├── alloc3_desc<span class="token punctuation">(</span>idx<span class="token punctuation">)</span>（或 <span class="token function">sleep</span> 等描述符）
+          ├── 填写 3 个描述符（请求头 + 数据区 + 状态）
+          ├── 更新 avail ring，写 QUEUE_NOTIFY 通知 QEMU
+          ├── while<span class="token punctuation">(</span>b-<span class="token operator">></span>disk <span class="token operator">==</span> 1<span class="token punctuation">)</span> sleep<span class="token punctuation">(</span>b, <span class="token operator">&amp;</span>disk.vdisk_lock<span class="token punctuation">)</span>
+          │           ↑         等待中断
+          │     ← virtio_disk_intr<span class="token punctuation">(</span><span class="token punctuation">)</span> 被调用
+          │           b-<span class="token operator">></span>disk <span class="token operator">=</span> 0<span class="token punctuation">;</span>  wakeup<span class="token punctuation">(</span>b<span class="token punctuation">)</span>
+          │                             ↓
+          └── release<span class="token punctuation">(</span><span class="token operator">&amp;</span>disk.vdisk_lock<span class="token punctuation">)</span>
+        b-<span class="token operator">></span>valid <span class="token operator">=</span> 1
+        <span class="token keyword">return</span> b（data<span class="token punctuation">[</span><span class="token punctuation">]</span> 已包含磁盘数据，持有 b-<span class="token operator">></span>lock）
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<hr>
+<h2 id="七、缓冲区生命周期图"><a href="#七、缓冲区生命周期图" class="headerlink" title="七、缓冲区生命周期图"></a>七、缓冲区生命周期图</h2><pre class="line-numbers language-bash"><code class="language-bash">未使用状态（refcnt<span class="token operator">=</span>0, valid<span class="token operator">=</span>0/1）
+         ↓ bget<span class="token punctuation">(</span><span class="token punctuation">)</span> 未命中，LRU 淘汰并重分配
+已分配但未读（refcnt<span class="token operator">=</span>1, valid<span class="token operator">=</span>0, 持有 buf.lock）
+         ↓ bread<span class="token punctuation">(</span><span class="token punctuation">)</span> 触发 virtio_disk_rw<span class="token punctuation">(</span><span class="token punctuation">)</span>
+已就绪（refcnt<span class="token operator">=</span>1, valid<span class="token operator">=</span>1, 持有 buf.lock）
+         ↓ 调用者读写 data<span class="token punctuation">[</span><span class="token punctuation">]</span>
+         ↓ bwrite<span class="token punctuation">(</span><span class="token punctuation">)</span>（可选，写回磁盘）
+         ↓ brelse<span class="token punctuation">(</span><span class="token punctuation">)</span>
+已释放（refcnt<span class="token operator">=</span>0, valid<span class="token operator">=</span>1，移到 LRU 链表头）
+         ↓ 下次被再次 bget<span class="token punctuation">(</span><span class="token punctuation">)</span> 命中
+再次命中（refcnt++, 不清 valid，直接返回缓存数据）
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<hr>
+<h2 id="八、为什么使用全局单锁（bcache-lock）？"><a href="#八、为什么使用全局单锁（bcache-lock）？" class="headerlink" title="八、为什么使用全局单锁（bcache.lock）？"></a>八、为什么使用全局单锁（<code>bcache.lock</code>）？</h2><p>xv6 的块缓存使用一把全局自旋锁保护整个链表，这是一个简单但性能受限的设计：</p>
+<p><strong>优点（适合 xv6 的教学目标）</strong>：</p>
+<ul>
+<li>实现极简，容易理解和验证正确性</li>
+<li>避免了复杂的锁分片（sharding）逻辑</li>
+</ul>
+<p><strong>性能瓶颈</strong>：</p>
+<ul>
+<li>高并发场景下（多个 CPU 同时调用 <code>bread</code>），<code>bcache.lock</code> 竞争激烈</li>
+<li>查找时需要持锁遍历链表（O(NBUF)），期间其他 CPU 必须等待</li>
+</ul>
+<p><strong>MIT 6.S081 的 “lock” Lab</strong> 就是要求学生将 <code>bcache</code> 从单锁改为哈希桶（hash bucket）分组，每个桶一把锁，大幅减少锁竞争，这是真实操作系统中常见的锁细化技术。</p>
+<hr>
+<h2 id="九、动手实验"><a href="#九、动手实验" class="headerlink" title="九、动手实验"></a>九、动手实验</h2><h3 id="实验-1：统计缓存命中率"><a href="#实验-1：统计缓存命中率" class="headerlink" title="实验 1：统计缓存命中率"></a>实验 1：统计缓存命中率</h3><p>在 <code>bget()</code> 中添加计数器，观察文件系统的缓存效果：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// kernel/bio.c 顶部添加全局计数器</span>
+uint64 bcache_hits <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+uint64 bcache_misses <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+
+<span class="token comment" spellcheck="true">// 在 bget() 第一遍扫描找到缓存时</span>
+<span class="token keyword">if</span><span class="token punctuation">(</span>b<span class="token operator">-></span>dev <span class="token operator">==</span> dev <span class="token operator">&amp;&amp;</span> b<span class="token operator">-></span>blockno <span class="token operator">==</span> blockno<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  bcache_hits<span class="token operator">++</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 缓存命中</span>
+  b<span class="token operator">-></span>refcnt<span class="token operator">++</span><span class="token punctuation">;</span>
+  <span class="token comment" spellcheck="true">// ...</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment" spellcheck="true">// 在第二遍扫描（未命中路径）</span>
+<span class="token keyword">if</span><span class="token punctuation">(</span>b<span class="token operator">-></span>refcnt <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  bcache_misses<span class="token operator">++</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 缓存未命中</span>
+  <span class="token comment" spellcheck="true">// ...</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>添加一个系统调用（或在 <code>brelse()</code> 中定期 <code>printf</code>）打印命中率：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"bcache: hits=%d, misses=%d, rate=%d%%\n"</span><span class="token punctuation">,</span>
+       bcache_hits<span class="token punctuation">,</span> bcache_misses<span class="token punctuation">,</span>
+       bcache_hits <span class="token operator">*</span> <span class="token number">100</span> <span class="token operator">/</span> <span class="token punctuation">(</span>bcache_hits <span class="token operator">+</span> bcache_misses <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<p>运行 <code>cat README</code>、<code>ls</code>、<code>usertests</code> 等命令，观察不同工作负载的缓存命中率。</p>
+<p><strong>预期现象</strong>：</p>
+<ul>
+<li>第一次 <code>cat README</code>：命中率低（冷启动，大量缓存未命中）</li>
+<li>第二次 <code>cat README</code>：命中率接近 100%（块已缓存）</li>
+<li><code>usertests</code>：命中率中等（工作集超过 30 个缓冲区时发生淘汰）</li>
+</ul>
+<h3 id="实验-2：画出-bcache-的双向循环链表结构"><a href="#实验-2：画出-bcache-的双向循环链表结构" class="headerlink" title="实验 2：画出 bcache 的双向循环链表结构"></a>实验 2：画出 <code>bcache</code> 的双向循环链表结构</h3><p>在 <code>binit()</code> 完成后，添加打印函数输出初始链表：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// kernel/bio.c，在 binit() 末尾添加</span>
+<span class="token keyword">void</span> <span class="token function">print_bcache</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">struct</span> buf <span class="token operator">*</span>b<span class="token punctuation">;</span>
+  <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"bcache list (MRU → LRU):\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  <span class="token keyword">for</span><span class="token punctuation">(</span>b <span class="token operator">=</span> bcache<span class="token punctuation">.</span>head<span class="token punctuation">.</span>next<span class="token punctuation">;</span> b <span class="token operator">!=</span> <span class="token operator">&amp;</span>bcache<span class="token punctuation">.</span>head<span class="token punctuation">;</span> b <span class="token operator">=</span> b<span class="token operator">-></span>next<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"  [%d] dev=%d blk=%d refcnt=%d valid=%d\n"</span><span class="token punctuation">,</span>
+           i<span class="token operator">++</span><span class="token punctuation">,</span> b<span class="token operator">-></span>dev<span class="token punctuation">,</span> b<span class="token operator">-></span>blockno<span class="token punctuation">,</span> b<span class="token operator">-></span>refcnt<span class="token punctuation">,</span> b<span class="token operator">-></span>valid<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>在系统初始化后和执行一些文件操作后分别调用 <code>print_bcache()</code>，观察 LRU 顺序如何随操作变化。</p>
+<p><strong>思考题</strong>：</p>
+<ul>
+<li>初始状态下所有 buf 的 <code>valid=0</code>，为什么此时 LRU 顺序不重要？</li>
+<li>当 30 个 buf 全被使用时，新的 <code>bget()</code> 请求会怎样？（<code>panic("bget: no buffers")</code>）</li>
+<li>如何设计才能避免这种 panic？（提示：参考 sleep 等待可用缓冲区）</li>
+</ul>
+<h3 id="实验-3：追踪一次磁盘读操作的完整路径"><a href="#实验-3：追踪一次磁盘读操作的完整路径" class="headerlink" title="实验 3：追踪一次磁盘读操作的完整路径"></a>实验 3：追踪一次磁盘读操作的完整路径</h3><p>用 <code>printf</code> 追踪 <code>cat README</code> 执行时底层的磁盘访问：</p>
+<p>在以下位置添加 <code>printf</code>：</p>
+<ol>
+<li><code>bread()</code> 进入时：<code>printf("bread: dev=%d blk=%d\n", dev, blockno)</code></li>
+<li><code>bget()</code> 缓存命中时：<code>printf("  → cache HIT\n")</code></li>
+<li><code>bget()</code> 缓存未命中时：<code>printf("  → cache MISS, evicting blk=%d\n", b-&gt;blockno)</code></li>
+<li><code>virtio_disk_rw()</code> 进入时：<code>printf("  → disk %s sector %d\n", write?"WRITE":"READ", b-&gt;blockno * 2)</code></li>
+<li><code>virtio_disk_intr()</code> 中断到来时：<code>printf("  → disk IRQ complete\n")</code></li>
+</ol>
+<p>分析输出，理解：</p>
+<ul>
+<li><code>cat README</code> 触发了多少次磁盘读？</li>
+<li>inode 块和数据块分别对应哪些 <code>blockno</code>？</li>
+<li>重复执行 <code>cat README</code>，哪些块被缓存了？</li>
+</ul>
+<h3 id="实验-4：理解-bpin-bunpin-的必要性"><a href="#实验-4：理解-bpin-bunpin-的必要性" class="headerlink" title="实验 4：理解 bpin() / bunpin() 的必要性"></a>实验 4：理解 <code>bpin()</code> / <code>bunpin()</code> 的必要性</h3><p><strong>背景</strong>：日志层（<code>log.c</code>）的 <code>log_write()</code> 调用 <code>bpin()</code>。</p>
+<p><strong>实验</strong>：临时注释掉 <code>log.c</code> 中 <code>log_write()</code> 内的 <code>bpin()</code> 调用，运行 <code>echo hi &gt; file ; cat file</code>，观察是否出现数据损坏或崩溃。</p>
+<p>在 <code>bget()</code> 的 LRU 淘汰路径加 <code>printf</code>，打印被淘汰的块号。若没有 <code>bpin()</code>，观察日志涉及的块是否被意外淘汰并重新分配给其他块，导致日志数据被覆盖。</p>
+<p><strong>思考题</strong>：</p>
+<ul>
+<li>为什么在 <code>log_write()</code> 中（而不是 <code>bwrite()</code>）调用 <code>bpin()</code>？</li>
+<li><code>bpin()</code> 的实现只增加 <code>refcnt</code>，为什么这就足以防止 LRU 淘汰？</li>
+</ul>
+<hr>
+<h2 id="十、本节小结"><a href="#十、本节小结" class="headerlink" title="十、本节小结"></a>十、本节小结</h2><table>
+<thead>
+<tr>
+<th>概念</th>
+<th>要点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>VirtIO MMIO</td>
+<td>通过读写固定物理地址控制 QEMU 虚拟磁盘；VIRTIO0 = 0x10001000</td>
+</tr>
+<tr>
+<td>三描述符链</td>
+<td>请求头（读/写类型 + 扇区号）+ 数据区 + 状态字节；描述符链通知设备做 I/O</td>
+</tr>
+<tr>
+<td>可用环 / 已用环</td>
+<td>驱动写可用环通知设备；设备写已用环通知驱动完成；<code>__sync_synchronize()</code> 保证顺序</td>
+</tr>
+<tr>
+<td><code>virtio_disk_rw</code></td>
+<td>持 <code>vdisk_lock</code> 睡眠等待中断；<code>b-&gt;disk</code> 是 I/O 进行的标志</td>
+</tr>
+<tr>
+<td><code>struct buf</code></td>
+<td>缓冲区 = 数据（data[1024]）+ 元数据（valid, disk, dev, blockno, refcnt）+ 锁</td>
+</tr>
+<tr>
+<td><code>bcache</code></td>
+<td>30 个固定缓冲区；双向循环链表 LRU；全局 <code>bcache.lock</code>（自旋锁）+ 每 buf 的 sleeplock</td>
+</tr>
+<tr>
+<td><code>bget()</code></td>
+<td>两遍扫描：命中直接返回（refcnt++）；未命中从 LRU 端淘汰（refcnt=0 才可淘汰）</td>
+</tr>
+<tr>
+<td><code>bread()</code></td>
+<td>= bget() + 视情况调用 <code>virtio_disk_rw()</code> 读磁盘</td>
+</tr>
+<tr>
+<td><code>brelse()</code></td>
+<td>释放 buf.lock + 将 buf 移到 LRU 链表 MRU 端</td>
+</tr>
+<tr>
+<td><code>bpin/bunpin</code></td>
+<td>通过增减 refcnt 固定缓冲区，防止日志块被 LRU 淘汰</td>
+</tr>
+<tr>
+<td>两层锁协作</td>
+<td><code>bcache.lock</code> 保护链表结构（短操作）；<code>buf.lock</code>（sleeplock）保护块数据（长操作，可睡眠）</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p><strong>下一节预告</strong>：第 14 节（日志层与崩溃恢复）将在块缓存之上构建事务机制，<code>log_write()</code>、<code>begin_op()</code>、<code>end_op()</code> 将频繁调用本节介绍的 <code>bread()</code>、<code>bwrite()</code>、<code>bpin()</code>，请确保本节内容已充分理解。</p>
+</blockquote>
+
+                
+            </div>
+            <hr/>
+
+            
+
+    <div class="reprint" id="reprint-statement">
+        
+            <div class="reprint__author">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-user">
+                        文章作者:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    <a href="/about" rel="external nofollow noreferrer">404djl</a>
+                </span>
+            </div>
+            <div class="reprint__type">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-link">
+                        文章链接:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    <a href="https://404djl.github.io/2026/03/28/os13-ci-pan-qu-dong-yu-kuai-huan-cun/">https://404djl.github.io/2026/03/28/os13-ci-pan-qu-dong-yu-kuai-huan-cun/</a>
+                </span>
+            </div>
+            <div class="reprint__notice">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-copyright">
+                        版权声明:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    本博客所有文章除特別声明外，均采用
+                    <a href="https://creativecommons.org/licenses/by/4.0/deed.zh" rel="external nofollow noreferrer" target="_blank">CC BY 4.0</a>
+                    许可协议。转载请注明来源
+                    <a href="/about" target="_blank">404djl</a>
+                    !
+                </span>
+            </div>
+        
+    </div>
+
+    <script async defer>
+      document.addEventListener("copy", function (e) {
+        let toastHTML = '<span>复制成功，请遵循本文的转载规则</span><button class="btn-flat toast-action" onclick="navToReprintStatement()" style="font-size: smaller">查看</a>';
+        M.toast({html: toastHTML})
+      });
+
+      function navToReprintStatement() {
+        $("html, body").animate({scrollTop: $("#reprint-statement").offset().top - 80}, 800);
+      }
+    </script>
+
+
+
+            <div class="tag_share" style="display: block;">
+                <div class="post-meta__tag-list" style="display: inline-block;">
+                    
+                        <div class="article-tag">
+                            
+                                <a href="/tags/linux/">
+                                    <span class="chip bg-color">linux</span>
+                                </a>
+                            
+                                <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                                    <span class="chip bg-color">操作系统</span>
+                                </a>
+                            
+                        </div>
+                    
+                </div>
+                <div class="post_share" style="zoom: 80%; width: fit-content; display: inline-block; float: right; margin: -0.15rem 0;">
+                    <link rel="stylesheet" type="text/css" href="/libs/share/css/share.min.css">
+<div id="article-share">
+
+    
+    <div class="social-share" data-sites="twitter,facebook,google,qq,qzone,wechat,weibo,douban,linkedin" data-wechat-qrcode-helper="<p>微信扫一扫即可分享！</p>"></div>
+    <script src="/libs/share/js/social-share.min.js"></script>
+    
+
+    
+
+</div>
+
+                </div>
+            </div>
+            
+                <div id="reward">
+    <a href="#rewardModal" class="reward-link modal-trigger btn-floating btn-medium waves-effect waves-light red">赏</a>
+
+    <!-- Modal Structure -->
+    <div id="rewardModal" class="modal">
+        <div class="modal-content">
+            <a class="close modal-close"><i class="fas fa-times"></i></a>
+            <h4 class="reward-title">你的赏识是我前进的动力</h4>
+            <div class="reward-content">
+                <div class="reward-tabs">
+                    <ul class="tabs row">
+                        <li class="tab col s6 alipay-tab waves-effect waves-light"><a href="#alipay">支付宝</a></li>
+                        <li class="tab col s6 wechat-tab waves-effect waves-light"><a href="#wechat">微 信</a></li>
+                    </ul>
+                    <div id="alipay">
+                        <img src="/medias/reward/alipay.jpg" class="reward-img" alt="支付宝打赏二维码">
+                    </div>
+                    <div id="wechat">
+                        <img src="/medias/reward/wechat.png" class="reward-img" alt="微信打赏二维码">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(function () {
+        $('.tabs').tabs();
+    });
+</script>
+
+            
+        </div>
+    </div>
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+<article id="prenext-posts" class="prev-next articles">
+    <div class="row article-row">
+        
+        <div class="article col s12 m6" data-aos="fade-up">
+            <div class="article-badge left-badge text-color">
+                <i class="fas fa-chevron-left"></i>&nbsp;上一篇</div>
+            <div class="card">
+                <a href="/2026/03/28/os16-wen-jian-miao-shu-fu-yu-xi-tong-diao-yong-ceng/">
+                    <div class="card-image">
+                        
+                        
+                        <img src="/medias/featureimages/6.png" class="responsive-img" alt="OS16-文件描述符与系统调用层">
+                        
+                        <span class="card-title">OS16-文件描述符与系统调用层</span>
+                    </div>
+                </a>
+                <div class="card-content article-content">
+                    <div class="summary block-with-text">
+                        
+                            
+                        
+                    </div>
+                    <div class="publish-info">
+                        <span class="publish-date">
+                            <i class="far fa-clock fa-fw icon-date"></i>2026-03-28
+                        </span>
+                        <span class="publish-author">
+                            
+                            <i class="fas fa-bookmark fa-fw icon-category"></i>
+                            
+                            <a href="/categories/OS/" class="post-category">
+                                    OS
+                                </a>
+                            
+                            
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="card-action article-tags">
+                    
+                    <a href="/tags/linux/">
+                        <span class="chip bg-color">linux</span>
+                    </a>
+                    
+                    <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                        <span class="chip bg-color">操作系统</span>
+                    </a>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+        
+        <div class="article col s12 m6" data-aos="fade-up">
+            <div class="article-badge right-badge text-color">
+                下一篇&nbsp;<i class="fas fa-chevron-right"></i>
+            </div>
+            <div class="card">
+                <a href="/2026/03/28/os12-suo-ji-zhi/">
+                    <div class="card-image">
+                        
+                        
+                        <img src="/medias/featureimages/8.png" class="responsive-img" alt="OS12-锁机制">
+                        
+                        <span class="card-title">OS12-锁机制</span>
+                    </div>
+                </a>
+                <div class="card-content article-content">
+                    <div class="summary block-with-text">
+                        
+                            
+                        
+                    </div>
+                    <div class="publish-info">
+                            <span class="publish-date">
+                                <i class="far fa-clock fa-fw icon-date"></i>2026-03-28
+                            </span>
+                        <span class="publish-author">
+                            
+                            <i class="fas fa-bookmark fa-fw icon-category"></i>
+                            
+                            <a href="/categories/OS/" class="post-category">
+                                    OS
+                                </a>
+                            
+                            
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="card-action article-tags">
+                    
+                    <a href="/tags/linux/">
+                        <span class="chip bg-color">linux</span>
+                    </a>
+                    
+                    <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                        <span class="chip bg-color">操作系统</span>
+                    </a>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+    </div>
+</article>
+
+</div>
+
+
+
+<!-- 代码块功能依赖 -->
+<script type="text/javascript" src="/libs/codeBlock/codeBlockFuction.js"></script>
+
+
+
+<!-- 代码语言 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeLang.js"></script>
+
+
+<!-- 代码块复制 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeCopy.js"></script>
+
+
+<!-- 代码块收缩 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeShrink.js"></script>
+
+
+
+    </div>
+    <div id="toc-aside" class="expanded col l3 hide-on-med-and-down">
+        <div class="toc-widget card" style="background-color: white;">
+            <div class="toc-title"><i class="far fa-list-alt"></i>&nbsp;&nbsp;目录</div>
+            <div id="toc-content"></div>
+        </div>
+    </div>
+</div>
+
+<!-- TOC 悬浮按钮. -->
+
+<div id="floating-toc-btn" class="hide-on-med-and-down">
+    <a class="btn-floating btn-large bg-color">
+        <i class="fas fa-list-ul"></i>
+    </a>
+</div>
+
+
+<script src="/libs/tocbot/tocbot.min.js"></script>
+<script>
+    $(function () {
+        tocbot.init({
+            tocSelector: '#toc-content',
+            contentSelector: '#articleContent',
+            headingsOffset: -($(window).height() * 0.4 - 45),
+            collapseDepth: Number('0'),
+            headingSelector: 'h2, h3, h4'
+        });
+
+        // Set scroll toc fixed.
+        let tocHeight = parseInt($(window).height() * 0.4 - 64);
+        let $tocWidget = $('.toc-widget');
+        $(window).scroll(function () {
+            let scroll = $(window).scrollTop();
+            /* add post toc fixed. */
+            if (scroll > tocHeight) {
+                $tocWidget.addClass('toc-fixed');
+            } else {
+                $tocWidget.removeClass('toc-fixed');
+            }
+        });
+
+        
+        /* 修复文章卡片 div 的宽度. */
+        let fixPostCardWidth = function (srcId, targetId) {
+            let srcDiv = $('#' + srcId);
+            if (srcDiv.length === 0) {
+                return;
+            }
+
+            let w = srcDiv.width();
+            if (w >= 450) {
+                w = w + 21;
+            } else if (w >= 350 && w < 450) {
+                w = w + 18;
+            } else if (w >= 300 && w < 350) {
+                w = w + 16;
+            } else {
+                w = w + 14;
+            }
+            $('#' + targetId).width(w);
+        };
+
+        // 切换TOC目录展开收缩的相关操作.
+        const expandedClass = 'expanded';
+        let $tocAside = $('#toc-aside');
+        let $mainContent = $('#main-content');
+        $('#floating-toc-btn .btn-floating').click(function () {
+            if ($tocAside.hasClass(expandedClass)) {
+                $tocAside.removeClass(expandedClass).hide();
+                $mainContent.removeClass('l9');
+            } else {
+                $tocAside.addClass(expandedClass).show();
+                $mainContent.addClass('l9');
+            }
+            fixPostCardWidth('artDetail', 'prenext-posts');
+        });
+        
+    });
+</script>
+
+    
+
+</main>
+
+
+
+
+    <footer class="page-footer" style="background: linear-gradient(to right, #ff5f6d, #ffc371); color: #fff;">
+    <div class="container" style="text-align: center; padding: 5px;">
+      <p>Copyright © 2024 - 2025 <a href="https://404djl.github.io" style="color: #fff; text-decoration: underline;">404djl</a> | Powered by <a href="https://hexo.io" target="_blank" style="color: #fff; text-decoration: underline;">Hexo</a> | Theme by <a href="https://github.com/blinkfox/hexo-theme-matery" target="_blank" style="color: #fff; text-decoration: underline;">Matery</a></p>
+      <p>
+        <p>📚 站点总字数: <span id="site-word-count"></span> 字</p> |
+        <span id="runtime"></span>
+      </p>
+    </div>
+    <div class="footer-contact" style="background: linear-gradient(to right, #ff5f6d, #ffc371); color: #fff;">
+        <a href="javascript:void(0);" class="tooltipped" target="_blank" data-tooltip="邮箱：3490002122@qq.com" data-position="top" data-delay="50">
+          <i class="fas fa-envelope"></i>
+        </a>
+        <a href="https://github.com/404djl" class="tooltipped" target="_blank" data-tooltip="GitHub：404djl" data-position="top" data-delay="50">
+          <i class="fab fa-github"></i>
+        </a>
+        <a href="javascript:void(0);" class="tooltipped" data-tooltip="微信：djl123456404" data-position="top" data-delay="50">
+          <i class="fab fa-weixin"></i>
+        </a>
+    </div>
+</footer>
+
+
+
+
+<script>
+    const blogStartDate = new Date("2024-12-16T00:00:00Z"); // 修改为你的博客起始日期
+  
+    function updateRuntime() {
+      const now = new Date();
+      const diff = now - blogStartDate;
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((diff / (1000 * 60)) % 60);
+      const seconds = Math.floor((diff / 1000) % 60);
+  
+      const runtimeText = `本站已安全运行 ${days} 天 ${hours} 小时 ${minutes} 分钟 ${seconds} 秒`;
+      document.getElementById("runtime").innerText = runtimeText;
+    }
+  
+    updateRuntime();
+    setInterval(updateRuntime, 1000);
+  </script>
+  
+  <script>
+    fetch('/index.html')
+      .then(response => response.text())
+      .then(html => {
+        const wordCountRegex = /<meta name="wordCount" content="(\d+)">/;
+        const match = wordCountRegex.exec(html);
+        if (match) {
+          document.getElementById('site-word-count').innerText = match[1];
+        }
+      });
+  </script>
+  
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var tooltips = document.querySelectorAll('.tooltipped');
+      M.Tooltip.init(tooltips);
+    });
+  </script>
+  
+
+    <!-- 搜索遮罩框 -->
+<div id="searchModal" class="modal">
+    <div class="modal-content">
+        <div class="search-header">
+            <span class="title"><i class="fas fa-search"></i>&nbsp;&nbsp;搜索</span>
+            <input type="search" id="searchInput" name="s" placeholder="请输入搜索的关键字"
+                   class="search-input">
+        </div>
+        <div id="searchResult"></div>
+    </div>
+</div>
+
+<script type="text/javascript">
+$(function () {
+    var searchFunc = function (path, search_id, content_id) {
+        'use strict';
+        $.ajax({
+            url: path,
+            dataType: "xml",
+            success: function (xmlResponse) {
+                // get the contents from search data
+                var datas = $("entry", xmlResponse).map(function () {
+                    return {
+                        title: $("title", this).text(),
+                        content: $("content", this).text(),
+                        url: $("url", this).text()
+                    };
+                }).get();
+                var $input = document.getElementById(search_id);
+                var $resultContent = document.getElementById(content_id);
+                $input.addEventListener('input', function () {
+                    var str = '<ul class=\"search-result-list\">';
+                    var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+                    $resultContent.innerHTML = "";
+                    if (this.value.trim().length <= 0) {
+                        return;
+                    }
+                    // perform local searching
+                    datas.forEach(function (data) {
+                        var isMatch = true;
+                        var data_title = data.title.trim().toLowerCase();
+                        var data_content = data.content.trim().replace(/<[^>]+>/g, "").toLowerCase();
+                        var data_url = data.url;
+                        data_url = data_url.indexOf('/') === 0 ? data.url : '/' + data_url;
+                        var index_title = -1;
+                        var index_content = -1;
+                        var first_occur = -1;
+                        // only match artiles with not empty titles and contents
+                        if (data_title !== '' && data_content !== '') {
+                            keywords.forEach(function (keyword, i) {
+                                index_title = data_title.indexOf(keyword);
+                                index_content = data_content.indexOf(keyword);
+                                if (index_title < 0 && index_content < 0) {
+                                    isMatch = false;
+                                } else {
+                                    if (index_content < 0) {
+                                        index_content = 0;
+                                    }
+                                    if (i === 0) {
+                                        first_occur = index_content;
+                                    }
+                                }
+                            });
+                        }
+                        // show search results
+                        if (isMatch) {
+                            str += "<li><a href='" + data_url + "' class='search-result-title'>" + data_title + "</a>";
+                            var content = data.content.trim().replace(/<[^>]+>/g, "");
+                            if (first_occur >= 0) {
+                                // cut out 100 characters
+                                var start = first_occur - 20;
+                                var end = first_occur + 80;
+                                if (start < 0) {
+                                    start = 0;
+                                }
+                                if (start === 0) {
+                                    end = 100;
+                                }
+                                if (end > content.length) {
+                                    end = content.length;
+                                }
+                                var match_content = content.substr(start, end);
+                                // highlight all keywords
+                                keywords.forEach(function (keyword) {
+                                    var regS = new RegExp(keyword, "gi");
+                                    match_content = match_content.replace(regS, "<em class=\"search-keyword\">" + keyword + "</em>");
+                                });
+
+                                str += "<p class=\"search-result\">" + match_content + "...</p>"
+                            }
+                            str += "</li>";
+                        }
+                    });
+                    str += "</ul>";
+                    $resultContent.innerHTML = str;
+                });
+            }
+        });
+    };
+
+    searchFunc('/search.xml', 'searchInput', 'searchResult');
+});
+</script>
+
+    <!-- 白天和黑夜主题 -->
+<div class="stars-con">
+    <div id="stars"></div>
+    <div id="stars2"></div>
+    <div id="stars3"></div>  
+</div>
+
+<script>
+    function switchNightMode() {
+        $('<div class="Cuteen_DarkSky"><div class="Cuteen_DarkPlanet"></div></div>').appendTo($('body')),
+        setTimeout(function () {
+            $('body').hasClass('DarkMode') 
+            ? ($('body').removeClass('DarkMode'), localStorage.setItem('isDark', '0'), $('#sum-moon-icon').removeClass("fa-sun").addClass('fa-moon')) 
+            : ($('body').addClass('DarkMode'), localStorage.setItem('isDark', '1'), $('#sum-moon-icon').addClass("fa-sun").removeClass('fa-moon')),
+            
+            setTimeout(function () {
+            $('.Cuteen_DarkSky').fadeOut(1e3, function () {
+                $(this).remove()
+            })
+            }, 2e3)
+        })
+    }
+</script>
+
+    <!-- 回到顶部按钮 -->
+<div id="backTop" class="top-scroll">
+    <a class="btn-floating btn-large waves-effect waves-light" href="#!">
+        <i class="fas fa-arrow-up"></i>
+    </a>
+</div>
+
+
+    <script src="/libs/materialize/materialize.min.js"></script>
+    <script src="/libs/masonry/masonry.pkgd.min.js"></script>
+    <script src="/libs/aos/aos.js"></script>
+    <script src="/libs/scrollprogress/scrollProgress.min.js"></script>
+    <script src="/libs/lightGallery/js/lightgallery-all.min.js"></script>
+    <script src="/js/matery.js"></script>
+
+    
+
+    
+    
+    
+
+    <!-- 雪花特效 -->
+     
+        <script type="text/javascript">
+            // 只在桌面版网页启用特效
+            var windowWidth = $(window).width();
+            if (windowWidth > 768) {
+                document.write('<script type="text/javascript" src="/libs/others/snow.js"><\/script>');
+            }
+        </script>
+    
+
+    <!-- 鼠标星星特效 -->
+    
+
+     
+        <script src="https://ssl.captcha.qq.com/TCaptcha.js"></script>
+        <script src="/libs/others/TencentCaptcha.js"></script>
+        <button id="TencentCaptcha" data-appid="xxxxxxxxxx" data-cbfn="callback" type="button" hidden></button>
+    
+
+    <!-- Baidu Analytics -->
+
+    <!-- Baidu Push -->
+
+<script>
+    (function () {
+        var bp = document.createElement('script');
+        var curProtocol = window.location.protocol.split(':')[0];
+        if (curProtocol === 'https') {
+            bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+        } else {
+            bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+        }
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(bp, s);
+    })();
+</script>
+
+    
+    <script src="/libs/others/clicklove.js" async="async"></script>
+    
+    
+    <script async src="/libs/others/busuanzi.pure.mini.js"></script>
+    
+
+    
+
+    
+
+    <!--腾讯兔小巢-->
+    
+    
+
+    
+
+    
+
+    
+    <script src="/libs/instantpage/instantpage.js" type="module"></script>
+    
+
+</body>
+
+</html>

@@ -1,0 +1,1939 @@
+<!DOCTYPE HTML>
+<html lang="zh-CN">
+
+
+<head>
+    <meta charset="utf-8">
+    <meta name="keywords" content="OS09-Trap机制（用户态）, 404djlのblog">
+    <meta name="description" content="第 9 节：Trap 机制（用户态）
+学习目标：深入理解用户态 trap 的完整处理流程——从 ecall 硬件触发到 sret 硬件返回，掌握 TRAMPOLINE 的精妙设计，理解 sscratch、sepc、scause 等 CSR ">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="renderer" content="webkit|ie-stand|ie-comp">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="referrer" content="no-referrer-when-downgrade">
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+
+
+    <title>OS09-Trap机制（用户态） | 404djlのblog</title>
+    <link rel="icon" type="image/gif" href="/icons8-github.gif">
+    
+    <style>
+        body{
+            background-image: url(https://pic1.imgdb.cn/item/69b9682b1eedde6824938321.jpg);
+            background-repeat:no-repeat;
+            background-size: 100% 100%;
+            background-attachment:fixed;
+        }
+    </style>
+
+
+
+    <!-- bg-cover style     -->
+
+
+
+<link rel="stylesheet" type="text/css" href="/libs/awesome/css/all.min.css">
+<link rel="stylesheet" type="text/css" href="/libs/materialize/materialize.min.css">
+<link rel="stylesheet" type="text/css" href="/libs/aos/aos.css">
+<link rel="stylesheet" type="text/css" href="/libs/animate/animate.min.css">
+<link rel="stylesheet" type="text/css" href="/libs/lightGallery/css/lightgallery.min.css">
+<link rel="stylesheet" type="text/css" href="/css/matery.css">
+<link rel="stylesheet" type="text/css" href="/css/my.css">
+<link rel="stylesheet" type="text/css" href="/css/dark.css" media="none" onload="if(media!='all')media='all'">
+
+
+
+
+    <link rel="stylesheet" href="/libs/tocbot/tocbot.css">
+    <link rel="stylesheet" href="/css/post.css">
+
+
+
+
+    
+        <link rel="stylesheet" type="text/css" href="/css/reward.css">
+    
+
+
+
+    <script src="/libs/jquery/jquery-3.6.0.min.js"></script>
+
+<meta name="generator" content="Hexo 4.2.0">
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+<link rel="alternate" href="/atom.xml" title="404djlのblog" type="application/atom+xml">
+<link rel="stylesheet" href="/css/prism-tomorrow.css" type="text/css">
+<link rel="stylesheet" href="/css/prism-line-numbers.css" type="text/css">
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+</head>
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+
+
+
+<body>
+    <header class="navbar-fixed">
+    <nav id="headNav" class="bg-color nav-transparent">
+        <div id="navContainer" class="nav-wrapper container">
+            <div class="brand-logo">
+                <a href="/" class="waves-effect waves-light">
+                    
+                    <img src="/icons8-github.gif" class="logo-img" alt="LOGO">
+                    
+                    <span class="logo-span">404djlのblog</span>
+                </a>
+            </div>
+            
+
+<a href="#" data-target="mobile-nav" class="sidenav-trigger button-collapse"><i class="fas fa-bars"></i></a>
+<ul class="right nav-menu">
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/" class="waves-effect waves-light">
+      
+      <i class="fas fa-home" style="zoom: 0.6;"></i>
+      
+      <span>首页</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/tags" class="waves-effect waves-light">
+      
+      <i class="fas fa-tags" style="zoom: 0.6;"></i>
+      
+      <span>标签</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/categories" class="waves-effect waves-light">
+      
+      <i class="fas fa-bookmark" style="zoom: 0.6;"></i>
+      
+      <span>分类</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/archives" class="waves-effect waves-light">
+      
+      <i class="fas fa-archive" style="zoom: 0.6;"></i>
+      
+      <span>归档</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/about" class="waves-effect waves-light">
+      
+      <i class="fas fa-user-circle" style="zoom: 0.6;"></i>
+      
+      <span>关于</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/contact" class="waves-effect waves-light">
+      
+      <i class="fas fa-comments" style="zoom: 0.6;"></i>
+      
+      <span>留言板</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/friends" class="waves-effect waves-light">
+      
+      <i class="fas fa-address-book" style="zoom: 0.6;"></i>
+      
+      <span>友情链接</span>
+    </a>
+    
+  </li>
+  
+  <li>
+    <a href="#searchModal" class="modal-trigger waves-effect waves-light">
+      <i id="searchIcon" class="fas fa-search" title="搜索" style="zoom: 0.85;"></i>
+    </a>
+  </li>
+  <li>
+    <a href="javascript:;" class="waves-effect waves-light" onclick="switchNightMode()" title="深色/浅色模式" >
+      <i id="sum-moon-icon" class="fas fa-sun" style="zoom: 0.85;"></i>
+    </a>
+  </li>
+</ul>
+
+
+<div id="mobile-nav" class="side-nav sidenav">
+
+    <div class="mobile-head bg-color">
+        
+        <img src="/icons8-github.gif" class="logo-img circle responsive-img">
+        
+        <div class="logo-name">404djlのblog</div>
+        <div class="logo-desc">
+            
+            Never really desperate, only the lost of the soul
+            
+        </div>
+    </div>
+
+    <ul class="menu-list mobile-menu-list">
+        
+        <li class="m-nav-item">
+	  
+		<a href="/" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-home"></i>
+			
+			首页
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/tags" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-tags"></i>
+			
+			标签
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/categories" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-bookmark"></i>
+			
+			分类
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/archives" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-archive"></i>
+			
+			归档
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/about" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-user-circle"></i>
+			
+			关于
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/contact" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-comments"></i>
+			
+			留言板
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/friends" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-address-book"></i>
+			
+			友情链接
+		</a>
+          
+        </li>
+        
+        
+        <li><div class="divider"></div></li>
+        <li>
+            <a href="https://github.com/404djl/404djl.github.io" class="waves-effect waves-light" target="_blank">
+                <i class="fab fa-github-square fa-fw"></i>Fork Me
+            </a>
+        </li>
+        
+    </ul>
+</div>
+
+
+        </div>
+
+        
+            <style>
+    .nav-transparent .github-corner {
+        display: none !important;
+    }
+
+    .github-corner {
+        position: absolute;
+        z-index: 10;
+        top: 0;
+        right: 0;
+        border: 0;
+        transform: scale(1.1);
+    }
+
+    .github-corner svg {
+        color: #0f9d58;
+        fill: #fff;
+        height: 64px;
+        width: 64px;
+    }
+
+    .github-corner:hover .octo-arm {
+        animation: a 0.56s ease-in-out;
+    }
+
+    .github-corner .octo-arm {
+        animation: none;
+    }
+
+    @keyframes a {
+        0%,
+        to {
+            transform: rotate(0);
+        }
+        20%,
+        60% {
+            transform: rotate(-25deg);
+        }
+        40%,
+        80% {
+            transform: rotate(10deg);
+        }
+    }
+</style>
+
+<a href="https://github.com/404djl/404djl.github.io" class="github-corner tooltipped hide-on-med-and-down" target="_blank"
+   data-tooltip="Fork Me" data-position="left" data-delay="50">
+    <svg viewBox="0 0 250 250" aria-hidden="true">
+        <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+        <path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2"
+              fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+        <path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z"
+              fill="currentColor" class="octo-body"></path>
+    </svg>
+</a>
+        
+    </nav>
+
+</header>
+
+    
+
+
+
+<div class="bg-cover pd-header post-cover" style="background-image: url('/medias/featureimages/23.png')">
+    <div class="container" style="right: 0px;left: 0px;">
+        <div class="row">
+            <div class="col s12 m12 l12">
+                <div class="brand">
+                    <h1 class="description center-align post-title">OS09-Trap机制（用户态）</h1>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+<main class="post-container content">
+
+    
+    <div class="row">
+    <div id="main-content" class="col s12 m12 l9">
+        <!-- 文章内容详情 -->
+<div id="artDetail">
+    <div class="card">
+        <div class="card-content article-info">
+            <div class="row tag-cate">
+                <div class="col s7">
+                    
+                    <div class="article-tag">
+                        
+                            <a href="/tags/linux/">
+                                <span class="chip bg-color">linux</span>
+                            </a>
+                        
+                            <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                                <span class="chip bg-color">操作系统</span>
+                            </a>
+                        
+                    </div>
+                    
+                </div>
+                <div class="col s5 right-align">
+                    
+                    <div class="post-cate">
+                        <i class="fas fa-bookmark fa-fw icon-category"></i>
+                        
+                            <a href="/categories/OS/" class="post-category">
+                                OS
+                            </a>
+                        
+                    </div>
+                    
+                </div>
+            </div>
+
+            <div class="post-info">
+                
+                <div class="post-date info-break-policy">
+                    <i class="far fa-calendar-minus fa-fw"></i>发布日期:&nbsp;&nbsp;
+                    2026-02-28
+                </div>
+                
+
+                
+                <div class="post-date info-break-policy">
+                    <i class="far fa-calendar-check fa-fw"></i>更新日期:&nbsp;&nbsp;
+                    2026-03-28
+                </div>
+                
+
+                
+                <div class="info-break-policy">
+                    <i class="far fa-file-word fa-fw"></i>文章字数:&nbsp;&nbsp;
+                    7.8k
+                </div>
+                
+
+                
+                <div class="info-break-policy">
+                    <i class="far fa-clock fa-fw"></i>阅读时长:&nbsp;&nbsp;
+                    32 分
+                </div>
+                
+
+                
+            </div>
+        </div>
+        <hr class="clearfix">
+
+        
+
+        
+
+        <div class="card-content article-card-content">
+            <div id="articleContent">
+                <h1 id="第-9-节：Trap-机制（用户态）"><a href="#第-9-节：Trap-机制（用户态）" class="headerlink" title="第 9 节：Trap 机制（用户态）"></a>第 9 节：Trap 机制（用户态）</h1><blockquote>
+<p><strong>学习目标</strong>：深入理解用户态 trap 的完整处理流程——从 <code>ecall</code> 硬件触发到 <code>sret</code> 硬件返回，掌握 TRAMPOLINE 的精妙设计，理解 <code>sscratch</code>、<code>sepc</code>、<code>scause</code> 等 CSR 寄存器的精确语义。</p>
+<p><strong>预计用时</strong>：3-4 小时</p>
+<p><strong>前置要求</strong>：完成第 2 节（RISC-V CSR 基础）、第 5 节（页表与地址空间）、第 8 节（进程调度）</p>
+</blockquote>
+<hr>
+<h2 id="一、理论：Trap-是什么？"><a href="#一、理论：Trap-是什么？" class="headerlink" title="一、理论：Trap 是什么？"></a>一、理论：Trap 是什么？</h2><h3 id="1-1-Trap-的三种来源"><a href="#1-1-Trap-的三种来源" class="headerlink" title="1.1 Trap 的三种来源"></a>1.1 Trap 的三种来源</h3><p>“Trap”是 RISC-V 中所有打断正常执行流、转入特权级处理的事件的统称：</p>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>触发方式</th>
+<th>RISC-V 术语</th>
+<th><code>scause</code> 最高位</th>
+<th>典型例子</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>系统调用</strong></td>
+<td>用户态执行 <code>ecall</code> 指令</td>
+<td>Exception</td>
+<td>0（异常）</td>
+<td><code>read()</code>, <code>write()</code>, <code>fork()</code></td>
+</tr>
+<tr>
+<td><strong>异常</strong></td>
+<td>CPU 执行非法操作</td>
+<td>Exception</td>
+<td>0（异常）</td>
+<td>非法地址访问、非法指令、页错误</td>
+</tr>
+<tr>
+<td><strong>中断</strong></td>
+<td>外部设备或计时器触发</td>
+<td>Interrupt</td>
+<td>1（中断）</td>
+<td>时钟、UART 输入、磁盘完成</td>
+</tr>
+</tbody></table>
+<p><code>scause</code> 寄存器的最高位（第 63 位）区分中断（1）和异常（0），低位编码具体原因：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">scause 常见值（xv6 中）：
+
+  中断（最高位<span class="token operator">=</span>1）：
+    0x8000000000000001  软件中断（S-mode，来自 timervec）
+    0x8000000000000005  时钟中断（S-mode，理论上，xv6 用软件中断转发）
+    0x8000000000000009  外部中断（S-mode，PLIC 发出）
+
+  异常（最高位<span class="token operator">=</span>0）：
+    2   非法指令
+    5   Load 地址对齐错误
+    7   Store 地址对齐错误
+    8   用户态 ecall（系统调用！）
+    12  Instruction Page Fault（取指页错误）
+    13  Load Page Fault（读访问页错误）
+    15  Store Page Fault（写访问页错误）
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="1-2-用户态-Trap-的难题"><a href="#1-2-用户态-Trap-的难题" class="headerlink" title="1.2 用户态 Trap 的难题"></a>1.2 用户态 Trap 的难题</h3><p>用户态发生 trap 时，CPU 需要从<strong>用户态切换到内核态</strong>，这看起来很简单，但有一个致命难题：</p>
+<blockquote>
+<p><strong>需要切换页表</strong>（用户页表 → 内核页表），但切换页表的代码本身必须在两张表中都能访问！</p>
+</blockquote>
+<p>推导出来的约束：</p>
+<ul>
+<li>trap 入口代码在用户页表中映射</li>
+<li>trap 入口代码在内核页表中也必须映射到<strong>相同的虚拟地址</strong></li>
+<li>否则，切换 <code>satp</code> 那条指令执行完，PC+4 在新页表中找不到映射，立刻 Page Fault</li>
+</ul>
+<p><strong>xv6 的解决方案——TRAMPOLINE 页</strong>：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">用户页表：
+  <span class="token punctuation">[</span>代码<span class="token punctuation">]</span><span class="token punctuation">[</span>数据<span class="token punctuation">]</span><span class="token punctuation">[</span>栈<span class="token punctuation">]</span><span class="token punctuation">[</span>堆<span class="token punctuation">]</span>     <span class="token punctuation">..</span>.（低地址区域）
+  TRAPFRAME: TRAMPOLINE-PGSIZE  ← 每进程私有，存放 trapframe
+  TRAMPOLINE: MAXVA-PGSIZE      ← 映射到 trampoline.S 的物理页
+
+内核页表：
+  <span class="token punctuation">[</span>内核代码<span class="token punctuation">]</span><span class="token punctuation">[</span>内核数据<span class="token punctuation">]</span><span class="token punctuation">[</span>直接映射区域<span class="token punctuation">]</span><span class="token punctuation">..</span>.
+  内核栈（KSTACK）
+  TRAMPOLINE: MAXVA-PGSIZE      ← 同一物理页，同一虚拟地址！
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><code>TRAMPOLINE = MAXVA - PGSIZE = 0x3FFFFF000</code>（Sv39 最大虚拟地址减一页），在<strong>用户页表和内核页表中映射到完全相同的虚拟地址</strong>。切换 <code>satp</code> 前后，<code>TRAMPOLINE</code> 范围内的代码仍然可以执行——这就是”弹簧板”（trampoline）的含义。</p>
+<h3 id="1-3-关键-CSR-寄存器回顾"><a href="#1-3-关键-CSR-寄存器回顾" class="headerlink" title="1.3 关键 CSR 寄存器回顾"></a>1.3 关键 CSR 寄存器回顾</h3><p>trap 处理要用到 5 个 S-mode CSR，理解它们是读懂源码的基础：</p>
+<table>
+<thead>
+<tr>
+<th>CSR</th>
+<th>读写</th>
+<th>内容</th>
+<th>trap 中的作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>stvec</code></td>
+<td>读写</td>
+<td>trap 处理程序的入口地址</td>
+<td>触发 trap 时 CPU 跳到这里</td>
+</tr>
+<tr>
+<td><code>sepc</code></td>
+<td>读写</td>
+<td>导致 trap 的指令地址</td>
+<td>保存”被打断的位置”，<code>sret</code> 返回这里</td>
+</tr>
+<tr>
+<td><code>scause</code></td>
+<td>只读</td>
+<td>trap 类型编码</td>
+<td><code>usertrap()</code> 用它区分 syscall/中断/异常</td>
+</tr>
+<tr>
+<td><code>sscratch</code></td>
+<td>读写</td>
+<td>暂存任意值（无特定语义）</td>
+<td>xv6 用来存 trapframe 地址（详见下文）</td>
+</tr>
+<tr>
+<td><code>sstatus</code></td>
+<td>读写</td>
+<td>状态寄存器（SPP, SPIE, SIE 等位）</td>
+<td>SPP=0 表示从用户态来；sret 后的中断使能由 SPIE 决定</td>
+</tr>
+</tbody></table>
+<p><strong>硬件在 trap 时自动做的事</strong>（不需要软件干预）：</p>
+<ol>
+<li>将当前 PC 存入 <code>sepc</code>（对于 <code>ecall</code>，<code>sepc</code> = <code>ecall</code> 指令的地址）</li>
+<li>将 trap 类型编码存入 <code>scause</code></li>
+<li>将 <code>sstatus.SIE</code>（当前中断使能位）复制到 <code>sstatus.SPIE</code>，然后清除 <code>SIE</code>（关闭中断）</li>
+<li>将当前特权级存入 <code>sstatus.SPP</code>（0=User, 1=Supervisor）</li>
+<li>切换特权级到 Supervisor</li>
+<li>跳转到 <code>stvec</code>（不修改页表！）</li>
+</ol>
+<p><strong>硬件 <code>sret</code> 时自动做的事</strong>：</p>
+<ol>
+<li>将 <code>sstatus.SPIE</code> 复制回 <code>sstatus.SIE</code>（恢复中断使能状态）</li>
+<li><code>sstatus.SPP</code> 决定返回特权级（0=User）</li>
+<li>PC = <code>sepc</code></li>
+<li>切换到 <code>sstatus.SPP</code> 指定的特权级</li>
+<li>不修改页表（需要软件在 <code>sret</code> 之前切换）</li>
+</ol>
+<hr>
+<h2 id="二、源码精读：kernel-trampoline-S（141-行）"><a href="#二、源码精读：kernel-trampoline-S（141-行）" class="headerlink" title="二、源码精读：kernel/trampoline.S（141 行）"></a>二、源码精读：<code>kernel/trampoline.S</code>（141 行）</h2><p><code>trampoline.S</code> 是两段纯汇编代码：<code>uservec</code>（进内核）和 <code>userret</code>（出内核）。它运行在最特殊的环境下——切换页表的前后。</p>
+<h3 id="2-1-uservec：用户态-→-内核态"><a href="#2-1-uservec：用户态-→-内核态" class="headerlink" title="2.1 uservec：用户态 → 内核态"></a>2.1 <code>uservec</code>：用户态 → 内核态</h3><p>以下是完整的 <code>uservec</code> 代码，加上每行的详细注释：</p>
+<pre class="line-numbers language-asm"><code class="language-asm">.globl uservec
+uservec:
+        # ── 此时的上下文 ──
+        # 特权级：Supervisor（硬件 trap 时已切换）
+        # 页表：用户页表（satp 尚未切换！）
+        # PC：TRAMPOLINE 虚拟地址（用户/内核页表都有映射）
+        # 所有寄存器：仍是用户态的值（没有任何寄存器可以"安全"使用）
+        # sscratch：存放 TRAPFRAME 地址（由 usertrapret() 提前设置）
+
+        # ① 原子交换 a0 和 sscratch
+        # 之后：a0 = TRAPFRAME 地址，sscratch = 用户的 a0 原始值
+        csrrw a0, sscratch, a0
+
+        # ② 保存 31 个用户寄存器到 trapframe（a0 是第 32 个，后面单独处理）
+        sd ra,   40(a0)   # trapframe 偏移 40   （注意：偏移 0-32 已被内核字段占用）
+        sd sp,   48(a0)
+        sd gp,   56(a0)
+        sd tp,   64(a0)
+        sd t0,   72(a0)
+        sd t1,   80(a0)
+        sd t2,   88(a0)
+        sd s0,   96(a0)
+        sd s1,  104(a0)
+        # 跳过 a0（112），先保存 a1-a7
+        sd a1,  120(a0)
+        sd a2,  128(a0)
+        sd a3,  136(a0)
+        sd a4,  144(a0)
+        sd a5,  152(a0)
+        sd a6,  160(a0)
+        sd a7,  168(a0)
+        sd s2,  176(a0)
+        sd s3,  184(a0)
+        sd s4,  192(a0)
+        sd s5,  200(a0)
+        sd s6,  208(a0)
+        sd s7,  216(a0)
+        sd s8,  224(a0)
+        sd s9,  232(a0)
+        sd s10, 240(a0)
+        sd s11, 248(a0)
+        sd t3,  256(a0)
+        sd t4,  264(a0)
+        sd t5,  272(a0)
+        sd t6,  280(a0)
+
+        # ③ 保存用户的 a0（目前在 sscratch 中）
+        csrr t0, sscratch
+        sd t0, 112(a0)    # trapframe->a0 = 用户的 a0 原始值
+
+        # ④ 从 trapframe 加载内核栈指针
+        ld sp, 8(a0)      # sp = p->trapframe->kernel_sp（内核栈顶）
+
+        # ⑤ 从 trapframe 加载 hartid 到 tp（cpuid() 用 tp 寄存器）
+        ld tp, 32(a0)     # tp = p->trapframe->kernel_hartid
+
+        # ⑥ 从 trapframe 加载 usertrap() 函数地址到 t0
+        ld t0, 16(a0)     # t0 = p->trapframe->kernel_trap（= &usertrap）
+
+        # ⑦ 从 trapframe 加载内核页表，切换 satp
+        ld t1, 0(a0)      # t1 = p->trapframe->kernel_satp（内核页表的 satp 值）
+        csrw satp, t1     # 切换到内核页表！
+        sfence.vma zero, zero  # TLB 刷新（让新页表立即生效）
+
+        # ── 此时 satp 已切换到内核页表 ──
+        # a0 仍指向 TRAPFRAME 地址，但这个地址在内核页表中没有映射！
+        # （TRAPFRAME 只映射在用户页表中）
+        # 所以 a0 失效了——但我们不再需要它了（内核信息已经加载完毕）
+
+        # ⑧ 跳转到 usertrap()
+        jr t0              # PC = t0 = &usertrap
+                           # 注意：这里用 jr（jump register），
+                           # 不用 call，因为无需设置 ra（usertrap 不返回到这里）
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong><code>csrrw a0, sscratch, a0</code> 的精妙之处</strong>：</p>
+<p>这是整个 trap 机制中最精妙的一条指令。<code>csrrw</code> 是”CSR Read-Write”：原子地将 <code>a0</code> 写入 <code>sscratch</code>，同时将 <code>sscratch</code> 的旧值读入 <code>a0</code>——这是一次<strong>原子交换</strong>。</p>
+<pre class="line-numbers language-bash"><code class="language-bash">执行前：a0 <span class="token operator">=</span> 用户代码中断时的 a0 值（未知）
+        sscratch <span class="token operator">=</span> TRAPFRAME 地址（由 usertrapret<span class="token punctuation">(</span><span class="token punctuation">)</span> 预先设置）
+
+执行 csrrw a0, sscratch, a0：原子地交换
+
+执行后：a0 <span class="token operator">=</span> TRAPFRAME 地址 ← 可以用来保存寄存器了！
+        sscratch <span class="token operator">=</span> 用户的 a0 原始值 ← 保存在这里，稍后写入 trapframe
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>为什么用 <code>sscratch</code> 而不是直接用某个寄存器？因为进入 <code>uservec</code> 时，<strong>所有 32 个通用寄存器都有用户态的值</strong>，不能直接使用任何一个来存放内核指针——否则就会破坏用户寄存器的值。<code>sscratch</code> 是唯一可以在不修改任何通用寄存器的前提下”交换”出一个值的地方。</p>
+<p><strong><code>sfence.vma zero, zero</code> 的必要性</strong>：</p>
+<p>切换 <code>satp</code> 后，TLB（转址旁路缓冲区）中缓存的旧翻译结果不能立即失效——CPU 可能还在用就的翻译访问内存。<code>sfence.vma</code> 刷新 TLB，确保后续所有内存访问都使用新页表翻译。少了这条指令，切换后可能读到旧页表表项对应的错误物理地址（数据损坏或安全漏洞）。</p>
+<h3 id="2-2-uservec-进入前的状态准备（usertrapret-做的事）"><a href="#2-2-uservec-进入前的状态准备（usertrapret-做的事）" class="headerlink" title="2.2 uservec 进入前的状态准备（usertrapret() 做的事）"></a>2.2 <code>uservec</code> 进入前的状态准备（<code>usertrapret()</code> 做的事）</h3><p><code>uservec</code> 在进入时假设 <code>sscratch = TRAPFRAME</code>，还假设 <code>trapframe</code> 中的 <code>kernel_sp</code>、<code>kernel_satp</code>、<code>kernel_trap</code>、<code>kernel_hartid</code> 字段都是有效的。这些值由谁来设置？答案是**上一次从内核返回用户态时的 <code>usertrapret()</code>**。</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// kernel/trap.c</span>
+<span class="token keyword">void</span>
+<span class="token function">usertrapret</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">struct</span> proc <span class="token operator">*</span>p <span class="token operator">=</span> <span class="token function">myproc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ① 关闭中断：即将修改 stvec，不能在此时响应中断</span>
+  <span class="token function">intr_off</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ② 设置 stvec 指向 trampoline.S 的 uservec（用户态 trap 入口）</span>
+  <span class="token comment" spellcheck="true">// （此前 stvec 指向 kernelvec，因为在内核中）</span>
+  <span class="token function">w_stvec</span><span class="token punctuation">(</span>TRAMPOLINE <span class="token operator">+</span> <span class="token punctuation">(</span>uservec <span class="token operator">-</span> trampoline<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment" spellcheck="true">//      └─ uservec 在 TRAMPOLINE 页内的偏移 ─┘</span>
+  <span class="token comment" spellcheck="true">//         用相对偏移确保即使内核代码在不同地址加载也正确</span>
+
+  <span class="token comment" spellcheck="true">// ③ 将内核信息预先写入 trapframe，供下次 uservec 使用</span>
+  p<span class="token operator">-></span>trapframe<span class="token operator">-></span>kernel_satp <span class="token operator">=</span> <span class="token function">r_satp</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>           <span class="token comment" spellcheck="true">// 内核页表（当前 satp）</span>
+  p<span class="token operator">-></span>trapframe<span class="token operator">-></span>kernel_sp <span class="token operator">=</span> p<span class="token operator">-></span>kstack <span class="token operator">+</span> PGSIZE<span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 内核栈顶（kstack 页的末尾）</span>
+  p<span class="token operator">-></span>trapframe<span class="token operator">-></span>kernel_trap <span class="token operator">=</span> <span class="token punctuation">(</span>uint64<span class="token punctuation">)</span>usertrap<span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// usertrap() 函数地址</span>
+  p<span class="token operator">-></span>trapframe<span class="token operator">-></span>kernel_hartid <span class="token operator">=</span> <span class="token function">r_tp</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>          <span class="token comment" spellcheck="true">// 当前 CPU 的 hartid</span>
+
+  <span class="token comment" spellcheck="true">// ④ 设置 sstatus：SPP=0（sret 返回用户态），SPIE=1（返回后开启中断）</span>
+  <span class="token keyword">unsigned</span> <span class="token keyword">long</span> x <span class="token operator">=</span> <span class="token function">r_sstatus</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  x <span class="token operator">&amp;</span><span class="token operator">=</span> <span class="token operator">~</span>SSTATUS_SPP<span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 清除 SPP（= 0 表示从用户态来，sret 返回用户态）</span>
+  x <span class="token operator">|</span><span class="token operator">=</span> SSTATUS_SPIE<span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 设置 SPIE（sret 后 SIE = SPIE = 1，开启中断）</span>
+  <span class="token function">w_sstatus</span><span class="token punctuation">(</span>x<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ⑤ 设置 sepc = trapframe->epc（用户程序恢复时的 PC）</span>
+  <span class="token function">w_sepc</span><span class="token punctuation">(</span>p<span class="token operator">-></span>trapframe<span class="token operator">-></span>epc<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ⑥ 准备调用 userret（trampoline.S 的第二段汇编）</span>
+  uint64 satp <span class="token operator">=</span> <span class="token function">MAKE_SATP</span><span class="token punctuation">(</span>p<span class="token operator">-></span>pagetable<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 用户页表的 satp 值</span>
+
+  <span class="token comment" spellcheck="true">// ⑦ 跳转到 trampoline.S 的 userret</span>
+  <span class="token comment" spellcheck="true">// 传入两个参数：a0 = TRAPFRAME 地址，a1 = 用户页表 satp</span>
+  uint64 fn <span class="token operator">=</span> TRAMPOLINE <span class="token operator">+</span> <span class="token punctuation">(</span>userret <span class="token operator">-</span> trampoline<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token keyword">void</span> <span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token punctuation">(</span>uint64<span class="token punctuation">,</span> uint64<span class="token punctuation">)</span><span class="token punctuation">)</span>fn<span class="token punctuation">)</span><span class="token punctuation">(</span>TRAPFRAME<span class="token punctuation">,</span> satp<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment" spellcheck="true">// 注意：userret 不会返回（sret 后进入用户态）</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong><code>TRAMPOLINE + (uservec - trampoline)</code> 的计算</strong>：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">trampoline（C 符号）：trampoline.S 代码在内核 .text 中的虚拟地址（也是物理地址，因为直接映射）
+uservec（C 符号）：uservec 标签在 .text 中的虚拟地址
+uservec - trampoline：uservec 在 trampoline 页内的字节偏移（<span class="token operator">=</span> 0，因为 uservec 就是第一个符号）
+TRAMPOLINE + 偏移：在 TRAMPOLINE 虚拟页中的地址
+
+这样，无论内核加载到什么物理地址，都能正确计算 TRAMPOLINE 页中 uservec 的虚拟地址。
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="2-3-userret：内核态-→-用户态"><a href="#2-3-userret：内核态-→-用户态" class="headerlink" title="2.3 userret：内核态 → 用户态"></a>2.3 <code>userret</code>：内核态 → 用户态</h3><pre class="line-numbers language-asm"><code class="language-asm">.globl userret
+userret:
+        # ── 此时的上下文 ──
+        # 特权级：Supervisor
+        # 页表：内核页表（satp 还没有切换）
+        # 参数：a0 = TRAPFRAME 地址，a1 = 用户页表 satp 值
+
+        # ① 切换到用户页表
+        csrw satp, a1
+        sfence.vma zero, zero
+        # ── satp 已切换，现在使用用户页表 ──
+        # TRAMPOLINE 在用户页表中仍然映射到相同虚拟地址，代码继续执行
+
+        # ② 预先将用户的 a0 存入 sscratch（稍后 csrrw 取回）
+        ld t0, 112(a0)    # t0 = trapframe->a0（用户的 a0 原始值）
+        csrw sscratch, t0 # sscratch = 用户的 a0（为最后一步的 csrrw 准备）
+
+        # ③ 恢复 31 个用户寄存器（除 a0 外，a0 在最后一步恢复）
+        ld ra,   40(a0)
+        ld sp,   48(a0)
+        ld gp,   56(a0)
+        ld tp,   64(a0)
+        ld t0,   72(a0)
+        ld t1,   80(a0)
+        ld t2,   88(a0)
+        ld s0,   96(a0)
+        ld s1,  104(a0)
+        # 跳过 a0（112）
+        ld a1,  120(a0)
+        ld a2,  128(a0)
+        ld a3,  136(a0)
+        ld a4,  144(a0)
+        ld a5,  152(a0)
+        ld a6,  160(a0)
+        ld a7,  168(a0)
+        ld s2,  176(a0)
+        ld s3,  184(a0)
+        ld s4,  192(a0)
+        ld s5,  200(a0)
+        ld s6,  208(a0)
+        ld s7,  216(a0)
+        ld s8,  224(a0)
+        ld s9,  232(a0)
+        ld s10, 240(a0)
+        ld s11, 248(a0)
+        ld t3,  256(a0)
+        ld t4,  264(a0)
+        ld t5,  272(a0)
+        ld t6,  280(a0)
+
+        # ④ 恢复 a0，同时将 TRAPFRAME 地址存回 sscratch（下次 uservec 用）
+        csrrw a0, sscratch, a0
+        # 执行后：a0 = 用户的 a0 原始值（从 sscratch 取出）
+        #         sscratch = TRAPFRAME 地址（a0 的旧值，下次 uservec 需要）
+
+        # ⑤ 返回用户态
+        sret
+        # 硬件执行：
+        # PC = sepc（usertrapret 设置的用户 PC）
+        # 特权级 = sstatus.SPP（被清为 0 = User）
+        # sstatus.SIE = sstatus.SPIE（= 1，开启中断）
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="2-4-uservec-userret-的对称性"><a href="#2-4-uservec-userret-的对称性" class="headerlink" title="2.4 uservec / userret 的对称性"></a>2.4 <code>uservec</code> / <code>userret</code> 的对称性</h3><pre class="line-numbers language-bash"><code class="language-bash">                  csrrw a0, sscratch, a0        csrrw a0, sscratch, a0
+进入 uservec：                                            ↑
+  sscratch <span class="token operator">=</span> TRAPFRAME      uservec               userret     sscratch <span class="token operator">=</span> TRAPFRAME
+  a0 <span class="token operator">=</span> 用户 a0                 │                        │          a0 <span class="token operator">=</span> 用户 a0
+                               │ 保存 31 寄存器          │ 恢复 31 寄存器
+                               │ 读取 sscratch→a0<span class="token punctuation">[</span>112<span class="token punctuation">]</span>   │ 写入 a0<span class="token punctuation">[</span>112<span class="token punctuation">]</span>→sscratch
+                               │ 加载内核栈/页表/入口     │ 切换用户页表
+                               │ 切换内核页表             │ sret
+                               ↓                        │
+                          usertrap<span class="token punctuation">(</span><span class="token punctuation">)</span>            usertrapret<span class="token punctuation">(</span><span class="token punctuation">)</span> → 调用 userret
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>进入（<code>uservec</code>）和返回（<code>userret</code>）之间，<code>sscratch</code> 的值形成一个”旋转”：</p>
+<ul>
+<li><code>uservec</code> 开始：<code>sscratch</code> = TRAPFRAME，<code>a0</code> = 用户 a0</li>
+<li><code>uservec</code> 结束：<code>sscratch</code> = 用户 a0（通过 csrrw 交换后，csrr t0, sscratch 读出）</li>
+<li><code>userret</code> 开始：<code>sscratch</code> = 用户 a0（通过 csrw sscratch, t0 写入）</li>
+<li><code>userret</code> 结束：<code>sscratch</code> = TRAPFRAME（通过最后的 csrrw 写回）</li>
+</ul>
+<p>下次 <code>uservec</code> 再次执行时，<code>sscratch</code> 又是 TRAPFRAME——循环结构。</p>
+<hr>
+<h2 id="三、源码精读：kernel-trap-c-用户态处理部分"><a href="#三、源码精读：kernel-trap-c-用户态处理部分" class="headerlink" title="三、源码精读：kernel/trap.c 用户态处理部分"></a>三、源码精读：<code>kernel/trap.c</code> 用户态处理部分</h2><h3 id="3-1-usertrap-——判断-trap-类型并分发"><a href="#3-1-usertrap-——判断-trap-类型并分发" class="headerlink" title="3.1 usertrap()——判断 trap 类型并分发"></a>3.1 <code>usertrap()</code>——判断 trap 类型并分发</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span>
+<span class="token function">usertrap</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">int</span> which_dev <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ① 安全检查：必须来自用户态（SPP 应该等于 0）</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token function">r_sstatus</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&amp;</span> SSTATUS_SPP<span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token number">0</span><span class="token punctuation">)</span>
+    <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"usertrap: not from user mode"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ② 立即重定向 stvec 到 kernelvec</span>
+  <span class="token comment" spellcheck="true">// 现在我们在内核中运行，如果再发生 trap 应该去 kerneltrap()，不是 uservec</span>
+  <span class="token function">w_stvec</span><span class="token punctuation">(</span><span class="token punctuation">(</span>uint64<span class="token punctuation">)</span>kernelvec<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">struct</span> proc <span class="token operator">*</span>p <span class="token operator">=</span> <span class="token function">myproc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment" spellcheck="true">// ③ 保存用户程序计数器（sepc 是"被打断的指令"地址）</span>
+  <span class="token comment" spellcheck="true">// 必须在开中断之前保存！因为后续中断会覆盖 sepc</span>
+  p<span class="token operator">-></span>trapframe<span class="token operator">-></span>epc <span class="token operator">=</span> <span class="token function">r_sepc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">r_scause</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">8</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// ④-A 系统调用（ecall 的 scause = 8）</span>
+    
+    <span class="token keyword">if</span><span class="token punctuation">(</span>p<span class="token operator">-></span>killed<span class="token punctuation">)</span>
+      <span class="token function">exit</span><span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token comment" spellcheck="true">// ecall 的 sepc 指向 ecall 指令本身</span>
+    <span class="token comment" spellcheck="true">// 系统调用返回后应该执行 ecall 的下一条指令</span>
+    p<span class="token operator">-></span>trapframe<span class="token operator">-></span>epc <span class="token operator">+</span><span class="token operator">=</span> <span class="token number">4</span><span class="token punctuation">;</span>
+
+    <span class="token comment" spellcheck="true">// 系统调用处理期间可以开中断（允许抢占）</span>
+    <span class="token function">intr_on</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token function">syscall</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 分发到具体的系统调用处理函数</span>
+
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span>which_dev <span class="token operator">=</span> <span class="token function">devintr</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// ④-B 中断（时钟、UART、VIRTIO 等）</span>
+    <span class="token comment" spellcheck="true">// devintr() 已经处理好了，which_dev = 1（外部中断）或 2（时钟中断）</span>
+
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// ④-C 异常（非法指令、页错误等）</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"usertrap(): unexpected scause %p pid=%d\n"</span><span class="token punctuation">,</span> <span class="token function">r_scause</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> p<span class="token operator">-></span>pid<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"            sepc=%p stval=%p\n"</span><span class="token punctuation">,</span> <span class="token function">r_sepc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token function">r_stval</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    p<span class="token operator">-></span>killed <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 标记进程为"该死"</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token comment" spellcheck="true">// ⑤ 如果进程被杀死，立刻退出</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>p<span class="token operator">-></span>killed<span class="token punctuation">)</span>
+    <span class="token function">exit</span><span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ⑥ 时钟中断：让出 CPU</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>which_dev <span class="token operator">==</span> <span class="token number">2</span><span class="token punctuation">)</span>
+    <span class="token function">yield</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// ⑦ 返回用户态</span>
+  <span class="token function">usertrapret</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong><code>p-&gt;trapframe-&gt;epc += 4</code> 的原因</strong>：</p>
+<p><code>ecall</code> 指令触发 trap 时，硬件将 <code>sepc</code> 设为 <code>ecall</code> 指令的地址（不是下一条指令）。如果直接用 <code>sepc</code> 来返回，用户程序会再次执行 <code>ecall</code>，导致无限循环！<code>+4</code> 是因为 RISC-V 指令是 32 位（4 字节），<code>ecall</code> 之后的下一条指令在 <code>epc+4</code> 处。</p>
+<p>（注意：RISC-V 的压缩指令是 16 位，但 <code>ecall</code> 没有压缩版本，始终是 4 字节。）</p>
+<p><strong><code>w_stvec((uint64)kernelvec)</code> 的时机</strong>：</p>
+<p><code>uservec</code> 被调用时，<code>stvec</code> 仍然指向 <code>TRAMPOLINE+uservec_offset</code>（因为在用户态时 stvec 就是这个值）。进入内核后，如果此时发生嵌套 trap（例如系统调用处理期间时钟中断），应该走 <code>kernelvec</code>（内核态 trap 处理），而不是再走 <code>uservec</code>（那会尝试保存到 trapframe 并切换页表，是错误的）。所以 <code>usertrap()</code> 的第一件事就是重设 <code>stvec</code>。</p>
+<p><strong><code>p-&gt;trapframe-&gt;epc = r_sepc()</code> 必须在 <code>intr_on()</code> 之前</strong>：</p>
+<p><code>sepc</code> 是 CSR，在下一次发生任何 trap 时会被硬件覆盖。如果在保存 <code>sepc</code> 之前就开中断（<code>intr_on()</code>），时钟中断到来会覆盖 <code>sepc</code>，用户 PC 就丢失了。所以先把 <code>sepc</code> 保存到 <code>trapframe-&gt;epc</code>（内存中，不会被硬件覆盖），然后才能开中断。</p>
+<h3 id="3-2-usertrapret-——设置-CSR，返回用户态"><a href="#3-2-usertrapret-——设置-CSR，返回用户态" class="headerlink" title="3.2 usertrapret()——设置 CSR，返回用户态"></a>3.2 <code>usertrapret()</code>——设置 CSR，返回用户态</h3><p>（代码已在 2.2 节中详细解读，此处总结关键设计点）</p>
+<pre class="line-numbers language-bash"><code class="language-bash">usertrapret<span class="token punctuation">(</span><span class="token punctuation">)</span> 的工作清单：
+
+1. intr_off<span class="token punctuation">(</span><span class="token punctuation">)</span>                    关中断，避免在修改 stvec/sstatus/sepc 期间被打断
+2. w_stvec<span class="token punctuation">(</span>TRAMPOLINE+uservec<span class="token punctuation">)</span>   设置用户态 <span class="token function">trap</span> 入口（指向 trampoline.S 中的 uservec）
+3. 写 trapframe 的内核字段        为下次 <span class="token function">trap</span> 进内核做准备（kernel_satp/sp/trap/hartid）
+4. sstatus: SPP<span class="token operator">=</span>0, SPIE<span class="token operator">=</span>1        设置 sret 后的特权级（User）和中断状态（开启）
+5. w_sepc<span class="token punctuation">(</span>trapframe-<span class="token operator">></span>epc<span class="token punctuation">)</span>        设置 sret 后的用户 PC
+6. 计算用户页表 satp              MAKE_SATP<span class="token punctuation">(</span>p-<span class="token operator">></span>pagetable<span class="token punctuation">)</span>
+7. 调用 userret<span class="token punctuation">(</span>TRAPFRAME, satp<span class="token punctuation">)</span> 跳入 trampoline.S/userret，最终 sret 回用户态
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<hr>
+<h2 id="四、完整的用户态-Trap-流程图"><a href="#四、完整的用户态-Trap-流程图" class="headerlink" title="四、完整的用户态 Trap 流程图"></a>四、完整的用户态 Trap 流程图</h2><h3 id="4-1-用户态进内核（以系统调用为例）"><a href="#4-1-用户态进内核（以系统调用为例）" class="headerlink" title="4.1 用户态进内核（以系统调用为例）"></a>4.1 用户态进内核（以系统调用为例）</h3><pre class="line-numbers language-bash"><code class="language-bash">用户程序执行 write<span class="token punctuation">(</span>fd, buf, n<span class="token punctuation">)</span>：
+  user/usys.S: li a7, SYS_write → ecall
+
+硬件（RISC-V CPU）：
+  sepc <span class="token operator">=</span> ecall 指令的地址
+  scause <span class="token operator">=</span> 8（用户态 ecall）
+  sstatus.SPP <span class="token operator">=</span> 0（来自用户态）
+  sstatus.SIE <span class="token operator">=</span> 0（关中断）
+  切换到 Supervisor 特权级
+  PC <span class="token operator">=</span> stvec <span class="token operator">=</span> TRAMPOLINE + uservec 偏移
+  （页表不变，仍是用户页表！）
+
+trampoline.S uservec（用户页表 + TRAMPOLINE 虚拟地址）：
+  csrrw a0, sscratch, a0       → a0 <span class="token operator">=</span> TRAPFRAME
+  sd ra, 40<span class="token punctuation">(</span>a0<span class="token punctuation">)</span> <span class="token punctuation">..</span>. sd t6, 280<span class="token punctuation">(</span>a0<span class="token punctuation">)</span>  → 保存 31 个用户寄存器
+  csrr t0, sscratch<span class="token punctuation">;</span> sd t0, 112<span class="token punctuation">(</span>a0<span class="token punctuation">)</span> → 保存用户 a0
+  ld sp, 8<span class="token punctuation">(</span>a0<span class="token punctuation">)</span>                 → 加载内核栈
+  ld tp, 32<span class="token punctuation">(</span>a0<span class="token punctuation">)</span>                → 加载 hartid
+  ld t0, 16<span class="token punctuation">(</span>a0<span class="token punctuation">)</span>                → t0 <span class="token operator">=</span> usertrap<span class="token punctuation">(</span><span class="token punctuation">)</span> 地址
+  ld t1, 0<span class="token punctuation">(</span>a0<span class="token punctuation">)</span>                 → t1 <span class="token operator">=</span> 内核页表 satp
+  csrw satp, t1                → 切换到内核页表！
+  sfence.vma                   → 刷新 TLB
+  jr t0                        → 跳入 usertrap<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+kernel/trap.c usertrap<span class="token punctuation">(</span><span class="token punctuation">)</span>：
+  SPP 检查
+  w_stvec<span class="token punctuation">(</span>kernelvec<span class="token punctuation">)</span>            → 重定向到内核 <span class="token function">trap</span> 处理
+  p-<span class="token operator">></span>trapframe-<span class="token operator">></span>epc <span class="token operator">=</span> r_sepc<span class="token punctuation">(</span><span class="token punctuation">)</span>  → 保存用户 PC
+  <span class="token keyword">if</span> scause <span class="token operator">==</span> 8:               → 是系统调用
+    epc +<span class="token operator">=</span> 4                    → 返回 ecall 的下一条指令
+    intr_on<span class="token punctuation">(</span><span class="token punctuation">)</span>                   → 系统调用期间可以开中断
+    syscall<span class="token punctuation">(</span><span class="token punctuation">)</span>                   → 分发到 sys_write<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+sys_write<span class="token punctuation">(</span><span class="token punctuation">)</span> 执行完毕，返回到 usertrap<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+kernel/trap.c usertrap<span class="token punctuation">(</span><span class="token punctuation">)</span>（续）：
+  killed 检查
+  时钟中断检查（yield）
+  usertrapret<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+kernel/trap.c usertrapret<span class="token punctuation">(</span><span class="token punctuation">)</span>：
+  intr_off<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  w_stvec<span class="token punctuation">(</span>TRAMPOLINE+uservec<span class="token punctuation">)</span>   → 重设用户态 <span class="token function">trap</span> 入口
+  写 trapframe 的 kernel_* 字段  → 下次 <span class="token function">trap</span> 进内核的准备
+  sstatus: SPP<span class="token operator">=</span>0, SPIE<span class="token operator">=</span>1
+  w_sepc<span class="token punctuation">(</span>trapframe-<span class="token operator">></span>epc<span class="token punctuation">)</span>        → 设置返回 PC
+  fn <span class="token operator">=</span> TRAMPOLINE + userret 偏移
+  调用 fn<span class="token punctuation">(</span>TRAPFRAME, satp<span class="token punctuation">)</span>      → 跳入 userret
+
+trampoline.S userret：
+  csrw satp, a1                 → 切换回用户页表！
+  sfence.vma                    → 刷新 TLB
+  csrw sscratch, <span class="token punctuation">(</span>trapframe-<span class="token operator">></span>a0<span class="token punctuation">)</span>→ 下次 uservec 用
+  ld ra, 40<span class="token punctuation">(</span>a0<span class="token punctuation">)</span> <span class="token punctuation">..</span>. ld t6, 280<span class="token punctuation">(</span>a0<span class="token punctuation">)</span>  → 恢复 31 个用户寄存器
+  csrrw a0, sscratch, a0        → 恢复 a0，保存 TRAPFRAME→sscratch
+  sret                          → 返回用户态，PC <span class="token operator">=</span> sepc，开中断
+
+用户程序从 ecall 下一条指令继续执行
+（a0 <span class="token operator">=</span> sys_write<span class="token punctuation">(</span><span class="token punctuation">)</span> 的返回值）
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="4-2-trapframe-的内存布局"><a href="#4-2-trapframe-的内存布局" class="headerlink" title="4.2 trapframe 的内存布局"></a>4.2 trapframe 的内存布局</h3><pre class="line-numbers language-bash"><code class="language-bash">struct trapframe（每进程独占一页 4KB，映射在 TRAPFRAME <span class="token operator">=</span> TRAMPOLINE - PGSIZE）：
+
+偏移    字段           谁写入        谁读取
+  0    kernel_satp    usertrapret<span class="token punctuation">(</span><span class="token punctuation">)</span> uservec（ld t1, 0<span class="token punctuation">(</span>a0<span class="token punctuation">)</span>）
+  8    kernel_sp      usertrapret<span class="token punctuation">(</span><span class="token punctuation">)</span> uservec（ld sp, 8<span class="token punctuation">(</span>a0<span class="token punctuation">)</span>）
+ 16    kernel_trap    usertrapret<span class="token punctuation">(</span><span class="token punctuation">)</span> uservec（ld t0, 16<span class="token punctuation">(</span>a0<span class="token punctuation">)</span>）
+ 24    epc            usertrap<span class="token punctuation">(</span><span class="token punctuation">)</span>    usertrapret<span class="token punctuation">(</span><span class="token punctuation">)</span>: w_sepc<span class="token punctuation">(</span><span class="token punctuation">)</span>
+                      uservec<span class="token punctuation">(</span>通过 sepc CSR 的值间接<span class="token punctuation">)</span> 
+ 32    kernel_hartid  usertrapret<span class="token punctuation">(</span><span class="token punctuation">)</span> uservec（ld tp, 32<span class="token punctuation">(</span>a0<span class="token punctuation">)</span>）
+ 40    ra             uservec       userret
+ 48    sp             uservec       userret
+ 56    gp             uservec       userret
+ 64    tp             uservec       userret
+ 72    t0             uservec       userret
+ 80    t1             uservec       userret
+ 88    t2             uservec       userret
+ 96    s0             uservec       userret
+104    s1             uservec       userret
+112    a0             uservec       userret（csrrw 时）
+120    a1             uservec       userret
+  <span class="token punctuation">..</span>.  a2-a7, s2-s11, t3-t6（继续到 280）
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>trapframe 是进程”用户态快照”的完整存储，<code>uservec</code> 负责保存，<code>userret</code> 负责恢复。</p>
+<hr>
+<h2 id="五、TRAMPOLINE-设计的完整推导"><a href="#五、TRAMPOLINE-设计的完整推导" class="headerlink" title="五、TRAMPOLINE 设计的完整推导"></a>五、TRAMPOLINE 设计的完整推导</h2><h3 id="5-1-为什么必须同时映射在两个页表且虚拟地址相同？"><a href="#5-1-为什么必须同时映射在两个页表且虚拟地址相同？" class="headerlink" title="5.1 为什么必须同时映射在两个页表且虚拟地址相同？"></a>5.1 为什么必须同时映射在两个页表且虚拟地址相同？</h3><pre class="line-numbers language-bash"><code class="language-bash">情景模拟：假设 trampoline 代码在内核页表中映射为 0xC0001000，
+          在用户页表中没有映射。
+
+用户态 <span class="token function">trap</span> 发生：
+  CPU 跳到 stvec（必须在用户页表中可访问）
+  → 但 0xC0001000 在用户页表中不存在
+  → 立刻产生 Page Fault
+  → stvec 又指向 trampoline<span class="token punctuation">..</span>.
+  → 无限页错误，系统崩溃
+
+情景模拟：假设 trampoline 在用户页表中映射为 0x1000，
+          在内核页表中映射为 0xC0001000。
+
+执行 uservec（在用户页表中，虚拟地址 0x1000）：
+  <span class="token punctuation">..</span>.
+  csrw satp, t1        → 切换到内核页表
+  sfence.vma
+  jr t0                → 但 t0 是从 trapframe-<span class="token operator">></span>kernel_trap 加载的，
+                          指向内核页表中的 usertrap<span class="token punctuation">(</span><span class="token punctuation">)</span> 地址
+
+  <span class="token punctuation">..</span>.下一条要执行的 PC 是什么？
+  PC 仍然是 0x1000+offset（切换 satp 时 PC 不变）
+  但在内核页表中，0x1000 没有 trampoline 的映射（映射在 0xC0001000）
+  → Page Fault，系统崩溃
+
+两个页表都映射 TRAMPOLINE 到相同虚拟地址（MAXVA-PGSIZE）：
+  切换 satp 后，PC 还是 TRAMPOLINE+offset
+  在新页表（内核页表）中，TRAMPOLINE 仍然映射到同一物理页
+  → 代码继续正常执行 ✓
+  → 然后 jr t0 跳到 usertrap<span class="token punctuation">(</span><span class="token punctuation">)</span>，进入完全的内核环境
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="5-2-TRAMPOLINE-的权限设置"><a href="#5-2-TRAMPOLINE-的权限设置" class="headerlink" title="5.2 TRAMPOLINE 的权限设置"></a>5.2 TRAMPOLINE 的权限设置</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// kernel/vm.c kvminit()——内核页表中：</span>
+<span class="token function">kvmap</span><span class="token punctuation">(</span>kpgtbl<span class="token punctuation">,</span> TRAMPOLINE<span class="token punctuation">,</span> <span class="token punctuation">(</span>uint64<span class="token punctuation">)</span>trampoline<span class="token punctuation">,</span> PGSIZE<span class="token punctuation">,</span> PTE_R <span class="token operator">|</span> PTE_X<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment" spellcheck="true">//                                                         没有 PTE_U！</span>
+
+<span class="token comment" spellcheck="true">// kernel/proc.c proc_pagetable()——用户页表中：</span>
+<span class="token function">mappages</span><span class="token punctuation">(</span>pagetable<span class="token punctuation">,</span> TRAMPOLINE<span class="token punctuation">,</span> PGSIZE<span class="token punctuation">,</span>
+         <span class="token punctuation">(</span>uint64<span class="token punctuation">)</span>trampoline<span class="token punctuation">,</span> PTE_R <span class="token operator">|</span> PTE_X<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment" spellcheck="true">//                                    没有 PTE_U！</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>TRAMPOLINE 没有 <code>PTE_U</code> 标志</strong>：用户程序不能执行 trampoline 代码——只有当特权级切换到 Supervisor 时（trap 入口、trap 返回期间），才能访问 TRAMPOLINE 页。如果 <code>PTE_U</code> 置位，恶意用户程序可以跳入 trampoline 代码直接操作内核页表，造成严重安全漏洞。</p>
+<p>类似地，<code>TRAPFRAME</code> 也没有 <code>PTE_U</code>：用户程序不能读取或修改自己的 trapframe（否则可以伪造保存的寄存器值，绕过内核的安全检查）。</p>
+<hr>
+<h2 id="六、动手实验"><a href="#六、动手实验" class="headerlink" title="六、动手实验"></a>六、动手实验</h2><h3 id="实验-1：在-usertrap-中打印-scause，观察各种-trap-类型"><a href="#实验-1：在-usertrap-中打印-scause，观察各种-trap-类型" class="headerlink" title="实验 1：在 usertrap() 中打印 scause，观察各种 trap 类型"></a>实验 1：在 <code>usertrap()</code> 中打印 <code>scause</code>，观察各种 trap 类型</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// kernel/trap.c 的 usertrap() 中添加：</span>
+<span class="token keyword">void</span>
+<span class="token function">usertrap</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token comment" spellcheck="true">// ... 前面的代码 ...</span>
+  
+  <span class="token keyword">struct</span> proc <span class="token operator">*</span>p <span class="token operator">=</span> <span class="token function">myproc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  p<span class="token operator">-></span>trapframe<span class="token operator">-></span>epc <span class="token operator">=</span> <span class="token function">r_sepc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  uint64 cause <span class="token operator">=</span> <span class="token function">r_scause</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment" spellcheck="true">// 添加这行打印：</span>
+  <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[trap] pid=%d name=%s scause=%p sepc=%p stval=%p\n"</span><span class="token punctuation">,</span>
+         p<span class="token operator">-></span>pid<span class="token punctuation">,</span> p<span class="token operator">-></span>name<span class="token punctuation">,</span> cause<span class="token punctuation">,</span> <span class="token function">r_sepc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token function">r_stval</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">r_scause</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">8</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// ...</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>在 xv6 中运行不同程序，观察 scause 值：</p>
+<ul>
+<li><code>echo hello</code>：只有 scause=8（系统调用），循环出现（每个 write/read/exit 都触发）</li>
+<li><code>cat /nonexist</code>：先是 scause=8（open），然后 scause=13 或 15（页错误，如果文件不存在）</li>
+<li>访问空指针（写一个用户程序 <code>*(int*)0 = 1</code>）：scause=15（Store Page Fault）</li>
+<li>运行 <code>grind</code>：scause=8 频繁，scause=0x8000000000000009 偶尔（外部中断）</li>
+</ul>
+<p><strong>scause 对照表用于分析</strong>：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">scause<span class="token operator">=</span>8:  ecall（系统调用）
+scause<span class="token operator">=</span>12: 取指页错误
+scause<span class="token operator">=</span>13: 读取页错误
+scause<span class="token operator">=</span>15: 写入页错误
+scause<span class="token operator">=</span>0x8<span class="token punctuation">..</span>.9: 外部中断（PLIC）
+scause<span class="token operator">=</span>0x8<span class="token punctuation">..</span>.1: 软件中断（时钟）
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>做完后恢复</strong>：</p>
+<pre class="line-numbers language-bash"><code class="language-bash"><span class="token function">git</span> checkout -- kernel/trap.c
+<span aria-hidden="true" class="line-numbers-rows"><span></span></span></code></pre>
+<h3 id="实验-2：GDB-单步跟踪-uservec，观察页表切换"><a href="#实验-2：GDB-单步跟踪-uservec，观察页表切换" class="headerlink" title="实验 2：GDB 单步跟踪 uservec，观察页表切换"></a>实验 2：GDB 单步跟踪 uservec，观察页表切换</h3><pre class="line-numbers language-bash"><code class="language-bash"><span class="token comment" spellcheck="true"># 终端 1</span>
+<span class="token function">make</span> qemu-gdb
+
+<span class="token comment" spellcheck="true"># 终端 2</span>
+gdb-multiarch kernel/kernel
+<span class="token punctuation">(</span>gdb<span class="token punctuation">)</span> target remote :26000
+<span class="token punctuation">(</span>gdb<span class="token punctuation">)</span> <span class="token keyword">break</span> *0x3ffffff000          <span class="token comment" spellcheck="true"># TRAMPOLINE 地址（MAXVA - PGSIZE）</span>
+<span class="token comment" spellcheck="true"># 也可以用符号：</span>
+<span class="token punctuation">(</span>gdb<span class="token punctuation">)</span> <span class="token keyword">break</span> uservec
+<span class="token punctuation">(</span>gdb<span class="token punctuation">)</span> <span class="token keyword">continue</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>当断点命中时，观察：</p>
+<pre class="line-numbers language-gdb"><code class="language-gdb">(gdb) info registers                        # 查看所有寄存器
+(gdb) p/x $a0                              # a0 = 用户的 a0（将被 csrrw 替换）
+(gdb) p/x $satp                            # 当前是用户页表
+(gdb) print/x *(uint64*)($a0 + 0)          # csrrw 执行前，sscratch 的值？
+
+(gdb) stepi                                 # 执行 csrrw
+(gdb) p/x $a0                              # 现在 a0 = TRAPFRAME 地址
+(gdb) p/x $satp                            # 还是用户页表
+
+# 继续单步到 csrw satp, t1
+(gdb) stepi 30                             # 执行 30 条指令（保存寄存器）
+(gdb) p/x $satp                            # 还是用户页表
+(gdb) stepi                                # 执行 csrw satp, t1
+(gdb) p/x $satp                            # 现在是内核页表！
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>观察要点</strong>：</p>
+<ul>
+<li><code>csrrw a0, sscratch, a0</code> 执行后，<code>a0</code> 变为 TRAPFRAME 地址（形如 0x3ffffxxx）</li>
+<li><code>csrw satp, t1</code> 执行后，<code>satp</code> 的高位变为 <code>SV39_MODE</code>，低位是内核页表地址</li>
+<li><code>sfence.vma</code> 之后才能安全使用内核页表中的地址</li>
+</ul>
+<h3 id="实验-3：手动计算-TRAPFRAME-地址并用-GDB-检验"><a href="#实验-3：手动计算-TRAPFRAME-地址并用-GDB-检验" class="headerlink" title="实验 3：手动计算 TRAPFRAME 地址并用 GDB 检验"></a>实验 3：手动计算 TRAPFRAME 地址并用 GDB 检验</h3><p>在 GDB 中，当进程运行时：</p>
+<pre class="line-numbers language-gdb"><code class="language-gdb"># trapframe->epc 字段（偏移 24）存放用户 PC
+(gdb) p myproc()->trapframe->epc           # 用户程序的当前 PC
+
+# trapframe 结构体本身的地址（应该是 TRAMPOLINE - PGSIZE）
+(gdb) p myproc()->trapframe                # 应该是 0x3ffffe000
+
+# 检验 sscratch 内容
+(gdb) p/x $sscratch                        # 应该是 TRAPFRAME 地址（uservec 执行后）
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>验证 <code>struct trapframe</code> 在 <code>proc.h</code> 中的偏移计算是否与 <code>trampoline.S</code> 中的 <code>sd</code> 偏移一致：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// 用这个简单程序验证（不需要在 xv6 中运行，在宿主机算即可）</span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">&lt;stddef.h></span></span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">&lt;stdio.h></span></span>
+<span class="token comment" spellcheck="true">// 替换定义...</span>
+<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"kernel_satp offset = %zu\n"</span><span class="token punctuation">,</span> <span class="token function">offsetof</span><span class="token punctuation">(</span><span class="token keyword">struct</span> trapframe<span class="token punctuation">,</span> kernel_satp<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment" spellcheck="true">// 0</span>
+<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"kernel_sp offset = %zu\n"</span><span class="token punctuation">,</span> <span class="token function">offsetof</span><span class="token punctuation">(</span><span class="token keyword">struct</span> trapframe<span class="token punctuation">,</span> kernel_sp<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>     <span class="token comment" spellcheck="true">// 8</span>
+<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"ra offset = %zu\n"</span><span class="token punctuation">,</span> <span class="token function">offsetof</span><span class="token punctuation">(</span><span class="token keyword">struct</span> trapframe<span class="token punctuation">,</span> ra<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>                   <span class="token comment" spellcheck="true">// 40</span>
+<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"a0 offset = %zu\n"</span><span class="token punctuation">,</span> <span class="token function">offsetof</span><span class="token punctuation">(</span><span class="token keyword">struct</span> trapframe<span class="token punctuation">,</span> a0<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>                   <span class="token comment" spellcheck="true">// 112</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="实验-4：追踪-sepc-的完整生命周期"><a href="#实验-4：追踪-sepc-的完整生命周期" class="headerlink" title="实验 4：追踪 sepc 的完整生命周期"></a>实验 4：追踪 <code>sepc</code> 的完整生命周期</h3><p>在以下位置添加打印，追踪用户 PC 在 trap 过程中的保存与恢复：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// kernel/trap.c usertrap() 中：</span>
+<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[usertrap] 入口: r_sepc()=%p\n"</span><span class="token punctuation">,</span> <span class="token function">r_sepc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment" spellcheck="true">// ...</span>
+<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[usertrap] 保存 epc: trapframe->epc=%p\n"</span><span class="token punctuation">,</span> p<span class="token operator">-></span>trapframe<span class="token operator">-></span>epc<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment" spellcheck="true">// 如果是系统调用：</span>
+<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[usertrap] epc+4: trapframe->epc=%p\n"</span><span class="token punctuation">,</span> p<span class="token operator">-></span>trapframe<span class="token operator">-></span>epc<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment" spellcheck="true">// kernel/trap.c usertrapret() 中：</span>
+<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"[usertrapret] w_sepc(%p)\n"</span><span class="token punctuation">,</span> p<span class="token operator">-></span>trapframe<span class="token operator">-></span>epc<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>在 xv6 中运行 <code>echo hi</code>：</p>
+<ul>
+<li>观察每次 <code>write</code> 系统调用中，<code>sepc</code> 的值（应该是 <code>usys.S</code> 中对应 <code>ecall</code> 指令的地址）</li>
+<li><code>epc + 4</code> 后，系统调用返回到哪里？（用 <code>objdump user/_echo | grep -A3 ecall</code> 验证）</li>
+</ul>
+<h3 id="实验-5：画出-trapframe、TRAMPOLINE、TRAPFRAME-的地址关系图"><a href="#实验-5：画出-trapframe、TRAMPOLINE、TRAPFRAME-的地址关系图" class="headerlink" title="实验 5：画出 trapframe、TRAMPOLINE、TRAPFRAME 的地址关系图"></a>实验 5：画出 trapframe、TRAMPOLINE、TRAPFRAME 的地址关系图</h3><p>结合 <code>memlayout.h</code> 的定义和实际运行中的值，手绘一张图：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">高虚拟地址
+0x4000000000  MAXVA（Sv39 最大可用地址 + 1）
+0x3ffffff000  TRAMPOLINE（MAXVA - PGSIZE <span class="token operator">=</span> MAXVA - 4096）
+               ← trampoline.S 代码映射在这里（物理页 <span class="token operator">=</span> trampoline 的实际位置）
+               ← 在用户和内核页表中都映射到此地址
+0x3ffffe000   TRAPFRAME（TRAMPOLINE - PGSIZE）
+               ← p-<span class="token operator">></span>trapframe 映射在这里（每个进程独立）
+               ← 保存 32 个用户寄存器 + 5 个内核字段
+
+<span class="token punctuation">..</span>.（空洞）<span class="token punctuation">..</span>.
+
+用户程序的栈  （向低地址增长）
+用户程序的堆
+用户程序的数据段
+用户程序的代码段（从虚拟地址 0 开始）
+低虚拟地址
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>标注清楚哪些映射使用了 <code>PTE_U</code>，哪些没有。</p>
+<h3 id="实验-6：理解-stval-寄存器的作用"><a href="#实验-6：理解-stval-寄存器的作用" class="headerlink" title="实验 6：理解 stval 寄存器的作用"></a>实验 6：理解 <code>stval</code> 寄存器的作用</h3><p><code>stval</code>（Supervisor Trap Value）在页错误时存放导致错误的<strong>虚拟地址</strong>，在非法指令时存放非法指令内容。</p>
+<p>修改 <code>usertrap()</code> 中的异常处理，打印有用的信息：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    uint64 scause <span class="token operator">=</span> <span class="token function">r_scause</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>scause <span class="token operator">==</span> <span class="token number">13</span> <span class="token operator">||</span> scause <span class="token operator">==</span> <span class="token number">15</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token comment" spellcheck="true">// 读写页错误</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"usertrap: 进程 %s(pid=%d) 访问了非法地址 %p\n"</span><span class="token punctuation">,</span>
+               p<span class="token operator">-></span>name<span class="token punctuation">,</span> p<span class="token operator">-></span>pid<span class="token punctuation">,</span> <span class="token function">r_stval</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"  出错的指令地址: %p\n"</span><span class="token punctuation">,</span> <span class="token function">r_sepc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span><span class="token punctuation">(</span>scause <span class="token operator">==</span> <span class="token number">2</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"usertrap: 进程 %s(pid=%d) 执行了非法指令: %p\n"</span><span class="token punctuation">,</span>
+               p<span class="token operator">-></span>name<span class="token punctuation">,</span> p<span class="token operator">-></span>pid<span class="token punctuation">,</span> <span class="token function">r_stval</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"usertrap(): unexpected scause %p pid=%d\n"</span><span class="token punctuation">,</span> scause<span class="token punctuation">,</span> p<span class="token operator">-></span>pid<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    p<span class="token operator">-></span>killed <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>写一个会触发页错误的用户程序，观察输出。</p>
+<hr>
+<h2 id="七、思考题"><a href="#七、思考题" class="headerlink" title="七、思考题"></a>七、思考题</h2><ol>
+<li><p><strong><code>uservec</code> 为什么不能直接将 TRAPFRAME 地址硬编码在代码中（如 <code>li a0, 0x3ffffe000</code>），而必须通过 <code>sscratch</code> 来获取？</strong></p>
+<blockquote>
+<p>理论上 TRAPFRAME 地址是固定的（<code>TRAMPOLINE - PGSIZE = 0x3ffffe000</code>），可以硬编码。但 xv6 通过 <code>sscratch</code> 传递是更通用的设计：在支持 COW fork 或其他优化的系统中，trapframe 可能不在固定地址。此外，<code>sscratch</code> 的值在 <code>usertrapret()</code> 时由内核设置，如果将来 trapframe 的位置需要改变，只需修改 <code>usertrapret()</code>，而不必修改汇编代码。更重要的是，<code>csrrw</code> 实现了<strong>原子交换</strong>——在保存 a0 之前，不需要借用任何其他通用寄存器（所有寄存器都有用户的值，不能破坏任何一个）。</p>
+</blockquote>
+</li>
+<li><p><strong>为什么 TRAMPOLINE 映射时不设置 <code>PTE_U</code>，而 TRAPFRAME 也不设置 <code>PTE_U</code>？如果恶意用户程序直接跳转到 TRAMPOLINE 地址执行 <code>uservec</code>，会发生什么？</strong></p>
+<blockquote>
+<p>Supervisor 模式执行 <code>uservec</code> 时，<code>sscratch</code> 已经由内核预设为 TRAPFRAME 地址，不受用户控制。但如果 <code>PTE_U</code> 被设置，用户程序可以在用户态执行 TRAMPOLINE 代码：此时特权级是 User，<code>sscratch</code> 的值不受内核控制（用户可以通过之前的 csrw 设置为任意值）。<code>uservec</code> 会将 <code>sscratch</code> 的值作为”TRAPFRAME 地址”，执行一系列 <code>sd</code> 操作——等于将用户寄存器写入用户控制的任意物理地址，可以破坏内核数据。去掉 <code>PTE_U</code> 后，用户态访问这两个页会触发 Page Fault，安全。</p>
+</blockquote>
+</li>
+<li><p><strong><code>usertrapret()</code> 在调用 <code>userret</code> 时传递了两个参数：<code>TRAPFRAME</code> 和 <code>satp</code>。但 <code>userret</code> 是汇编，运行在 TRAMPOLINE 物理页上。为什么第一行执行 <code>csrw satp, a1</code> 之后，代码可以继续在 TRAMPOLINE 虚拟地址运行？</strong></p>
+<blockquote>
+<p><code>csrw satp, a1</code> 将 <code>satp</code> 切换到用户页表。切换发生时，PC 仍然指向 TRAMPOLINE 虚拟地址范围内。TRAMPOLINE 页在用户页表中也映射到<strong>完全相同的虚拟地址</strong>（<code>MAXVA - PGSIZE</code>）且指向相同的物理页——所以切换 <code>satp</code> 后，CPU 用新的（用户）页表翻译 TRAMPOLINE 地址，得到的物理地址与内核页表下相同，代码继续执行。这正是”TRAMPOLINE 必须在两个页表中映射到相同虚拟地址”设计的根本原因。</p>
+</blockquote>
+</li>
+<li><p><strong><code>usertrap()</code> 收到时钟中断时，会调用 <code>yield()-&gt;sched()-&gt;swtch()</code>，然后切换到调度器。但 <code>yield()</code> 返回后仍然会执行 <code>usertrapret()</code> 返回用户态——这中间进程可能已经被另一个时钟中断打断并重新调度。为什么这不会出问题？</strong></p>
+<blockquote>
+<p><code>yield()</code> 返回时，进程重新拥有 CPU。由于 <code>yield()</code> 只是让出然后被重新调度，进程的内核状态（栈、寄存器等）完好无损——<code>swtch()</code> 保证了上下文的完整性。<code>p-&gt;trapframe-&gt;epc</code> 在 <code>usertrap()</code> 开头就保存好了（调用 <code>yield()</code> 之前），<code>usertrapret()</code> 会用这个值设置 <code>sepc</code> 并返回用户态。整个过程就像进程短暂”休眠”了一会儿，然后从相同的状态继续——用户程序无感知。</p>
+</blockquote>
+</li>
+<li><p><strong>RISC-V 有一个 <code>sscratch</code> 寄存器，但没有类似”用于保存 sp”的专用寄存器。<code>uservec</code> 切换到内核栈是通过 <code>ld sp, 8(a0)</code> 完成的——此时 <code>a0</code> 已经指向 TRAPFRAME，<code>trapframe+8 = kernel_sp</code>。问题：如果在执行 <code>ld sp, 8(a0)</code> 之前，用户程序的 <code>sp</code> 非法（如 sp=0），会有什么问题？</strong></p>
+<blockquote>
+<p>在 <code>ld sp, 8(a0)</code> 之前，<code>sp</code> 仍然是用户态的值。执行这行之前的所有 <code>sd</code> 指令用的是用户的 <code>sp</code>（<code>sd ra, 40(a0)</code> 等都是相对于 <code>a0</code> 寻址，不依赖 <code>sp</code>）。<code>a0</code> 指向 TRAPFRAME（虚拟地址 0x3ffffe000），这个地址在用户页表中是内核通过 <code>proc_pagetable()</code> 预先映射的，是合法的。所以即使用户的 <code>sp</code> = 0，<code>uservec</code> 的 <code>sd</code> 操作不会出错（它们不依赖 <code>sp</code>）。的确问题存在的点是：如果 <code>a0</code>（trapframe 地址）因为某种原因无效，第一个 <code>sd</code> 就会页错误——但 TRAPFRAME 地址来自 <code>sscratch</code>，由内核在 <code>usertrapret()</code> 设置，不受用户控制，所以这是安全的。</p>
+</blockquote>
+</li>
+<li><p><strong><code>trampoline.S</code> 运行时几乎没有依赖——不需要 C 运行时、不需要全局变量、不能调用任何 C 函数。这是为什么？如果想在 <code>uservec</code> 中调用一个 C 函数（如打印日志），在何时才安全？</strong></p>
+<blockquote>
+<p><code>uservec</code> 执行时处于极端约束环境：(1) 用户页表——无法访问内核的数据段、BSS、全局变量；(2) 无内核栈（用户 sp 可能无效）——无法调用任何需要栈的函数；(3) satp 随时可能是用户页表或刚切换后的内核页表。任何 C 函数调用都需要：有效的 sp、正确的页表（访问代码和数据）、可能还需要内核的 BSS/数据段。这一切在 <code>ld sp, 8(a0)</code> 加载内核栈、<code>csrw satp, t1</code> 切换内核页表、并且 <code>sfence.vma</code> 刷新 TLB 之后才具备。所以，安全调用 C 函数的最早时机是 <code>jr t0</code>（即 <code>usertrap()</code> 的入口）——这正是 xv6 的做法：汇编只做最小化工作（保存寄存器、切换页表和栈），然后立刻跳入 C 函数。</p>
+</blockquote>
+</li>
+</ol>
+<hr>
+<h2 id="八、本节小结"><a href="#八、本节小结" class="headerlink" title="八、本节小结"></a>八、本节小结</h2><table>
+<thead>
+<tr>
+<th>概念</th>
+<th>要点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Trap 三种来源</td>
+<td>syscall（ecall, scause=8）、异常（非法访问等）、中断（时钟、外设）</td>
+</tr>
+<tr>
+<td>硬件 trap 时做的事</td>
+<td>sepc←PC, scause←原因, SPP←特权级, 关中断, 跳到 stvec（不切页表！）</td>
+</tr>
+<tr>
+<td>TRAMPOLINE 设计</td>
+<td>同一物理页映射到两个页表的相同虚拟地址，无 PTE_U，保证切换 satp 时代码连续</td>
+</tr>
+<tr>
+<td>TRAPFRAME 设计</td>
+<td>每进程独占一页（TRAMPOLINE-PGSIZE），存放 32 个用户寄存器 + 5 个内核字段</td>
+</tr>
+<tr>
+<td><code>csrrw</code> 技巧</td>
+<td>原子交换 a0 和 sscratch：无需借用寄存器即可获得 TRAPFRAME 地址</td>
+</tr>
+<tr>
+<td><code>uservec</code> 步骤</td>
+<td>交换 a0/sscratch → 保存 31 寄存器 → 保存 a0 → 加载内核栈/hartid/usertrap → 切换 satp → 跳入 usertrap()</td>
+</tr>
+<tr>
+<td><code>usertrap()</code> 步骤</td>
+<td>检查 SPP → 重设 stvec → 保存 sepc → 分发（syscall/中断/异常）→ 检查 killed → 可能 yield → usertrapret()</td>
+</tr>
+<tr>
+<td><code>usertrapret()</code> 步骤</td>
+<td>关中断 → 设 stvec → 写 trapframe 内核字段 → 设 sstatus/sepc → 调用 userret</td>
+</tr>
+<tr>
+<td><code>userret</code> 步骤</td>
+<td>切换用户页表 → 设 sscratch → 恢复 31 寄存器 → csrrw 恢复 a0/保存 TRAPFRAME → sret</td>
+</tr>
+<tr>
+<td><code>epc += 4</code></td>
+<td>ecall 的 sepc 指向 ecall 自身，需 +4 跳过，否则系统调用返回后无限循环</td>
+</tr>
+<tr>
+<td>中断开关时机</td>
+<td>保存 sepc 之前不能开中断；<code>usertrapret()</code> 一开始关中断防止修改 CSR 时被打断</td>
+</tr>
+</tbody></table>
+<p><strong>下一节预告</strong>：第 10 节将聚焦系统调用的完整实现——<code>usys.S</code> 自动生成的 stub、<code>syscall()</code> 分发表、<code>argint()</code>/<code>argaddr()</code>/<code>argstr()</code> 如何安全地从用户空间取参数，以及如何向 xv6 添加一个全新的系统调用。</p>
+<hr>
+<h2 id="附录：用户态-Trap-相关符号速查"><a href="#附录：用户态-Trap-相关符号速查" class="headerlink" title="附录：用户态 Trap 相关符号速查"></a>附录：用户态 Trap 相关符号速查</h2><table>
+<thead>
+<tr>
+<th>符号</th>
+<th>位置</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>TRAMPOLINE</code></td>
+<td>memlayout.h</td>
+<td><code>MAXVA - PGSIZE</code>，trampoline 代码的虚拟地址</td>
+</tr>
+<tr>
+<td><code>TRAPFRAME</code></td>
+<td>memlayout.h</td>
+<td><code>TRAMPOLINE - PGSIZE</code>，用户 trapframe 的虚拟地址</td>
+</tr>
+<tr>
+<td><code>uservec</code></td>
+<td>trampoline.S</td>
+<td>用户态 trap 入口汇编标签</td>
+</tr>
+<tr>
+<td><code>userret</code></td>
+<td>trampoline.S</td>
+<td>内核返回用户态汇编标签</td>
+</tr>
+<tr>
+<td><code>usertrap()</code></td>
+<td>trap.c</td>
+<td>用户态 trap 的 C 处理函数</td>
+</tr>
+<tr>
+<td><code>usertrapret()</code></td>
+<td>trap.c</td>
+<td>设置 CSR、调用 <code>userret</code> 的 C 函数</td>
+</tr>
+<tr>
+<td><code>SSTATUS_SPP</code></td>
+<td>riscv.h</td>
+<td>sstatus 第 8 位：1=来自 Supervisor，0=来自 User</td>
+</tr>
+<tr>
+<td><code>SSTATUS_SPIE</code></td>
+<td>riscv.h</td>
+<td>sstatus 第 5 位：sret 后是否开启中断</td>
+</tr>
+<tr>
+<td><code>MAKE_SATP(pt)</code></td>
+<td>riscv.h</td>
+<td><code>SATP_SV39 | ((uint64)pt &gt;&gt; 12)</code>：构造 satp 值</td>
+</tr>
+<tr>
+<td><code>sfence.vma</code></td>
+<td>trampoline.S</td>
+<td>刷新 TLB，切换 satp 后必须执行</td>
+</tr>
+</tbody></table>
+
+                
+            </div>
+            <hr/>
+
+            
+
+    <div class="reprint" id="reprint-statement">
+        
+            <div class="reprint__author">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-user">
+                        文章作者:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    <a href="/about" rel="external nofollow noreferrer">404djl</a>
+                </span>
+            </div>
+            <div class="reprint__type">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-link">
+                        文章链接:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    <a href="https://404djl.github.io/2026/02/28/os09-trap-ji-zhi-yong-hu-tai/">https://404djl.github.io/2026/02/28/os09-trap-ji-zhi-yong-hu-tai/</a>
+                </span>
+            </div>
+            <div class="reprint__notice">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-copyright">
+                        版权声明:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    本博客所有文章除特別声明外，均采用
+                    <a href="https://creativecommons.org/licenses/by/4.0/deed.zh" rel="external nofollow noreferrer" target="_blank">CC BY 4.0</a>
+                    许可协议。转载请注明来源
+                    <a href="/about" target="_blank">404djl</a>
+                    !
+                </span>
+            </div>
+        
+    </div>
+
+    <script async defer>
+      document.addEventListener("copy", function (e) {
+        let toastHTML = '<span>复制成功，请遵循本文的转载规则</span><button class="btn-flat toast-action" onclick="navToReprintStatement()" style="font-size: smaller">查看</a>';
+        M.toast({html: toastHTML})
+      });
+
+      function navToReprintStatement() {
+        $("html, body").animate({scrollTop: $("#reprint-statement").offset().top - 80}, 800);
+      }
+    </script>
+
+
+
+            <div class="tag_share" style="display: block;">
+                <div class="post-meta__tag-list" style="display: inline-block;">
+                    
+                        <div class="article-tag">
+                            
+                                <a href="/tags/linux/">
+                                    <span class="chip bg-color">linux</span>
+                                </a>
+                            
+                                <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                                    <span class="chip bg-color">操作系统</span>
+                                </a>
+                            
+                        </div>
+                    
+                </div>
+                <div class="post_share" style="zoom: 80%; width: fit-content; display: inline-block; float: right; margin: -0.15rem 0;">
+                    <link rel="stylesheet" type="text/css" href="/libs/share/css/share.min.css">
+<div id="article-share">
+
+    
+    <div class="social-share" data-sites="twitter,facebook,google,qq,qzone,wechat,weibo,douban,linkedin" data-wechat-qrcode-helper="<p>微信扫一扫即可分享！</p>"></div>
+    <script src="/libs/share/js/social-share.min.js"></script>
+    
+
+    
+
+</div>
+
+                </div>
+            </div>
+            
+                <div id="reward">
+    <a href="#rewardModal" class="reward-link modal-trigger btn-floating btn-medium waves-effect waves-light red">赏</a>
+
+    <!-- Modal Structure -->
+    <div id="rewardModal" class="modal">
+        <div class="modal-content">
+            <a class="close modal-close"><i class="fas fa-times"></i></a>
+            <h4 class="reward-title">你的赏识是我前进的动力</h4>
+            <div class="reward-content">
+                <div class="reward-tabs">
+                    <ul class="tabs row">
+                        <li class="tab col s6 alipay-tab waves-effect waves-light"><a href="#alipay">支付宝</a></li>
+                        <li class="tab col s6 wechat-tab waves-effect waves-light"><a href="#wechat">微 信</a></li>
+                    </ul>
+                    <div id="alipay">
+                        <img src="/medias/reward/alipay.jpg" class="reward-img" alt="支付宝打赏二维码">
+                    </div>
+                    <div id="wechat">
+                        <img src="/medias/reward/wechat.png" class="reward-img" alt="微信打赏二维码">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(function () {
+        $('.tabs').tabs();
+    });
+</script>
+
+            
+        </div>
+    </div>
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+<article id="prenext-posts" class="prev-next articles">
+    <div class="row article-row">
+        
+        <div class="article col s12 m6" data-aos="fade-up">
+            <div class="article-badge left-badge text-color">
+                <i class="fas fa-chevron-left"></i>&nbsp;上一篇</div>
+            <div class="card">
+                <a href="/2026/02/28/os11-trap-ji-zhi-nei-he-tai-yu-zhong-duan-chu-li/">
+                    <div class="card-image">
+                        
+                        
+                        <img src="/medias/featureimages/35.png" class="responsive-img" alt="OS11-Trap机制（内核态）与中断处理">
+                        
+                        <span class="card-title">OS11-Trap机制（内核态）与中断处理</span>
+                    </div>
+                </a>
+                <div class="card-content article-content">
+                    <div class="summary block-with-text">
+                        
+                            
+                        
+                    </div>
+                    <div class="publish-info">
+                        <span class="publish-date">
+                            <i class="far fa-clock fa-fw icon-date"></i>2026-02-28
+                        </span>
+                        <span class="publish-author">
+                            
+                            <i class="fas fa-user fa-fw"></i>
+                            404djl
+                            
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="card-action article-tags">
+                    
+                    <a href="/tags/linux/">
+                        <span class="chip bg-color">linux</span>
+                    </a>
+                    
+                    <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                        <span class="chip bg-color">操作系统</span>
+                    </a>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+        
+        <div class="article col s12 m6" data-aos="fade-up">
+            <div class="article-badge right-badge text-color">
+                下一篇&nbsp;<i class="fas fa-chevron-right"></i>
+            </div>
+            <div class="card">
+                <a href="/2026/02/27/os08-jin-cheng-diao-du-yu-shang-xia-wen-qie-huan/">
+                    <div class="card-image">
+                        
+                        
+                        <img src="/medias/featureimages/10.png" class="responsive-img" alt="OS08-进程调度与上下文切换">
+                        
+                        <span class="card-title">OS08-进程调度与上下文切换</span>
+                    </div>
+                </a>
+                <div class="card-content article-content">
+                    <div class="summary block-with-text">
+                        
+                            
+                        
+                    </div>
+                    <div class="publish-info">
+                            <span class="publish-date">
+                                <i class="far fa-clock fa-fw icon-date"></i>2026-02-27
+                            </span>
+                        <span class="publish-author">
+                            
+                            <i class="fas fa-bookmark fa-fw icon-category"></i>
+                            
+                            <a href="/categories/OS/" class="post-category">
+                                    OS
+                                </a>
+                            
+                            
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="card-action article-tags">
+                    
+                    <a href="/tags/linux/">
+                        <span class="chip bg-color">linux</span>
+                    </a>
+                    
+                    <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                        <span class="chip bg-color">操作系统</span>
+                    </a>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+    </div>
+</article>
+
+</div>
+
+
+
+<!-- 代码块功能依赖 -->
+<script type="text/javascript" src="/libs/codeBlock/codeBlockFuction.js"></script>
+
+
+
+<!-- 代码语言 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeLang.js"></script>
+
+
+<!-- 代码块复制 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeCopy.js"></script>
+
+
+<!-- 代码块收缩 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeShrink.js"></script>
+
+
+
+    </div>
+    <div id="toc-aside" class="expanded col l3 hide-on-med-and-down">
+        <div class="toc-widget card" style="background-color: white;">
+            <div class="toc-title"><i class="far fa-list-alt"></i>&nbsp;&nbsp;目录</div>
+            <div id="toc-content"></div>
+        </div>
+    </div>
+</div>
+
+<!-- TOC 悬浮按钮. -->
+
+<div id="floating-toc-btn" class="hide-on-med-and-down">
+    <a class="btn-floating btn-large bg-color">
+        <i class="fas fa-list-ul"></i>
+    </a>
+</div>
+
+
+<script src="/libs/tocbot/tocbot.min.js"></script>
+<script>
+    $(function () {
+        tocbot.init({
+            tocSelector: '#toc-content',
+            contentSelector: '#articleContent',
+            headingsOffset: -($(window).height() * 0.4 - 45),
+            collapseDepth: Number('0'),
+            headingSelector: 'h2, h3, h4'
+        });
+
+        // Set scroll toc fixed.
+        let tocHeight = parseInt($(window).height() * 0.4 - 64);
+        let $tocWidget = $('.toc-widget');
+        $(window).scroll(function () {
+            let scroll = $(window).scrollTop();
+            /* add post toc fixed. */
+            if (scroll > tocHeight) {
+                $tocWidget.addClass('toc-fixed');
+            } else {
+                $tocWidget.removeClass('toc-fixed');
+            }
+        });
+
+        
+        /* 修复文章卡片 div 的宽度. */
+        let fixPostCardWidth = function (srcId, targetId) {
+            let srcDiv = $('#' + srcId);
+            if (srcDiv.length === 0) {
+                return;
+            }
+
+            let w = srcDiv.width();
+            if (w >= 450) {
+                w = w + 21;
+            } else if (w >= 350 && w < 450) {
+                w = w + 18;
+            } else if (w >= 300 && w < 350) {
+                w = w + 16;
+            } else {
+                w = w + 14;
+            }
+            $('#' + targetId).width(w);
+        };
+
+        // 切换TOC目录展开收缩的相关操作.
+        const expandedClass = 'expanded';
+        let $tocAside = $('#toc-aside');
+        let $mainContent = $('#main-content');
+        $('#floating-toc-btn .btn-floating').click(function () {
+            if ($tocAside.hasClass(expandedClass)) {
+                $tocAside.removeClass(expandedClass).hide();
+                $mainContent.removeClass('l9');
+            } else {
+                $tocAside.addClass(expandedClass).show();
+                $mainContent.addClass('l9');
+            }
+            fixPostCardWidth('artDetail', 'prenext-posts');
+        });
+        
+    });
+</script>
+
+    
+
+</main>
+
+
+
+
+    <footer class="page-footer" style="background: linear-gradient(to right, #ff5f6d, #ffc371); color: #fff;">
+    <div class="container" style="text-align: center; padding: 5px;">
+      <p>Copyright © 2024 - 2025 <a href="https://404djl.github.io" style="color: #fff; text-decoration: underline;">404djl</a> | Powered by <a href="https://hexo.io" target="_blank" style="color: #fff; text-decoration: underline;">Hexo</a> | Theme by <a href="https://github.com/blinkfox/hexo-theme-matery" target="_blank" style="color: #fff; text-decoration: underline;">Matery</a></p>
+      <p>
+        <p>📚 站点总字数: <span id="site-word-count"></span> 字</p> |
+        <span id="runtime"></span>
+      </p>
+    </div>
+    <div class="footer-contact" style="background: linear-gradient(to right, #ff5f6d, #ffc371); color: #fff;">
+        <a href="javascript:void(0);" class="tooltipped" target="_blank" data-tooltip="邮箱：3490002122@qq.com" data-position="top" data-delay="50">
+          <i class="fas fa-envelope"></i>
+        </a>
+        <a href="https://github.com/404djl" class="tooltipped" target="_blank" data-tooltip="GitHub：404djl" data-position="top" data-delay="50">
+          <i class="fab fa-github"></i>
+        </a>
+        <a href="javascript:void(0);" class="tooltipped" data-tooltip="微信：djl123456404" data-position="top" data-delay="50">
+          <i class="fab fa-weixin"></i>
+        </a>
+    </div>
+</footer>
+
+
+
+
+<script>
+    const blogStartDate = new Date("2024-12-16T00:00:00Z"); // 修改为你的博客起始日期
+  
+    function updateRuntime() {
+      const now = new Date();
+      const diff = now - blogStartDate;
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((diff / (1000 * 60)) % 60);
+      const seconds = Math.floor((diff / 1000) % 60);
+  
+      const runtimeText = `本站已安全运行 ${days} 天 ${hours} 小时 ${minutes} 分钟 ${seconds} 秒`;
+      document.getElementById("runtime").innerText = runtimeText;
+    }
+  
+    updateRuntime();
+    setInterval(updateRuntime, 1000);
+  </script>
+  
+  <script>
+    fetch('/index.html')
+      .then(response => response.text())
+      .then(html => {
+        const wordCountRegex = /<meta name="wordCount" content="(\d+)">/;
+        const match = wordCountRegex.exec(html);
+        if (match) {
+          document.getElementById('site-word-count').innerText = match[1];
+        }
+      });
+  </script>
+  
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var tooltips = document.querySelectorAll('.tooltipped');
+      M.Tooltip.init(tooltips);
+    });
+  </script>
+  
+
+    <!-- 搜索遮罩框 -->
+<div id="searchModal" class="modal">
+    <div class="modal-content">
+        <div class="search-header">
+            <span class="title"><i class="fas fa-search"></i>&nbsp;&nbsp;搜索</span>
+            <input type="search" id="searchInput" name="s" placeholder="请输入搜索的关键字"
+                   class="search-input">
+        </div>
+        <div id="searchResult"></div>
+    </div>
+</div>
+
+<script type="text/javascript">
+$(function () {
+    var searchFunc = function (path, search_id, content_id) {
+        'use strict';
+        $.ajax({
+            url: path,
+            dataType: "xml",
+            success: function (xmlResponse) {
+                // get the contents from search data
+                var datas = $("entry", xmlResponse).map(function () {
+                    return {
+                        title: $("title", this).text(),
+                        content: $("content", this).text(),
+                        url: $("url", this).text()
+                    };
+                }).get();
+                var $input = document.getElementById(search_id);
+                var $resultContent = document.getElementById(content_id);
+                $input.addEventListener('input', function () {
+                    var str = '<ul class=\"search-result-list\">';
+                    var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+                    $resultContent.innerHTML = "";
+                    if (this.value.trim().length <= 0) {
+                        return;
+                    }
+                    // perform local searching
+                    datas.forEach(function (data) {
+                        var isMatch = true;
+                        var data_title = data.title.trim().toLowerCase();
+                        var data_content = data.content.trim().replace(/<[^>]+>/g, "").toLowerCase();
+                        var data_url = data.url;
+                        data_url = data_url.indexOf('/') === 0 ? data.url : '/' + data_url;
+                        var index_title = -1;
+                        var index_content = -1;
+                        var first_occur = -1;
+                        // only match artiles with not empty titles and contents
+                        if (data_title !== '' && data_content !== '') {
+                            keywords.forEach(function (keyword, i) {
+                                index_title = data_title.indexOf(keyword);
+                                index_content = data_content.indexOf(keyword);
+                                if (index_title < 0 && index_content < 0) {
+                                    isMatch = false;
+                                } else {
+                                    if (index_content < 0) {
+                                        index_content = 0;
+                                    }
+                                    if (i === 0) {
+                                        first_occur = index_content;
+                                    }
+                                }
+                            });
+                        }
+                        // show search results
+                        if (isMatch) {
+                            str += "<li><a href='" + data_url + "' class='search-result-title'>" + data_title + "</a>";
+                            var content = data.content.trim().replace(/<[^>]+>/g, "");
+                            if (first_occur >= 0) {
+                                // cut out 100 characters
+                                var start = first_occur - 20;
+                                var end = first_occur + 80;
+                                if (start < 0) {
+                                    start = 0;
+                                }
+                                if (start === 0) {
+                                    end = 100;
+                                }
+                                if (end > content.length) {
+                                    end = content.length;
+                                }
+                                var match_content = content.substr(start, end);
+                                // highlight all keywords
+                                keywords.forEach(function (keyword) {
+                                    var regS = new RegExp(keyword, "gi");
+                                    match_content = match_content.replace(regS, "<em class=\"search-keyword\">" + keyword + "</em>");
+                                });
+
+                                str += "<p class=\"search-result\">" + match_content + "...</p>"
+                            }
+                            str += "</li>";
+                        }
+                    });
+                    str += "</ul>";
+                    $resultContent.innerHTML = str;
+                });
+            }
+        });
+    };
+
+    searchFunc('/search.xml', 'searchInput', 'searchResult');
+});
+</script>
+
+    <!-- 白天和黑夜主题 -->
+<div class="stars-con">
+    <div id="stars"></div>
+    <div id="stars2"></div>
+    <div id="stars3"></div>  
+</div>
+
+<script>
+    function switchNightMode() {
+        $('<div class="Cuteen_DarkSky"><div class="Cuteen_DarkPlanet"></div></div>').appendTo($('body')),
+        setTimeout(function () {
+            $('body').hasClass('DarkMode') 
+            ? ($('body').removeClass('DarkMode'), localStorage.setItem('isDark', '0'), $('#sum-moon-icon').removeClass("fa-sun").addClass('fa-moon')) 
+            : ($('body').addClass('DarkMode'), localStorage.setItem('isDark', '1'), $('#sum-moon-icon').addClass("fa-sun").removeClass('fa-moon')),
+            
+            setTimeout(function () {
+            $('.Cuteen_DarkSky').fadeOut(1e3, function () {
+                $(this).remove()
+            })
+            }, 2e3)
+        })
+    }
+</script>
+
+    <!-- 回到顶部按钮 -->
+<div id="backTop" class="top-scroll">
+    <a class="btn-floating btn-large waves-effect waves-light" href="#!">
+        <i class="fas fa-arrow-up"></i>
+    </a>
+</div>
+
+
+    <script src="/libs/materialize/materialize.min.js"></script>
+    <script src="/libs/masonry/masonry.pkgd.min.js"></script>
+    <script src="/libs/aos/aos.js"></script>
+    <script src="/libs/scrollprogress/scrollProgress.min.js"></script>
+    <script src="/libs/lightGallery/js/lightgallery-all.min.js"></script>
+    <script src="/js/matery.js"></script>
+
+    
+
+    
+    
+    
+
+    <!-- 雪花特效 -->
+     
+        <script type="text/javascript">
+            // 只在桌面版网页启用特效
+            var windowWidth = $(window).width();
+            if (windowWidth > 768) {
+                document.write('<script type="text/javascript" src="/libs/others/snow.js"><\/script>');
+            }
+        </script>
+    
+
+    <!-- 鼠标星星特效 -->
+    
+
+     
+        <script src="https://ssl.captcha.qq.com/TCaptcha.js"></script>
+        <script src="/libs/others/TencentCaptcha.js"></script>
+        <button id="TencentCaptcha" data-appid="xxxxxxxxxx" data-cbfn="callback" type="button" hidden></button>
+    
+
+    <!-- Baidu Analytics -->
+
+    <!-- Baidu Push -->
+
+<script>
+    (function () {
+        var bp = document.createElement('script');
+        var curProtocol = window.location.protocol.split(':')[0];
+        if (curProtocol === 'https') {
+            bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+        } else {
+            bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+        }
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(bp, s);
+    })();
+</script>
+
+    
+    <script src="/libs/others/clicklove.js" async="async"></script>
+    
+    
+    <script async src="/libs/others/busuanzi.pure.mini.js"></script>
+    
+
+    
+
+    
+
+    <!--腾讯兔小巢-->
+    
+    
+
+    
+
+    
+
+    
+    <script src="/libs/instantpage/instantpage.js" type="module"></script>
+    
+
+</body>
+
+</html>

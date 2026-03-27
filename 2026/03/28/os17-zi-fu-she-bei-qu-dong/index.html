@@ -1,0 +1,1849 @@
+<!DOCTYPE HTML>
+<html lang="zh-CN">
+
+
+<head>
+    <meta charset="utf-8">
+    <meta name="keywords" content="OS17-字符设备驱动, 404djlのblog">
+    <meta name="description" content="第17节：字符设备驱动（UART 与 Console）学习目标
+理解 MMIO（内存映射 I/O）与 16550A UART 寄存器的交互方式
+掌握中断驱动 I/O 的设计：发送侧的异步缓冲、接收侧的回调链
+理解 console 三索引环形">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="renderer" content="webkit|ie-stand|ie-comp">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="referrer" content="no-referrer-when-downgrade">
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+
+
+    <title>OS17-字符设备驱动 | 404djlのblog</title>
+    <link rel="icon" type="image/gif" href="/icons8-github.gif">
+    
+    <style>
+        body{
+            background-image: url(https://pic1.imgdb.cn/item/69b9682b1eedde6824938321.jpg);
+            background-repeat:no-repeat;
+            background-size: 100% 100%;
+            background-attachment:fixed;
+        }
+    </style>
+
+
+
+    <!-- bg-cover style     -->
+
+
+
+<link rel="stylesheet" type="text/css" href="/libs/awesome/css/all.min.css">
+<link rel="stylesheet" type="text/css" href="/libs/materialize/materialize.min.css">
+<link rel="stylesheet" type="text/css" href="/libs/aos/aos.css">
+<link rel="stylesheet" type="text/css" href="/libs/animate/animate.min.css">
+<link rel="stylesheet" type="text/css" href="/libs/lightGallery/css/lightgallery.min.css">
+<link rel="stylesheet" type="text/css" href="/css/matery.css">
+<link rel="stylesheet" type="text/css" href="/css/my.css">
+<link rel="stylesheet" type="text/css" href="/css/dark.css" media="none" onload="if(media!='all')media='all'">
+
+
+
+
+    <link rel="stylesheet" href="/libs/tocbot/tocbot.css">
+    <link rel="stylesheet" href="/css/post.css">
+
+
+
+
+    
+        <link rel="stylesheet" type="text/css" href="/css/reward.css">
+    
+
+
+
+    <script src="/libs/jquery/jquery-3.6.0.min.js"></script>
+
+<meta name="generator" content="Hexo 4.2.0">
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+<link rel="alternate" href="/atom.xml" title="404djlのblog" type="application/atom+xml">
+<link rel="stylesheet" href="/css/prism-tomorrow.css" type="text/css">
+<link rel="stylesheet" href="/css/prism-line-numbers.css" type="text/css">
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+</head>
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+
+
+
+<body>
+    <header class="navbar-fixed">
+    <nav id="headNav" class="bg-color nav-transparent">
+        <div id="navContainer" class="nav-wrapper container">
+            <div class="brand-logo">
+                <a href="/" class="waves-effect waves-light">
+                    
+                    <img src="/icons8-github.gif" class="logo-img" alt="LOGO">
+                    
+                    <span class="logo-span">404djlのblog</span>
+                </a>
+            </div>
+            
+
+<a href="#" data-target="mobile-nav" class="sidenav-trigger button-collapse"><i class="fas fa-bars"></i></a>
+<ul class="right nav-menu">
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/" class="waves-effect waves-light">
+      
+      <i class="fas fa-home" style="zoom: 0.6;"></i>
+      
+      <span>首页</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/tags" class="waves-effect waves-light">
+      
+      <i class="fas fa-tags" style="zoom: 0.6;"></i>
+      
+      <span>标签</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/categories" class="waves-effect waves-light">
+      
+      <i class="fas fa-bookmark" style="zoom: 0.6;"></i>
+      
+      <span>分类</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/archives" class="waves-effect waves-light">
+      
+      <i class="fas fa-archive" style="zoom: 0.6;"></i>
+      
+      <span>归档</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/about" class="waves-effect waves-light">
+      
+      <i class="fas fa-user-circle" style="zoom: 0.6;"></i>
+      
+      <span>关于</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/contact" class="waves-effect waves-light">
+      
+      <i class="fas fa-comments" style="zoom: 0.6;"></i>
+      
+      <span>留言板</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/friends" class="waves-effect waves-light">
+      
+      <i class="fas fa-address-book" style="zoom: 0.6;"></i>
+      
+      <span>友情链接</span>
+    </a>
+    
+  </li>
+  
+  <li>
+    <a href="#searchModal" class="modal-trigger waves-effect waves-light">
+      <i id="searchIcon" class="fas fa-search" title="搜索" style="zoom: 0.85;"></i>
+    </a>
+  </li>
+  <li>
+    <a href="javascript:;" class="waves-effect waves-light" onclick="switchNightMode()" title="深色/浅色模式" >
+      <i id="sum-moon-icon" class="fas fa-sun" style="zoom: 0.85;"></i>
+    </a>
+  </li>
+</ul>
+
+
+<div id="mobile-nav" class="side-nav sidenav">
+
+    <div class="mobile-head bg-color">
+        
+        <img src="/icons8-github.gif" class="logo-img circle responsive-img">
+        
+        <div class="logo-name">404djlのblog</div>
+        <div class="logo-desc">
+            
+            Never really desperate, only the lost of the soul
+            
+        </div>
+    </div>
+
+    <ul class="menu-list mobile-menu-list">
+        
+        <li class="m-nav-item">
+	  
+		<a href="/" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-home"></i>
+			
+			首页
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/tags" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-tags"></i>
+			
+			标签
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/categories" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-bookmark"></i>
+			
+			分类
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/archives" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-archive"></i>
+			
+			归档
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/about" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-user-circle"></i>
+			
+			关于
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/contact" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-comments"></i>
+			
+			留言板
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/friends" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-address-book"></i>
+			
+			友情链接
+		</a>
+          
+        </li>
+        
+        
+        <li><div class="divider"></div></li>
+        <li>
+            <a href="https://github.com/404djl/404djl.github.io" class="waves-effect waves-light" target="_blank">
+                <i class="fab fa-github-square fa-fw"></i>Fork Me
+            </a>
+        </li>
+        
+    </ul>
+</div>
+
+
+        </div>
+
+        
+            <style>
+    .nav-transparent .github-corner {
+        display: none !important;
+    }
+
+    .github-corner {
+        position: absolute;
+        z-index: 10;
+        top: 0;
+        right: 0;
+        border: 0;
+        transform: scale(1.1);
+    }
+
+    .github-corner svg {
+        color: #0f9d58;
+        fill: #fff;
+        height: 64px;
+        width: 64px;
+    }
+
+    .github-corner:hover .octo-arm {
+        animation: a 0.56s ease-in-out;
+    }
+
+    .github-corner .octo-arm {
+        animation: none;
+    }
+
+    @keyframes a {
+        0%,
+        to {
+            transform: rotate(0);
+        }
+        20%,
+        60% {
+            transform: rotate(-25deg);
+        }
+        40%,
+        80% {
+            transform: rotate(10deg);
+        }
+    }
+</style>
+
+<a href="https://github.com/404djl/404djl.github.io" class="github-corner tooltipped hide-on-med-and-down" target="_blank"
+   data-tooltip="Fork Me" data-position="left" data-delay="50">
+    <svg viewBox="0 0 250 250" aria-hidden="true">
+        <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+        <path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2"
+              fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+        <path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z"
+              fill="currentColor" class="octo-body"></path>
+    </svg>
+</a>
+        
+    </nav>
+
+</header>
+
+    
+
+
+
+<div class="bg-cover pd-header post-cover" style="background-image: url('/medias/featureimages/21.png')">
+    <div class="container" style="right: 0px;left: 0px;">
+        <div class="row">
+            <div class="col s12 m12 l12">
+                <div class="brand">
+                    <h1 class="description center-align post-title">OS17-字符设备驱动</h1>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+<main class="post-container content">
+
+    
+    <div class="row">
+    <div id="main-content" class="col s12 m12 l9">
+        <!-- 文章内容详情 -->
+<div id="artDetail">
+    <div class="card">
+        <div class="card-content article-info">
+            <div class="row tag-cate">
+                <div class="col s7">
+                    
+                    <div class="article-tag">
+                        
+                            <a href="/tags/linux/">
+                                <span class="chip bg-color">linux</span>
+                            </a>
+                        
+                            <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                                <span class="chip bg-color">操作系统</span>
+                            </a>
+                        
+                    </div>
+                    
+                </div>
+                <div class="col s5 right-align">
+                    
+                    <div class="post-cate">
+                        <i class="fas fa-bookmark fa-fw icon-category"></i>
+                        
+                            <a href="/categories/OS/" class="post-category">
+                                OS
+                            </a>
+                        
+                    </div>
+                    
+                </div>
+            </div>
+
+            <div class="post-info">
+                
+                <div class="post-date info-break-policy">
+                    <i class="far fa-calendar-minus fa-fw"></i>发布日期:&nbsp;&nbsp;
+                    2026-03-28
+                </div>
+                
+
+                
+                <div class="post-date info-break-policy">
+                    <i class="far fa-calendar-check fa-fw"></i>更新日期:&nbsp;&nbsp;
+                    2026-03-28
+                </div>
+                
+
+                
+                <div class="info-break-policy">
+                    <i class="far fa-file-word fa-fw"></i>文章字数:&nbsp;&nbsp;
+                    4.5k
+                </div>
+                
+
+                
+                <div class="info-break-policy">
+                    <i class="far fa-clock fa-fw"></i>阅读时长:&nbsp;&nbsp;
+                    20 分
+                </div>
+                
+
+                
+            </div>
+        </div>
+        <hr class="clearfix">
+
+        
+
+        
+
+        <div class="card-content article-card-content">
+            <div id="articleContent">
+                <h1 id="第17节：字符设备驱动（UART-与-Console）"><a href="#第17节：字符设备驱动（UART-与-Console）" class="headerlink" title="第17节：字符设备驱动（UART 与 Console）"></a>第17节：字符设备驱动（UART 与 Console）</h1><h2 id="学习目标"><a href="#学习目标" class="headerlink" title="学习目标"></a>学习目标</h2><ul>
+<li>理解 MMIO（内存映射 I/O）与 16550A UART 寄存器的交互方式</li>
+<li>掌握中断驱动 I/O 的设计：发送侧的异步缓冲、接收侧的回调链</li>
+<li>理解 console 三索引环形缓冲区的行编辑协议（echo、backspace、Ctrl-U、Ctrl-D）</li>
+<li>掌握 PLIC 中断控制器在 xv6 中的角色与路由流程</li>
+<li>理解内核 <code>printf</code> 与用户 <code>write</code> 两条不同输出路径</li>
+</ul>
+<p><strong>预计用时</strong>：3～4 小时<br><strong>前置要求</strong>：第11节（Trap机制/内核态中断）、第16节（文件描述符与系统调用层）、第12节（锁机制）</p>
+<hr>
+<h2 id="一、硬件背景：UART-16550A-与-MMIO"><a href="#一、硬件背景：UART-16550A-与-MMIO" class="headerlink" title="一、硬件背景：UART 16550A 与 MMIO"></a>一、硬件背景：UART 16550A 与 MMIO</h2><h3 id="1-1-MMIO-基本概念"><a href="#1-1-MMIO-基本概念" class="headerlink" title="1.1 MMIO 基本概念"></a>1.1 MMIO 基本概念</h3><p>xv6 运行在 QEMU 模拟的 RISC-V 平台上，外设寄存器通过<strong>内存映射 I/O（MMIO）</strong> 暴露给 CPU：将外设寄存器映射到某段物理地址，CPU 用普通的内存读写指令（<code>lw/sw</code>）访问外设——无需专用 I/O 指令。</p>
+<pre class="line-numbers language-bash"><code class="language-bash">物理地址空间（QEMU virt 平台）：
+
+0x00000000 ── 0x0FFFFFFF   普通 RAM（前 16 MB 保留给机器固件）
+0x0C000000                 PLIC（中断控制器）
+0x10000000                 UART0（串口，16550A）   ← UART0_IRQ <span class="token operator">=</span> 10
+0x10001000                 VirtIO 磁盘              ← VIRTIO0_IRQ <span class="token operator">=</span> 1
+0x80000000 ──              RAM（xv6 运行区域）
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>关键宏（<code>kernel/memlayout.h</code>）</strong>：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token macro property">#<span class="token directive keyword">define</span> UART0      0x10000000L    </span><span class="token comment" spellcheck="true">// UART 寄存器基地址</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> UART0_IRQ  10             </span><span class="token comment" spellcheck="true">// UART 的中断号</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<h3 id="1-2-16550A-UART-寄存器"><a href="#1-2-16550A-UART-寄存器" class="headerlink" title="1.2 16550A UART 寄存器"></a>1.2 16550A UART 寄存器</h3><p>16550A 是经典的串行通信芯片，xv6 通过以下寄存器偏移访问它：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// kernel/uart.c 寄存器偏移定义</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> RHR 0    </span><span class="token comment" spellcheck="true">// 接收保持寄存器（读时：读取收到的字节）</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> THR 0    </span><span class="token comment" spellcheck="true">// 发送保持寄存器（写时：发送一个字节）</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> IER 1    </span><span class="token comment" spellcheck="true">// 中断使能寄存器</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> FCR 2    </span><span class="token comment" spellcheck="true">// FIFO 控制寄存器（写）</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> ISR 2    </span><span class="token comment" spellcheck="true">// 中断状态寄存器（读）</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> LCR 3    </span><span class="token comment" spellcheck="true">// 线路控制寄存器（波特率、字长）</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> LSR 5    </span><span class="token comment" spellcheck="true">// 线路状态寄存器</span>
+
+<span class="token comment" spellcheck="true">// LSR 状态位</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> LSR_RX_READY (1&lt;&lt;0)   </span><span class="token comment" spellcheck="true">// 位0=1：RHR 中有数据可读</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> LSR_TX_IDLE  (1&lt;&lt;5)   </span><span class="token comment" spellcheck="true">// 位5=1：THR 空闲，可发送</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>寄存器访问宏</strong>：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token macro property">#<span class="token directive keyword">define</span> Reg(reg) ((volatile unsigned char *)(UART0 + reg))</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> ReadReg(reg)    (*(Reg(reg)))</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> WriteReg(reg,v) (*(Reg(reg)) = (v))</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<p><code>volatile</code> 关键字告诉编译器<strong>不要优化</strong>对这些地址的访问——外设状态由硬件改变，不能被缓存。</p>
+<h3 id="1-3-PLIC-中断控制器"><a href="#1-3-PLIC-中断控制器" class="headerlink" title="1.3 PLIC 中断控制器"></a>1.3 PLIC 中断控制器</h3><p>PLIC（Platform Level Interrupt Controller）负责将多个外设中断路由到 CPU 核心：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">外设 UART    <span class="token punctuation">(</span>IRQ<span class="token operator">=</span>10<span class="token punctuation">)</span>  ──┐
+外设 VirtIO  <span class="token punctuation">(</span>IRQ<span class="token operator">=</span>1<span class="token punctuation">)</span>   ──┤──→  PLIC  ──→  CPU hart0/hart1
+外设 <span class="token punctuation">..</span>.                 ┘          <span class="token punctuation">(</span>S 模式外部中断，scause bit63<span class="token operator">=</span>1, bits<span class="token operator">=</span>9<span class="token punctuation">)</span>
+
+PLIC 寄存器地址（kernel/memlayout.h）：
+PLIC            <span class="token operator">=</span> 0x0C000000   // 中断优先级配置
+PLIC_SENABLE<span class="token punctuation">(</span>h<span class="token punctuation">)</span> <span class="token operator">=</span> PLIC + 0x2080 + h*0x100   // S 模式中断使能（按 hart）
+PLIC_SPRIORITY<span class="token punctuation">(</span>h<span class="token punctuation">)</span><span class="token operator">=</span> PLIC + 0x201000 + h*0x2000  // S 模式优先级阈值
+PLIC_SCLAIM<span class="token punctuation">(</span>h<span class="token punctuation">)</span>  <span class="token operator">=</span> PLIC + 0x201004 + h*0x2000   // claim/complete 寄存器
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>中断处理流程</strong>：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">硬件中断 <span class="token punctuation">(</span>e.g. UART 收到字符<span class="token punctuation">)</span>
+  → PLIC 置 pending 位
+  → CPU 进入 S 模式中断，跳转 kernelvec → usertrap/kerneltrap
+  → devintr<span class="token punctuation">(</span><span class="token punctuation">)</span>
+      ├── plic_claim<span class="token punctuation">(</span><span class="token punctuation">)</span>       读 PLIC_SCLAIM 获取 irq 号
+      ├── if<span class="token punctuation">(</span>irq<span class="token operator">==</span>UART0_IRQ<span class="token punctuation">)</span>: uartintr<span class="token punctuation">(</span><span class="token punctuation">)</span>
+      ├── if<span class="token punctuation">(</span>irq<span class="token operator">==</span>VIRTIO0_IRQ<span class="token punctuation">)</span>: virtio_disk_intr<span class="token punctuation">(</span><span class="token punctuation">)</span>
+      └── plic_complete<span class="token punctuation">(</span>irq<span class="token punctuation">)</span> 通知 PLIC 处理完毕，允许下次中断
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<hr>
+<h2 id="二、uart-c-源码精读"><a href="#二、uart-c-源码精读" class="headerlink" title="二、uart.c 源码精读"></a>二、uart.c 源码精读</h2><h3 id="2-1-uartinit-—-硬件初始化"><a href="#2-1-uartinit-—-硬件初始化" class="headerlink" title="2.1 uartinit — 硬件初始化"></a>2.1 uartinit — 硬件初始化</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span>
+<span class="token function">uartinit</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token comment" spellcheck="true">// 1. 先关闭所有中断，再配置参数</span>
+  <span class="token function">WriteReg</span><span class="token punctuation">(</span>IER<span class="token punctuation">,</span> <span class="token number">0x00</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// 2. 进入波特率设置模式（LCR bit7=1）</span>
+  <span class="token function">WriteReg</span><span class="token punctuation">(</span>LCR<span class="token punctuation">,</span> LCR_BAUD_LATCH<span class="token punctuation">)</span><span class="token punctuation">;</span>       <span class="token comment" spellcheck="true">// LCR_BAUD_LATCH = (1&lt;&lt;7)</span>
+
+  <span class="token comment" spellcheck="true">// 3. 设置波特率 38400（除数=3）：LSB=0x03, MSB=0x00</span>
+  <span class="token function">WriteReg</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">0x03</span><span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 除数低字节 → 偏移 0（覆盖 RHR/THR）</span>
+  <span class="token function">WriteReg</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">0x00</span><span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 除数高字节 → 偏移 1（覆盖 IER）</span>
+
+  <span class="token comment" spellcheck="true">// 4. 退出波特率模式，设置 8 数据位，无奇偶校验</span>
+  <span class="token function">WriteReg</span><span class="token punctuation">(</span>LCR<span class="token punctuation">,</span> LCR_EIGHT_BITS<span class="token punctuation">)</span><span class="token punctuation">;</span>       <span class="token comment" spellcheck="true">// LCR_EIGHT_BITS = (3&lt;&lt;0) = 0x03</span>
+
+  <span class="token comment" spellcheck="true">// 5. 复位并启用 FIFO（16字节收/发缓冲）</span>
+  <span class="token function">WriteReg</span><span class="token punctuation">(</span>FCR<span class="token punctuation">,</span> FCR_FIFO_ENABLE <span class="token operator">|</span> FCR_FIFO_CLEAR<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// 6. 使能发送（TX）和接收（RX）中断</span>
+  <span class="token function">WriteReg</span><span class="token punctuation">(</span>IER<span class="token punctuation">,</span> IER_TX_ENABLE <span class="token operator">|</span> IER_RX_ENABLE<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token function">initlock</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>uart_tx_lock<span class="token punctuation">,</span> <span class="token string">"uart"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>波特率计算</strong>：16550A 内部时钟为 1.8432 MHz，除数=3 时：波特率 = 1843200 / (16×3) = 38400 bps。</p>
+<h3 id="2-2-发送侧：软件缓冲-中断驱动"><a href="#2-2-发送侧：软件缓冲-中断驱动" class="headerlink" title="2.2 发送侧：软件缓冲 + 中断驱动"></a>2.2 发送侧：软件缓冲 + 中断驱动</h3><p>xv6 UART 的<strong>发送路径</strong>分为两层：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">上层（可睡眠）: uartputc<span class="token punctuation">(</span>c<span class="token punctuation">)</span>
+  ─ 将字符存入 uart_tx_buf<span class="token punctuation">[</span>32<span class="token punctuation">]</span>（环形）
+  ─ 调用 uartstart<span class="token punctuation">(</span><span class="token punctuation">)</span> 尝试发送
+  ─ 若缓冲区满，sleep 等待
+
+下层（中断回调）: uartintr<span class="token punctuation">(</span><span class="token punctuation">)</span> → uartstart<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  ─ 发送队列中所有可发送的字符
+  ─ 唤醒等待的 uartputc
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>发送缓冲区</strong>（32字节环形）：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">struct</span> spinlock uart_tx_lock<span class="token punctuation">;</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> UART_TX_BUF_SIZE 32</span>
+<span class="token keyword">char</span> uart_tx_buf<span class="token punctuation">[</span>UART_TX_BUF_SIZE<span class="token punctuation">]</span><span class="token punctuation">;</span>
+<span class="token keyword">int</span> uart_tx_w<span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 写指针（下一个写入位置）</span>
+<span class="token keyword">int</span> uart_tx_r<span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 读指针（下一个发送位置）</span>
+
+<span class="token comment" spellcheck="true">// 缓冲区满：(uart_tx_w + 1) % SIZE == uart_tx_r</span>
+<span class="token comment" spellcheck="true">// 缓冲区空：uart_tx_w == uart_tx_r</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>uartputc — 上半部（top half）</strong>：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span>
+<span class="token function">uartputc</span><span class="token punctuation">(</span><span class="token keyword">int</span> c<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token function">acquire</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>uart_tx_lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span>panicked<span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token keyword">for</span><span class="token punctuation">(</span><span class="token punctuation">;</span><span class="token punctuation">;</span><span class="token punctuation">)</span> <span class="token punctuation">;</span>          <span class="token comment" spellcheck="true">// panic 后死循环，不再发送</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token keyword">while</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">(</span>uart_tx_w <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">%</span> UART_TX_BUF_SIZE<span class="token punctuation">)</span> <span class="token operator">==</span> uart_tx_r<span class="token punctuation">)</span><span class="token punctuation">{</span>
+      <span class="token comment" spellcheck="true">// 缓冲区满：等待 uartstart 消费数据腾出空间</span>
+      <span class="token comment" spellcheck="true">// sleep 在 &amp;uart_tx_r 上，由 uartstart 唤醒</span>
+      <span class="token function">sleep</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>uart_tx_r<span class="token punctuation">,</span> <span class="token operator">&amp;</span>uart_tx_lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+      uart_tx_buf<span class="token punctuation">[</span>uart_tx_w<span class="token punctuation">]</span> <span class="token operator">=</span> c<span class="token punctuation">;</span>
+      uart_tx_w <span class="token operator">=</span> <span class="token punctuation">(</span>uart_tx_w <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">%</span> UART_TX_BUF_SIZE<span class="token punctuation">;</span>
+      <span class="token function">uartstart</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>       <span class="token comment" spellcheck="true">// 尝试立即发送</span>
+      <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>uart_tx_lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>uartstart — 发送引擎（需持有 uart_tx_lock）</strong>：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span>
+<span class="token function">uartstart</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">while</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>uart_tx_w <span class="token operator">==</span> uart_tx_r<span class="token punctuation">)</span><span class="token punctuation">{</span>
+      <span class="token keyword">return</span><span class="token punctuation">;</span>             <span class="token comment" spellcheck="true">// 缓冲区空，无需发送</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token function">ReadReg</span><span class="token punctuation">(</span>LSR<span class="token punctuation">)</span> <span class="token operator">&amp;</span> LSR_TX_IDLE<span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+      <span class="token comment" spellcheck="true">// UART 发送保持寄存器（THR）还未空闲</span>
+      <span class="token comment" spellcheck="true">// 等待硬件发送完毕后产生 TX 中断再来</span>
+      <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token keyword">int</span> c <span class="token operator">=</span> uart_tx_buf<span class="token punctuation">[</span>uart_tx_r<span class="token punctuation">]</span><span class="token punctuation">;</span>
+    uart_tx_r <span class="token operator">=</span> <span class="token punctuation">(</span>uart_tx_r <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">%</span> UART_TX_BUF_SIZE<span class="token punctuation">;</span>
+    
+    <span class="token function">wakeup</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>uart_tx_r<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 唤醒可能阻塞在 uartputc 的进程</span>
+    
+    <span class="token function">WriteReg</span><span class="token punctuation">(</span>THR<span class="token punctuation">,</span> c<span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 写入 THR，硬件开始发送该字节</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>uartputc_sync — 同步阻塞发送（不使用中断）</strong>：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span>
+<span class="token function">uartputc_sync</span><span class="token punctuation">(</span><span class="token keyword">int</span> c<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token function">push_off</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>           <span class="token comment" spellcheck="true">// 关中断（防止在中断处理中睡眠）</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span>panicked<span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token keyword">for</span><span class="token punctuation">(</span><span class="token punctuation">;</span><span class="token punctuation">;</span><span class="token punctuation">)</span> <span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token comment" spellcheck="true">// 忙等：轮询 LSR 直到 THR 空闲</span>
+  <span class="token keyword">while</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token function">ReadReg</span><span class="token punctuation">(</span>LSR<span class="token punctuation">)</span> <span class="token operator">&amp;</span> LSR_TX_IDLE<span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span>
+    <span class="token punctuation">;</span>
+  <span class="token function">WriteReg</span><span class="token punctuation">(</span>THR<span class="token punctuation">,</span> c<span class="token punctuation">)</span><span class="token punctuation">;</span>     <span class="token comment" spellcheck="true">// 直接写入，不经过软件缓冲区</span>
+
+  <span class="token function">pop_off</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><code>uartputc_sync</code> 用于：</p>
+<ol>
+<li>**内核 <code>printf</code>**：可能在持有锁或中断关闭时调用，不能 sleep</li>
+<li><strong>字符回显（echo）</strong>：<code>consoleintr</code> 在中断上下文中，不能 sleep</li>
+</ol>
+<h3 id="2-3-接收侧"><a href="#2-3-接收侧" class="headerlink" title="2.3 接收侧"></a>2.3 接收侧</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// 非阻塞：检查 RHR 是否有数据</span>
+<span class="token keyword">int</span>
+<span class="token function">uartgetc</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">ReadReg</span><span class="token punctuation">(</span>LSR<span class="token punctuation">)</span> <span class="token operator">&amp;</span> <span class="token number">0x01</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token function">ReadReg</span><span class="token punctuation">(</span>RHR<span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 读取字节（清除 RX 中断）</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>              <span class="token comment" spellcheck="true">// 无数据</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment" spellcheck="true">// UART 中断处理（由 trap.c 的 devintr() 调用）</span>
+<span class="token keyword">void</span>
+<span class="token function">uartintr</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token comment" spellcheck="true">// 接收：循环读取所有待处理的输入字符</span>
+  <span class="token keyword">while</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token keyword">int</span> c <span class="token operator">=</span> <span class="token function">uartgetc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>c <span class="token operator">==</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span>
+      <span class="token keyword">break</span><span class="token punctuation">;</span>
+    <span class="token function">consoleintr</span><span class="token punctuation">(</span>c<span class="token punctuation">)</span><span class="token punctuation">;</span>     <span class="token comment" spellcheck="true">// 将字符交给 console 的行编辑处理</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token comment" spellcheck="true">// 发送：利用本次中断机会继续发送缓冲区中的字符</span>
+  <span class="token function">acquire</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>uart_tx_lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token function">uartstart</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>uart_tx_lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>发送 TX 中断的触发条件</strong>：当 UART 发送完一个字节、THR 重新空闲时，若 IER 中 TX 中断已使能，UART 会产生中断。这时 <code>uartintr</code> 被调用，再次执行 <code>uartstart()</code>，继续发送队列中的下一个字节。</p>
+<hr>
+<h2 id="三、console-c-源码精读"><a href="#三、console-c-源码精读" class="headerlink" title="三、console.c 源码精读"></a>三、console.c 源码精读</h2><p>console 是建立在 UART 之上的<strong>行导向终端</strong>，负责：</p>
+<ol>
+<li><strong>输出</strong>：将 <code>write()</code> 系统调用的数据字节逐个送到 <code>uartputc</code></li>
+<li><strong>输入</strong>：从 UART 收集字符，支持行编辑，按行提供给 <code>read()</code> 系统调用</li>
+</ol>
+<h3 id="3-1-console-输入缓冲区：三索引设计"><a href="#3-1-console-输入缓冲区：三索引设计" class="headerlink" title="3.1 console 输入缓冲区：三索引设计"></a>3.1 console 输入缓冲区：三索引设计</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">struct</span> <span class="token punctuation">{</span>
+  <span class="token keyword">struct</span> spinlock lock<span class="token punctuation">;</span>
+  
+  <span class="token macro property">#<span class="token directive keyword">define</span> INPUT_BUF 128</span>
+  <span class="token keyword">char</span> buf<span class="token punctuation">[</span>INPUT_BUF<span class="token punctuation">]</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 128 字节环形缓冲区</span>
+  uint r<span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 读索引  (read index)：consoleread 从此处读走字符</span>
+  uint w<span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 写索引  (write index)：已完成一行，可供读者消费</span>
+  uint e<span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 编辑索引(edit index)：当前正在编辑的位置（含未确认字符）</span>
+<span class="token punctuation">}</span> cons<span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>三个索引的关系</strong>：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">buf<span class="token punctuation">[</span>128<span class="token punctuation">]</span>:
+  r ≤ w ≤ e   <span class="token punctuation">(</span>均为单调递增，取模 128 做环形索引<span class="token punctuation">)</span>
+
+  <span class="token punctuation">[</span>r  <span class="token punctuation">..</span>. w<span class="token punctuation">)</span>   ← 已确认，等待 consoleread 消费的完整行
+  <span class="token punctuation">[</span>w  <span class="token punctuation">..</span>. e<span class="token punctuation">)</span>   ← 正在编辑，尚未按回车确认（用户可退格修改）
+  <span class="token punctuation">[</span>e  <span class="token punctuation">..</span>.  <span class="token punctuation">)</span>   ← 空闲
+
+状态图：
+  输入 <span class="token string">'h'</span>,<span class="token string">'e'</span>,<span class="token string">'l'</span>,<span class="token string">'l'</span>,<span class="token string">'o'</span><span class="token keyword">:</span>    r<span class="token operator">=</span>0, w<span class="token operator">=</span>0, e<span class="token operator">=</span>5  <span class="token punctuation">(</span>未确认<span class="token punctuation">)</span>
+  按下 <span class="token string">'\n'</span><span class="token keyword">:</span>                   r<span class="token operator">=</span>0, w<span class="token operator">=</span>6, e<span class="token operator">=</span>6  <span class="token punctuation">(</span>wakeup consoleread<span class="token punctuation">)</span>
+  consoleread 读完:             r<span class="token operator">=</span>6, w<span class="token operator">=</span>6, e<span class="token operator">=</span>6
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>相比两索引方案（只有 r 和 w），三索引允许在<strong>确认（换行/Ctrl-D）前随时退格撤销</strong>，而不影响已确认行的读取。</p>
+<h3 id="3-2-consoleintr-—-中断处理（下半部）"><a href="#3-2-consoleintr-—-中断处理（下半部）" class="headerlink" title="3.2 consoleintr — 中断处理（下半部）"></a>3.2 consoleintr — 中断处理（下半部）</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span>
+<span class="token function">consoleintr</span><span class="token punctuation">(</span><span class="token keyword">int</span> c<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token function">acquire</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>cons<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">switch</span><span class="token punctuation">(</span>c<span class="token punctuation">)</span><span class="token punctuation">{</span>
+  <span class="token keyword">case</span> <span class="token function">C</span><span class="token punctuation">(</span><span class="token string">'P'</span><span class="token punctuation">)</span><span class="token punctuation">:</span>        <span class="token comment" spellcheck="true">// Ctrl-P：打印所有进程（调试用）</span>
+    <span class="token function">procdump</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">break</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">case</span> <span class="token function">C</span><span class="token punctuation">(</span><span class="token string">'U'</span><span class="token punctuation">)</span><span class="token punctuation">:</span>        <span class="token comment" spellcheck="true">// Ctrl-U：删除整行（Kill Line）</span>
+    <span class="token comment" spellcheck="true">// 从当前编辑位置向前，逐字符退格，直到回到行首或换行符</span>
+    <span class="token keyword">while</span><span class="token punctuation">(</span>cons<span class="token punctuation">.</span>e <span class="token operator">!=</span> cons<span class="token punctuation">.</span>w <span class="token operator">&amp;&amp;</span>
+          cons<span class="token punctuation">.</span>buf<span class="token punctuation">[</span><span class="token punctuation">(</span>cons<span class="token punctuation">.</span>e<span class="token number">-1</span><span class="token punctuation">)</span> <span class="token operator">%</span> INPUT_BUF<span class="token punctuation">]</span> <span class="token operator">!=</span> <span class="token string">'\n'</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+      cons<span class="token punctuation">.</span>e<span class="token operator">--</span><span class="token punctuation">;</span>
+      <span class="token function">consputc</span><span class="token punctuation">(</span>BACKSPACE<span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 发送退格序列到终端</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">break</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">case</span> <span class="token function">C</span><span class="token punctuation">(</span><span class="token string">'H'</span><span class="token punctuation">)</span><span class="token punctuation">:</span>        <span class="token comment" spellcheck="true">// Ctrl-H（0x08）：退格</span>
+  <span class="token keyword">case</span> <span class="token string">'\x7f'</span><span class="token punctuation">:</span>        <span class="token comment" spellcheck="true">// DEL（0x7F）：退格（部分终端）</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>cons<span class="token punctuation">.</span>e <span class="token operator">!=</span> cons<span class="token punctuation">.</span>w<span class="token punctuation">)</span><span class="token punctuation">{</span>    <span class="token comment" spellcheck="true">// 保证不越界到已确认区域</span>
+      cons<span class="token punctuation">.</span>e<span class="token operator">--</span><span class="token punctuation">;</span>
+      <span class="token function">consputc</span><span class="token punctuation">(</span>BACKSPACE<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">break</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">default</span><span class="token punctuation">:</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>c <span class="token operator">!=</span> <span class="token number">0</span> <span class="token operator">&amp;&amp;</span> cons<span class="token punctuation">.</span>e <span class="token operator">-</span> cons<span class="token punctuation">.</span>r <span class="token operator">&lt;</span> INPUT_BUF<span class="token punctuation">)</span><span class="token punctuation">{</span>
+      <span class="token comment" spellcheck="true">// 普通字符：将 \r 转换为 \n</span>
+      c <span class="token operator">=</span> <span class="token punctuation">(</span>c <span class="token operator">==</span> <span class="token string">'\r'</span><span class="token punctuation">)</span> <span class="token operator">?</span> <span class="token string">'\n'</span> <span class="token punctuation">:</span> c<span class="token punctuation">;</span>
+
+      <span class="token function">consputc</span><span class="token punctuation">(</span>c<span class="token punctuation">)</span><span class="token punctuation">;</span>            <span class="token comment" spellcheck="true">// 立即回显（echo back）</span>
+
+      cons<span class="token punctuation">.</span>buf<span class="token punctuation">[</span>cons<span class="token punctuation">.</span>e<span class="token operator">++</span> <span class="token operator">%</span> INPUT_BUF<span class="token punctuation">]</span> <span class="token operator">=</span> c<span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 存入编辑区</span>
+
+      <span class="token comment" spellcheck="true">// 满足以下任一条件时，将 w 推进到 e，唤醒 consoleread：</span>
+      <span class="token comment" spellcheck="true">// 1. 收到换行符 → 一行结束</span>
+      <span class="token comment" spellcheck="true">// 2. 收到 Ctrl-D → EOF</span>
+      <span class="token comment" spellcheck="true">// 3. 缓冲区满（防止溢出）</span>
+      <span class="token keyword">if</span><span class="token punctuation">(</span>c <span class="token operator">==</span> <span class="token string">'\n'</span> <span class="token operator">||</span> c <span class="token operator">==</span> <span class="token function">C</span><span class="token punctuation">(</span><span class="token string">'D'</span><span class="token punctuation">)</span> <span class="token operator">||</span> cons<span class="token punctuation">.</span>e <span class="token operator">==</span> cons<span class="token punctuation">.</span>r <span class="token operator">+</span> INPUT_BUF<span class="token punctuation">)</span><span class="token punctuation">{</span>
+        cons<span class="token punctuation">.</span>w <span class="token operator">=</span> cons<span class="token punctuation">.</span>e<span class="token punctuation">;</span>
+        <span class="token function">wakeup</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>cons<span class="token punctuation">.</span>r<span class="token punctuation">)</span><span class="token punctuation">;</span>      <span class="token comment" spellcheck="true">// 唤醒等待读取的进程</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">break</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>cons<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>consputc — 回显输出</strong>（在 <code>consoleintr</code> 中调用，不能 sleep）：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span>
+<span class="token function">consputc</span><span class="token punctuation">(</span><span class="token keyword">int</span> c<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>c <span class="token operator">==</span> BACKSPACE<span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// 退格视觉效果：'\b'（向左移1格）+ ' '（覆盖字符）+ '\b'（再向左）</span>
+    <span class="token function">uartputc_sync</span><span class="token punctuation">(</span><span class="token string">'\b'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">uartputc_sync</span><span class="token punctuation">(</span><span class="token string">' '</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">uartputc_sync</span><span class="token punctuation">(</span><span class="token string">'\b'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    <span class="token function">uartputc_sync</span><span class="token punctuation">(</span>c<span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 直接同步发送（中断上下文，不能 sleep）</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="3-3-consoleread-—-用户读（上半部）"><a href="#3-3-consoleread-—-用户读（上半部）" class="headerlink" title="3.3 consoleread — 用户读（上半部）"></a>3.3 consoleread — 用户读（上半部）</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">int</span>
+<span class="token function">consoleread</span><span class="token punctuation">(</span><span class="token keyword">int</span> user_dst<span class="token punctuation">,</span> uint64 dst<span class="token punctuation">,</span> <span class="token keyword">int</span> n<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  uint target <span class="token operator">=</span> n<span class="token punctuation">;</span>       <span class="token comment" spellcheck="true">// 记录目标字节数（用于计算返回值）</span>
+  <span class="token keyword">int</span> c<span class="token punctuation">;</span>
+  <span class="token keyword">char</span> cbuf<span class="token punctuation">;</span>
+
+  <span class="token function">acquire</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>cons<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">while</span><span class="token punctuation">(</span>n <span class="token operator">></span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// 等待：直到 consoleintr 将 w 推进（即有确认行可读）</span>
+    <span class="token keyword">while</span><span class="token punctuation">(</span>cons<span class="token punctuation">.</span>r <span class="token operator">==</span> cons<span class="token punctuation">.</span>w<span class="token punctuation">)</span><span class="token punctuation">{</span>
+      <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">myproc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">-></span>killed<span class="token punctuation">)</span><span class="token punctuation">{</span>
+        <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>cons<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+      <span class="token function">sleep</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>cons<span class="token punctuation">.</span>r<span class="token punctuation">,</span> <span class="token operator">&amp;</span>cons<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 在 cons.r 上睡眠</span>
+    <span class="token punctuation">}</span>
+
+    c <span class="token operator">=</span> cons<span class="token punctuation">.</span>buf<span class="token punctuation">[</span>cons<span class="token punctuation">.</span>r<span class="token operator">++</span> <span class="token operator">%</span> INPUT_BUF<span class="token punctuation">]</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 消费一字节</span>
+
+    <span class="token keyword">if</span><span class="token punctuation">(</span>c <span class="token operator">==</span> <span class="token function">C</span><span class="token punctuation">(</span><span class="token string">'D'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">{</span>    <span class="token comment" spellcheck="true">// Ctrl-D = EOF</span>
+      <span class="token keyword">if</span><span class="token punctuation">(</span>n <span class="token operator">&lt;</span> target<span class="token punctuation">)</span><span class="token punctuation">{</span>
+        <span class="token comment" spellcheck="true">// 本次 read 已经读了一些字符，需要保留 ^D 供下次 read 返回 0</span>
+        cons<span class="token punctuation">.</span>r<span class="token operator">--</span><span class="token punctuation">;</span>       <span class="token comment" spellcheck="true">// 把 Ctrl-D 放回，下次 read 会返回 0</span>
+      <span class="token punctuation">}</span>
+      <span class="token keyword">break</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    cbuf <span class="token operator">=</span> c<span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">either_copyout</span><span class="token punctuation">(</span>user_dst<span class="token punctuation">,</span> dst<span class="token punctuation">,</span> <span class="token operator">&amp;</span>cbuf<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span>
+      <span class="token keyword">break</span><span class="token punctuation">;</span>
+
+    dst<span class="token operator">++</span><span class="token punctuation">;</span>
+    <span class="token operator">--</span>n<span class="token punctuation">;</span>
+
+    <span class="token keyword">if</span><span class="token punctuation">(</span>c <span class="token operator">==</span> <span class="token string">'\n'</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+      <span class="token keyword">break</span><span class="token punctuation">;</span>           <span class="token comment" spellcheck="true">// 一次 read 最多消费一行</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+  <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>cons<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">return</span> target <span class="token operator">-</span> n<span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 实际读取的字节数</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="3-4-consolewrite-—-用户写"><a href="#3-4-consolewrite-—-用户写" class="headerlink" title="3.4 consolewrite — 用户写"></a>3.4 consolewrite — 用户写</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">int</span>
+<span class="token function">consolewrite</span><span class="token punctuation">(</span><span class="token keyword">int</span> user_src<span class="token punctuation">,</span> uint64 src<span class="token punctuation">,</span> <span class="token keyword">int</span> n<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">int</span> i<span class="token punctuation">;</span>
+
+  <span class="token function">acquire</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>cons<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">for</span><span class="token punctuation">(</span>i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> n<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token keyword">char</span> c<span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">either_copyin</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>c<span class="token punctuation">,</span> user_src<span class="token punctuation">,</span> src<span class="token operator">+</span>i<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span>
+      <span class="token keyword">break</span><span class="token punctuation">;</span>
+    <span class="token function">uartputc</span><span class="token punctuation">(</span>c<span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 异步发送（使用 tx 缓冲区，可 sleep）</span>
+  <span class="token punctuation">}</span>
+  <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>cons<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">return</span> i<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>注意：<code>consolewrite</code> 用 <code>uartputc</code>（可睡眠，走软件缓冲区），而 <code>consputc</code>（回显）用 <code>uartputc_sync</code>（不可睡眠，忙等）。</p>
+<h3 id="3-5-consoleinit-—-注册设备"><a href="#3-5-consoleinit-—-注册设备" class="headerlink" title="3.5 consoleinit — 注册设备"></a>3.5 consoleinit — 注册设备</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span>
+<span class="token function">consoleinit</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token function">initlock</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>cons<span class="token punctuation">.</span>lock<span class="token punctuation">,</span> <span class="token string">"cons"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token function">uartinit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>                          <span class="token comment" spellcheck="true">// 初始化 UART 硬件</span>
+
+  <span class="token comment" spellcheck="true">// 将 console 读写函数注册到设备函数表</span>
+  devsw<span class="token punctuation">[</span>CONSOLE<span class="token punctuation">]</span><span class="token punctuation">.</span>read  <span class="token operator">=</span> consoleread<span class="token punctuation">;</span>
+  devsw<span class="token punctuation">[</span>CONSOLE<span class="token punctuation">]</span><span class="token punctuation">.</span>write <span class="token operator">=</span> consolewrite<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>此后，对 <code>/dev/console</code>（设备号 major=1）的 <code>read/write</code> 系统调用会经由 <code>fileread/filewrite → devsw[1].read/write</code> 路由到这里。</p>
+<hr>
+<h2 id="四、printf-c-源码精读"><a href="#四、printf-c-源码精读" class="headerlink" title="四、printf.c 源码精读"></a>四、printf.c 源码精读</h2><h3 id="4-1-内核-printf"><a href="#4-1-内核-printf" class="headerlink" title="4.1 内核 printf"></a>4.1 内核 printf</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">volatile</span> <span class="token keyword">int</span> panicked <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// panic 后置 1，让其他 CPU 的 uartstart 停止</span>
+
+<span class="token keyword">static</span> <span class="token keyword">struct</span> <span class="token punctuation">{</span>
+  <span class="token keyword">struct</span> spinlock lock<span class="token punctuation">;</span>
+  <span class="token keyword">int</span> locking<span class="token punctuation">;</span>               <span class="token comment" spellcheck="true">// 初始为 0，printfinit 后置 1</span>
+<span class="token punctuation">}</span> pr<span class="token punctuation">;</span>
+
+<span class="token keyword">void</span>
+<span class="token function">printf</span><span class="token punctuation">(</span><span class="token keyword">char</span> <span class="token operator">*</span>fmt<span class="token punctuation">,</span> <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  va_list ap<span class="token punctuation">;</span>
+  <span class="token keyword">int</span> i<span class="token punctuation">,</span> c<span class="token punctuation">,</span> locking<span class="token punctuation">;</span>
+  <span class="token keyword">char</span> <span class="token operator">*</span>s<span class="token punctuation">;</span>
+
+  locking <span class="token operator">=</span> pr<span class="token punctuation">.</span>locking<span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>locking<span class="token punctuation">)</span>
+    <span class="token function">acquire</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>pr<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>       <span class="token comment" spellcheck="true">// 防止多 CPU 并发 printf 输出乱码</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span>fmt <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span>
+    <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"null fmt"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token function">va_start</span><span class="token punctuation">(</span>ap<span class="token punctuation">,</span> fmt<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">for</span><span class="token punctuation">(</span>i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> <span class="token punctuation">(</span>c <span class="token operator">=</span> fmt<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">&amp;</span> <span class="token number">0xff</span><span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token number">0</span><span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>c <span class="token operator">!=</span> <span class="token string">'%'</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+      <span class="token function">consputc</span><span class="token punctuation">(</span>c<span class="token punctuation">)</span><span class="token punctuation">;</span>           <span class="token comment" spellcheck="true">// 普通字符：直接调用 consputc（同步）</span>
+      <span class="token keyword">continue</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    c <span class="token operator">=</span> fmt<span class="token punctuation">[</span><span class="token operator">++</span>i<span class="token punctuation">]</span> <span class="token operator">&amp;</span> <span class="token number">0xff</span><span class="token punctuation">;</span>
+    <span class="token keyword">switch</span><span class="token punctuation">(</span>c<span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token keyword">case</span> <span class="token string">'d'</span><span class="token punctuation">:</span> <span class="token function">printint</span><span class="token punctuation">(</span><span class="token function">va_arg</span><span class="token punctuation">(</span>ap<span class="token punctuation">,</span> <span class="token keyword">int</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">10</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token keyword">break</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 十进制整数</span>
+    <span class="token keyword">case</span> <span class="token string">'x'</span><span class="token punctuation">:</span> <span class="token function">printint</span><span class="token punctuation">(</span><span class="token function">va_arg</span><span class="token punctuation">(</span>ap<span class="token punctuation">,</span> <span class="token keyword">int</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">16</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token keyword">break</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 十六进制整数</span>
+    <span class="token keyword">case</span> <span class="token string">'p'</span><span class="token punctuation">:</span> <span class="token function">printptr</span><span class="token punctuation">(</span><span class="token function">va_arg</span><span class="token punctuation">(</span>ap<span class="token punctuation">,</span> uint64<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>     <span class="token keyword">break</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 指针（0x...）</span>
+    <span class="token keyword">case</span> <span class="token string">'s'</span><span class="token punctuation">:</span>
+      s <span class="token operator">=</span> <span class="token function">va_arg</span><span class="token punctuation">(</span>ap<span class="token punctuation">,</span> <span class="token keyword">char</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">if</span><span class="token punctuation">(</span>s <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> s <span class="token operator">=</span> <span class="token string">"(null)"</span><span class="token punctuation">;</span>
+      <span class="token keyword">for</span><span class="token punctuation">(</span><span class="token punctuation">;</span> <span class="token operator">*</span>s<span class="token punctuation">;</span> s<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token function">consputc</span><span class="token punctuation">(</span><span class="token operator">*</span>s<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">break</span><span class="token punctuation">;</span>
+    <span class="token keyword">case</span> <span class="token string">'%'</span><span class="token punctuation">:</span> <span class="token function">consputc</span><span class="token punctuation">(</span><span class="token string">'%'</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token keyword">break</span><span class="token punctuation">;</span>
+    <span class="token keyword">default</span><span class="token punctuation">:</span>
+      <span class="token function">consputc</span><span class="token punctuation">(</span><span class="token string">'%'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token function">consputc</span><span class="token punctuation">(</span>c<span class="token punctuation">)</span><span class="token punctuation">;</span>           <span class="token comment" spellcheck="true">// 未知格式符：原样输出</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span>locking<span class="token punctuation">)</span>
+    <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>pr<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>支持的格式符</strong>：仅 <code>%d</code>、<code>%x</code>、<code>%p</code>、<code>%s</code>，比标准 C 库简单得多，够内核调试使用即可。</p>
+<h3 id="4-2-panic-—-内核崩溃处理"><a href="#4-2-panic-—-内核崩溃处理" class="headerlink" title="4.2 panic — 内核崩溃处理"></a>4.2 panic — 内核崩溃处理</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span>
+<span class="token function">panic</span><span class="token punctuation">(</span><span class="token keyword">char</span> <span class="token operator">*</span>s<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  pr<span class="token punctuation">.</span>locking <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>      <span class="token comment" spellcheck="true">// 关闭 printf 锁（避免死锁，直接输出）</span>
+  <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"panic: "</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token function">printf</span><span class="token punctuation">(</span>s<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  panicked <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>        <span class="token comment" spellcheck="true">// 通知其他 CPU：系统已崩溃</span>
+  <span class="token keyword">for</span><span class="token punctuation">(</span><span class="token punctuation">;</span><span class="token punctuation">;</span><span class="token punctuation">)</span>              <span class="token comment" spellcheck="true">// 当前 CPU 死循环（halt）</span>
+    <span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><code>panicked = 1</code> 之后，<code>uartputc</code> 和 <code>uartputc_sync</code> 都会检测到这个标志并死循环，防止其他 CPU 继续发送，冻结终端输出方便调试。</p>
+<h3 id="4-3-printint-printptr-实现原理"><a href="#4-3-printint-printptr-实现原理" class="headerlink" title="4.3 printint / printptr 实现原理"></a>4.3 printint / printptr 实现原理</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">static</span> <span class="token keyword">void</span>
+<span class="token function">printint</span><span class="token punctuation">(</span><span class="token keyword">int</span> xx<span class="token punctuation">,</span> <span class="token keyword">int</span> base<span class="token punctuation">,</span> <span class="token keyword">int</span> sign<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">char</span> buf<span class="token punctuation">[</span><span class="token number">16</span><span class="token punctuation">]</span><span class="token punctuation">;</span>     <span class="token comment" spellcheck="true">// 最多 16 位（二进制最长）</span>
+  <span class="token keyword">int</span> i<span class="token punctuation">;</span>
+  uint x<span class="token punctuation">;</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span>sign <span class="token operator">&amp;&amp;</span> <span class="token punctuation">(</span>sign <span class="token operator">=</span> xx <span class="token operator">&lt;</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    x <span class="token operator">=</span> <span class="token operator">-</span>xx<span class="token punctuation">;</span>        <span class="token comment" spellcheck="true">// 处理负数</span>
+  <span class="token keyword">else</span>
+    x <span class="token operator">=</span> xx<span class="token punctuation">;</span>
+
+  i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  <span class="token keyword">do</span> <span class="token punctuation">{</span>
+    buf<span class="token punctuation">[</span>i<span class="token operator">++</span><span class="token punctuation">]</span> <span class="token operator">=</span> digits<span class="token punctuation">[</span>x <span class="token operator">%</span> base<span class="token punctuation">]</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 低位先存（逆序）</span>
+  <span class="token punctuation">}</span> <span class="token keyword">while</span><span class="token punctuation">(</span><span class="token punctuation">(</span>x <span class="token operator">/</span><span class="token operator">=</span> base<span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span>sign<span class="token punctuation">)</span>
+    buf<span class="token punctuation">[</span>i<span class="token operator">++</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token string">'-'</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">while</span><span class="token punctuation">(</span><span class="token operator">--</span>i <span class="token operator">>=</span> <span class="token number">0</span><span class="token punctuation">)</span>
+    <span class="token function">consputc</span><span class="token punctuation">(</span>buf<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 逆序输出 = 正确顺序</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">static</span> <span class="token keyword">void</span>
+<span class="token function">printptr</span><span class="token punctuation">(</span>uint64 x<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">int</span> i<span class="token punctuation">;</span>
+  <span class="token function">consputc</span><span class="token punctuation">(</span><span class="token string">'0'</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token function">consputc</span><span class="token punctuation">(</span><span class="token string">'x'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>     <span class="token comment" spellcheck="true">// 固定前缀 "0x"</span>
+  <span class="token comment" spellcheck="true">// 从最高 4 位开始（64位 = 16个十六进制位）</span>
+  <span class="token keyword">for</span><span class="token punctuation">(</span>i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> <span class="token punctuation">(</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span>uint64<span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">,</span> x <span class="token operator">&lt;&lt;=</span> <span class="token number">4</span><span class="token punctuation">)</span>
+    <span class="token function">consputc</span><span class="token punctuation">(</span>digits<span class="token punctuation">[</span>x <span class="token operator">>></span> <span class="token punctuation">(</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span>uint64<span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">8</span> <span class="token operator">-</span> <span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<hr>
+<h2 id="五、完整-I-O-路径图"><a href="#五、完整-I-O-路径图" class="headerlink" title="五、完整 I/O 路径图"></a>五、完整 I/O 路径图</h2><h3 id="5-1-键盘输入路径（用户进程-read）"><a href="#5-1-键盘输入路径（用户进程-read）" class="headerlink" title="5.1 键盘输入路径（用户进程 read）"></a>5.1 键盘输入路径（用户进程 read）</h3><pre class="line-numbers language-bash"><code class="language-bash">物理键盘按键
+  → QEMU 串口仿真
+  → UART 硬件：字节存入 RHR，置 LSR_RX_READY，向 PLIC 发送 IRQ<span class="token operator">=</span>10
+  → PLIC：向 CPU hart 发送外部中断
+  → CPU：进入 S 模式中断，跳转 kernelvec → usertrap/kerneltrap
+  → devintr<span class="token punctuation">(</span><span class="token punctuation">)</span>
+      ├── plic_claim<span class="token punctuation">(</span><span class="token punctuation">)</span>    → 返回 irq<span class="token operator">=</span>10
+      ├── uartintr<span class="token punctuation">(</span><span class="token punctuation">)</span>
+      │   ├── uartgetc<span class="token punctuation">(</span><span class="token punctuation">)</span>          读 RHR 取字节 c
+      │   └── consoleintr<span class="token punctuation">(</span>c<span class="token punctuation">)</span>
+      │       ├── 普通字符：存入 cons.buf<span class="token punctuation">[</span>e++<span class="token punctuation">]</span>, consputc<span class="token punctuation">(</span>回显<span class="token punctuation">)</span>
+      │       ├── \n / Ctrl-D：cons.w <span class="token operator">=</span> cons.e<span class="token punctuation">;</span> wakeup<span class="token punctuation">(</span><span class="token operator">&amp;</span>cons.r<span class="token punctuation">)</span>
+      │       └── Ctrl-H / DEL：cons.e--<span class="token punctuation">;</span> consputc<span class="token punctuation">(</span>BACKSPACE<span class="token punctuation">)</span>
+      └── plic_complete<span class="token punctuation">(</span>10<span class="token punctuation">)</span>
+  → 若用户进程在 consoleread → sleep<span class="token punctuation">(</span><span class="token operator">&amp;</span>cons.r<span class="token punctuation">)</span> 中等待：
+      wakeup 唤醒它
+  → consoleread：从 cons.buf<span class="token punctuation">[</span>r++<span class="token punctuation">]</span> 读字节，copyout 到用户空间
+  → sys_read → fileread → consoleread → 返回字节数
+  → 用户进程获得输入
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="5-2-用户程序-write-到屏幕路径"><a href="#5-2-用户程序-write-到屏幕路径" class="headerlink" title="5.2 用户程序 write 到屏幕路径"></a>5.2 用户程序 write 到屏幕路径</h3><pre class="line-numbers language-bash"><code class="language-bash">用户程序: write<span class="token punctuation">(</span>1, buf, n<span class="token punctuation">)</span>
+  → ecall → usertrap → sys_write
+  → filewrite<span class="token punctuation">(</span>f, addr, n<span class="token punctuation">)</span>      f-<span class="token operator">></span>type <span class="token operator">=</span> FD_DEVICE, f-<span class="token operator">></span>major <span class="token operator">=</span> CONSOLE
+  → devsw<span class="token punctuation">[</span>CONSOLE<span class="token punctuation">]</span>.write<span class="token punctuation">(</span>1, addr, n<span class="token punctuation">)</span>
+  → consolewrite<span class="token punctuation">(</span>user_src<span class="token operator">=</span>1, src<span class="token operator">=</span>addr, n<span class="token punctuation">)</span>
+      └── 逐字节: either_copyin 读取 → uartputc<span class="token punctuation">(</span>c<span class="token punctuation">)</span>
+  → uartputc: 存入 uart_tx_buf<span class="token punctuation">[</span>w++<span class="token punctuation">]</span>, 调用 uartstart<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  → uartstart: 若 THR 空闲，WriteReg<span class="token punctuation">(</span>THR, c<span class="token punctuation">)</span>
+  → UART 硬件:发送字节到串口
+  → QEMU → 终端显示字符
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="5-3-内核-printf-路径"><a href="#5-3-内核-printf-路径" class="headerlink" title="5.3 内核 printf 路径"></a>5.3 内核 printf 路径</h3><pre class="line-numbers language-bash"><code class="language-bash">内核代码: printf<span class="token punctuation">(</span><span class="token string">"hello %d\n"</span>, 42<span class="token punctuation">)</span>
+  → <span class="token function">printf</span> → consputc<span class="token punctuation">(</span>c<span class="token punctuation">)</span>          （跳过 uartputc，直接同步）
+  → uartputc_sync<span class="token punctuation">(</span>c<span class="token punctuation">)</span>
+      ├── push_off<span class="token punctuation">(</span><span class="token punctuation">)</span>              关中断
+      ├── while<span class="token punctuation">(</span><span class="token operator">!</span><span class="token punctuation">(</span>LSR <span class="token operator">&amp;</span> TX_IDLE<span class="token punctuation">))</span> 忙等
+      ├── WriteReg<span class="token punctuation">(</span>THR, c<span class="token punctuation">)</span>        直接写硬件
+      └── pop_off<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  → UART 硬件发送
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>两条路径对比</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>路径</th>
+<th>函数</th>
+<th>阻塞方式</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>用户 write</td>
+<td><code>uartputc</code></td>
+<td>sleep（可调度）</td>
+<td>正常 I/O，有进程上下文</td>
+</tr>
+<tr>
+<td>内核 printf / echo</td>
+<td><code>uartputc_sync</code></td>
+<td>忙等（busy-wait）</td>
+<td>中断上下文、panic、调试</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="六、启动顺序中的-Console-UART-初始化"><a href="#六、启动顺序中的-Console-UART-初始化" class="headerlink" title="六、启动顺序中的 Console/UART 初始化"></a>六、启动顺序中的 Console/UART 初始化</h2><pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// kernel/main.c（CPU 0 启动流程节选）</span>
+<span class="token keyword">void</span>
+<span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">cpuid</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token function">consoleinit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 1. 初始化 cons 锁 + uartinit + 注册 devsw</span>
+    <span class="token function">printfinit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>     <span class="token comment" spellcheck="true">// 2. 初始化 pr 锁，开启 printf 锁保护</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"xv6 kernel is booting\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment" spellcheck="true">// ... 其他初始化（kinit, kvminit, procinit, ...）</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>初始化顺序的约束</strong>：</p>
+<ul>
+<li><code>consoleinit</code> 必须在任何 <code>printf</code> 之前（否则 <code>consputc</code> 输出到未初始化的 UART）</li>
+<li><code>printfinit</code> 之前，<code>printf</code> 不加锁（<code>pr.locking=0</code>）——这期间 printf 不是线程安全的，但 CPU 0 启动时其他 CPU 还未运行，安全</li>
+</ul>
+<hr>
+<h2 id="七、devsw-设备抽象全景"><a href="#七、devsw-设备抽象全景" class="headerlink" title="七、devsw 设备抽象全景"></a>七、devsw 设备抽象全景</h2><pre class="line-numbers language-bash"><code class="language-bash">consoleinit<span class="token punctuation">(</span><span class="token punctuation">)</span> 注册后：
+
+devsw<span class="token punctuation">[</span>0<span class="token punctuation">]</span>    <span class="token operator">=</span> <span class="token punctuation">{</span> NULL, NULL <span class="token punctuation">}</span>           // 未使用
+devsw<span class="token punctuation">[</span>1<span class="token punctuation">]</span>    <span class="token operator">=</span> <span class="token punctuation">{</span> consoleread,           // CONSOLE <span class="token punctuation">(</span>major<span class="token operator">=</span>1<span class="token punctuation">)</span>
+                consolewrite <span class="token punctuation">}</span>
+devsw<span class="token punctuation">[</span>2<span class="token punctuation">..</span>9<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token punctuation">{</span> NULL, NULL <span class="token punctuation">}</span>           // 保留
+
+调用路径：
+  fileread<span class="token punctuation">(</span>f, addr, n<span class="token punctuation">)</span>  when f-<span class="token operator">></span>type <span class="token operator">==</span> FD_DEVICE
+    → devsw<span class="token punctuation">[</span>f-<span class="token operator">></span>major<span class="token punctuation">]</span>.read<span class="token punctuation">(</span>1, addr, n<span class="token punctuation">)</span>
+    → consoleread<span class="token punctuation">(</span>1, addr, n<span class="token punctuation">)</span>
+
+  filewrite<span class="token punctuation">(</span>f, addr, n<span class="token punctuation">)</span> when f-<span class="token operator">></span>type <span class="token operator">==</span> FD_DEVICE
+    → devsw<span class="token punctuation">[</span>f-<span class="token operator">></span>major<span class="token punctuation">]</span>.write<span class="token punctuation">(</span>1, addr, n<span class="token punctuation">)</span>
+    → consolewrite<span class="token punctuation">(</span>1, addr, n<span class="token punctuation">)</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>新增设备（如网卡）只需：</p>
+<ol>
+<li>分配一个主设备号</li>
+<li>实现 read/write 函数</li>
+<li>在初始化时注册 <code>devsw[major]</code></li>
+<li>用 <code>mknod</code> 创建设备文件</li>
+</ol>
+<hr>
+<h2 id="八、动手实验"><a href="#八、动手实验" class="headerlink" title="八、动手实验"></a>八、动手实验</h2><h3 id="实验一：追踪-UART-寄存器操作"><a href="#实验一：追踪-UART-寄存器操作" class="headerlink" title="实验一：追踪 UART 寄存器操作"></a>实验一：追踪 UART 寄存器操作</h3><p>在 <code>kernel/uart.c</code> 的 <code>WriteReg</code> 宏展开处添加调试输出（仅在初始化时打印），观察波特率配置序列：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// 临时修改 uartinit，初始化完成后打印</span>
+<span class="token keyword">void</span>
+<span class="token function">uartinit</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token function">WriteReg</span><span class="token punctuation">(</span>IER<span class="token punctuation">,</span> <span class="token number">0x00</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment" spellcheck="true">// ... 其他寄存器配置 ...</span>
+  <span class="token function">WriteReg</span><span class="token punctuation">(</span>IER<span class="token punctuation">,</span> IER_TX_ENABLE <span class="token operator">|</span> IER_RX_ENABLE<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token function">initlock</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>uart_tx_lock<span class="token punctuation">,</span> <span class="token string">"uart"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment" spellcheck="true">// 注意：此时 printf 尚未初始化，使用 uartputc_sync</span>
+  <span class="token comment" spellcheck="true">// 实际调试时可在 printfinit 后加 printf("uart ready\n");</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="实验二：观察-console-三索引变化"><a href="#实验二：观察-console-三索引变化" class="headerlink" title="实验二：观察 console 三索引变化"></a>实验二：观察 console 三索引变化</h3><p>在 <code>consoleintr</code> 中添加调试打印，实时观察 <code>r/w/e</code> 三个索引的变化：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// 在 consoleintr 函数末尾、release 之前插入</span>
+<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"  [cons] r=%d w=%d e=%d\n"</span><span class="token punctuation">,</span> cons<span class="token punctuation">.</span>r<span class="token punctuation">,</span> cons<span class="token punctuation">.</span>w<span class="token punctuation">,</span> cons<span class="token punctuation">.</span>e<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p>运行 xv6 后输入 <code>"ab"</code> 再按退格，再输入 <code>"c&lt;enter&gt;"</code>，会看到类似：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">  <span class="token punctuation">[</span>cons<span class="token punctuation">]</span> r<span class="token operator">=</span>0 w<span class="token operator">=</span>0 e<span class="token operator">=</span>1     <span class="token punctuation">(</span>输入 <span class="token string">'a'</span><span class="token punctuation">)</span>
+  <span class="token punctuation">[</span>cons<span class="token punctuation">]</span> r<span class="token operator">=</span>0 w<span class="token operator">=</span>0 e<span class="token operator">=</span>2     <span class="token punctuation">(</span>输入 <span class="token string">'b'</span><span class="token punctuation">)</span>
+  <span class="token punctuation">[</span>cons<span class="token punctuation">]</span> r<span class="token operator">=</span>0 w<span class="token operator">=</span>0 e<span class="token operator">=</span>1     <span class="token punctuation">(</span>退格<span class="token punctuation">)</span>
+  <span class="token punctuation">[</span>cons<span class="token punctuation">]</span> r<span class="token operator">=</span>0 w<span class="token operator">=</span>0 e<span class="token operator">=</span>2     <span class="token punctuation">(</span>输入 <span class="token string">'c'</span><span class="token punctuation">)</span>
+  <span class="token punctuation">[</span>cons<span class="token punctuation">]</span> r<span class="token operator">=</span>0 w<span class="token operator">=</span>3 e<span class="token operator">=</span>3     <span class="token punctuation">(</span>按回车，w 推进，wakeup<span class="token punctuation">)</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="实验三：实现-Ctrl-L-清屏功能"><a href="#实验三：实现-Ctrl-L-清屏功能" class="headerlink" title="实验三：实现 Ctrl-L 清屏功能"></a>实验三：实现 Ctrl-L 清屏功能</h3><p>在 <code>consoleintr</code> 的 <code>switch</code> 中添加一个新的 case：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">case</span> <span class="token function">C</span><span class="token punctuation">(</span><span class="token string">'L'</span><span class="token punctuation">)</span><span class="token punctuation">:</span>   <span class="token comment" spellcheck="true">// Ctrl-L：清屏（发送 ANSI 清屏序列）</span>
+  <span class="token comment" spellcheck="true">// ANSI 转义序列 ESC[2J 清屏，ESC[H 移光标到左上角</span>
+  <span class="token function">consputc</span><span class="token punctuation">(</span><span class="token string">'\033'</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token function">consputc</span><span class="token punctuation">(</span><span class="token string">'['</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token function">consputc</span><span class="token punctuation">(</span><span class="token string">'2'</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token function">consputc</span><span class="token punctuation">(</span><span class="token string">'J'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token function">consputc</span><span class="token punctuation">(</span><span class="token string">'\033'</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token function">consputc</span><span class="token punctuation">(</span><span class="token string">'['</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token function">consputc</span><span class="token punctuation">(</span><span class="token string">'H'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">break</span><span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>重新编译运行，在 xv6 shell 中按 Ctrl-L 会清屏。</p>
+<h3 id="实验四：分析-panic-停机机制"><a href="#实验四：分析-panic-停机机制" class="headerlink" title="实验四：分析 panic 停机机制"></a>实验四：分析 panic 停机机制</h3><p>在 xv6 内核中主动触发 panic：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// 在 kernel/main.c 的某处临时添加：</span>
+<span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"test panic"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p>观察：</p>
+<ol>
+<li>panic 输出 “panic: test panic” 后死循环</li>
+<li>其他 CPU 的 <code>uartputc</code> 检测到 <code>panicked=1</code> 后也死循环</li>
+<li>QEMU 终端输出冻结</li>
+</ol>
+<p>分析为什么 <code>panicked</code> 用 <code>volatile int</code> 而不是普通 <code>int</code>：防止编译器缓存该值，确保各 CPU 实时读取内存中的最新状态。</p>
+<h3 id="实验五：添加新字符设备"><a href="#实验五：添加新字符设备" class="headerlink" title="实验五：添加新字符设备"></a>实验五：添加新字符设备</h3><p>实现一个简单的随机数设备 <code>/dev/rand</code>（返回伪随机字节）：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// kernel/rand.c（新建）</span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"types.h"</span></span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"riscv.h"</span></span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"defs.h"</span></span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"file.h"</span></span>
+
+<span class="token keyword">static</span> uint64 seed <span class="token operator">=</span> <span class="token number">12345678</span><span class="token punctuation">;</span>
+
+<span class="token keyword">int</span>
+<span class="token function">randread</span><span class="token punctuation">(</span><span class="token keyword">int</span> user_dst<span class="token punctuation">,</span> uint64 dst<span class="token punctuation">,</span> <span class="token keyword">int</span> n<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">for</span><span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> n<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+    seed <span class="token operator">=</span> seed <span class="token operator">*</span> <span class="token number">6364136223846793005ULL</span> <span class="token operator">+</span> <span class="token number">1442695040888963407ULL</span><span class="token punctuation">;</span>
+    <span class="token keyword">char</span> c <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">char</span><span class="token punctuation">)</span><span class="token punctuation">(</span>seed <span class="token operator">>></span> <span class="token number">33</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">copyout</span><span class="token punctuation">(</span><span class="token function">myproc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">-></span>pagetable<span class="token punctuation">,</span> dst<span class="token operator">+</span>i<span class="token punctuation">,</span> <span class="token operator">&amp;</span>c<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span><span class="token punctuation">)</span>
+      <span class="token keyword">return</span> i<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">return</span> n<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">void</span>
+<span class="token function">randinit</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  devsw<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">.</span>read <span class="token operator">=</span> randread<span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 主设备号 2</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>在 <code>main.c</code> 调用 <code>randinit()</code>，然后 <code>mknod /dev/rand 2 0</code>，即可 <code>cat /dev/rand</code>。</p>
+<hr>
+<h2 id="九、本节小结"><a href="#九、本节小结" class="headerlink" title="九、本节小结"></a>九、本节小结</h2><table>
+<thead>
+<tr>
+<th>组件</th>
+<th>文件</th>
+<th>核心作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>UART 寄存器宏</td>
+<td><code>kernel/uart.c</code></td>
+<td>MMIO 访问 16550A（RHR/THR/LCR/LSR/IER/FCR）</td>
+</tr>
+<tr>
+<td><code>uartinit</code></td>
+<td><code>kernel/uart.c</code></td>
+<td>配置波特率/字长/FIFO，使能中断</td>
+</tr>
+<tr>
+<td><code>uartputc</code></td>
+<td><code>kernel/uart.c</code></td>
+<td>异步发送（软件 32 字节环形缓冲 + sleep）</td>
+</tr>
+<tr>
+<td><code>uartputc_sync</code></td>
+<td><code>kernel/uart.c</code></td>
+<td>同步忙等发送（适用中断上下文/panic）</td>
+</tr>
+<tr>
+<td><code>uartstart</code></td>
+<td><code>kernel/uart.c</code></td>
+<td>发送引擎，将缓冲字节写入 THR</td>
+</tr>
+<tr>
+<td><code>uartgetc</code></td>
+<td><code>kernel/uart.c</code></td>
+<td>非阻塞读 RHR</td>
+</tr>
+<tr>
+<td><code>uartintr</code></td>
+<td><code>kernel/uart.c</code></td>
+<td>UART 中断处理：接收→consoleintr，发送→uartstart</td>
+</tr>
+<tr>
+<td><code>cons</code> 结构体</td>
+<td><code>kernel/console.c</code></td>
+<td>128 字节三索引环形缓冲（r/w/e）</td>
+</tr>
+<tr>
+<td><code>consoleintr</code></td>
+<td><code>kernel/console.c</code></td>
+<td>键盘输入处理：echo + 行编辑（退格/Ctrl-U/Ctrl-D）</td>
+</tr>
+<tr>
+<td><code>consoleread</code></td>
+<td><code>kernel/console.c</code></td>
+<td>用户 read 实现：按行阻塞读取</td>
+</tr>
+<tr>
+<td><code>consolewrite</code></td>
+<td><code>kernel/console.c</code></td>
+<td>用户 write 实现：逐字节调用 uartputc</td>
+</tr>
+<tr>
+<td><code>consoleinit</code></td>
+<td><code>kernel/console.c</code></td>
+<td>注册 devsw[CONSOLE]</td>
+</tr>
+<tr>
+<td><code>printf</code></td>
+<td><code>kernel/printf.c</code></td>
+<td>内核格式化输出（%d/%x/%p/%s）</td>
+</tr>
+<tr>
+<td><code>panic</code></td>
+<td><code>kernel/printf.c</code></td>
+<td>内核崩溃：输出信息 + 冻结系统</td>
+</tr>
+<tr>
+<td>PLIC + <code>devintr</code></td>
+<td><code>kernel/plic.c</code> + <code>trap.c</code></td>
+<td>外部中断路由：irq=10→uartintr</td>
+</tr>
+</tbody></table>
+<p><strong>核心设计思想</strong>：</p>
+<ol>
+<li><strong>上下半部分离（Top/Bottom Half）</strong>：<code>uartputc</code>（上，可 sleep）与 <code>uartintr→uartstart</code>（下，中断，不可 sleep）通过共享环形缓冲区协作</li>
+<li><strong>三索引行编辑</strong>：<code>r≤w≤e</code> 优雅地分离”已消费/可读/正编辑”三个状态，支持行内修改而不影响已完成行</li>
+<li><strong>两条 printf 路径</strong>：用户 write 走异步路径（高效），内核 printf 走同步忙等路径（安全）</li>
+<li><strong>devsw 多态</strong>：字符设备通过函数指针表实现统一接口，新设备只需注册无需修改框架代码</li>
+<li><strong>volatile + panicked</strong>：跨 CPU 的简单同步，不使用锁（panic 时锁状态不可信）</li>
+</ol>
+
+                
+            </div>
+            <hr/>
+
+            
+
+    <div class="reprint" id="reprint-statement">
+        
+            <div class="reprint__author">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-user">
+                        文章作者:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    <a href="/about" rel="external nofollow noreferrer">404djl</a>
+                </span>
+            </div>
+            <div class="reprint__type">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-link">
+                        文章链接:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    <a href="https://404djl.github.io/2026/03/28/os17-zi-fu-she-bei-qu-dong/">https://404djl.github.io/2026/03/28/os17-zi-fu-she-bei-qu-dong/</a>
+                </span>
+            </div>
+            <div class="reprint__notice">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-copyright">
+                        版权声明:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    本博客所有文章除特別声明外，均采用
+                    <a href="https://creativecommons.org/licenses/by/4.0/deed.zh" rel="external nofollow noreferrer" target="_blank">CC BY 4.0</a>
+                    许可协议。转载请注明来源
+                    <a href="/about" target="_blank">404djl</a>
+                    !
+                </span>
+            </div>
+        
+    </div>
+
+    <script async defer>
+      document.addEventListener("copy", function (e) {
+        let toastHTML = '<span>复制成功，请遵循本文的转载规则</span><button class="btn-flat toast-action" onclick="navToReprintStatement()" style="font-size: smaller">查看</a>';
+        M.toast({html: toastHTML})
+      });
+
+      function navToReprintStatement() {
+        $("html, body").animate({scrollTop: $("#reprint-statement").offset().top - 80}, 800);
+      }
+    </script>
+
+
+
+            <div class="tag_share" style="display: block;">
+                <div class="post-meta__tag-list" style="display: inline-block;">
+                    
+                        <div class="article-tag">
+                            
+                                <a href="/tags/linux/">
+                                    <span class="chip bg-color">linux</span>
+                                </a>
+                            
+                                <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                                    <span class="chip bg-color">操作系统</span>
+                                </a>
+                            
+                        </div>
+                    
+                </div>
+                <div class="post_share" style="zoom: 80%; width: fit-content; display: inline-block; float: right; margin: -0.15rem 0;">
+                    <link rel="stylesheet" type="text/css" href="/libs/share/css/share.min.css">
+<div id="article-share">
+
+    
+    <div class="social-share" data-sites="twitter,facebook,google,qq,qzone,wechat,weibo,douban,linkedin" data-wechat-qrcode-helper="<p>微信扫一扫即可分享！</p>"></div>
+    <script src="/libs/share/js/social-share.min.js"></script>
+    
+
+    
+
+</div>
+
+                </div>
+            </div>
+            
+                <div id="reward">
+    <a href="#rewardModal" class="reward-link modal-trigger btn-floating btn-medium waves-effect waves-light red">赏</a>
+
+    <!-- Modal Structure -->
+    <div id="rewardModal" class="modal">
+        <div class="modal-content">
+            <a class="close modal-close"><i class="fas fa-times"></i></a>
+            <h4 class="reward-title">你的赏识是我前进的动力</h4>
+            <div class="reward-content">
+                <div class="reward-tabs">
+                    <ul class="tabs row">
+                        <li class="tab col s6 alipay-tab waves-effect waves-light"><a href="#alipay">支付宝</a></li>
+                        <li class="tab col s6 wechat-tab waves-effect waves-light"><a href="#wechat">微 信</a></li>
+                    </ul>
+                    <div id="alipay">
+                        <img src="/medias/reward/alipay.jpg" class="reward-img" alt="支付宝打赏二维码">
+                    </div>
+                    <div id="wechat">
+                        <img src="/medias/reward/wechat.png" class="reward-img" alt="微信打赏二维码">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(function () {
+        $('.tabs').tabs();
+    });
+</script>
+
+            
+        </div>
+    </div>
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+<article id="prenext-posts" class="prev-next articles">
+    <div class="row article-row">
+        
+        <div class="article col s12 m6" data-aos="fade-up" data-aos="fade-up">
+            <div class="article-badge left-badge text-color">
+                <i class="far fa-dot-circle"></i>&nbsp;本篇
+            </div>
+            <div class="card">
+                <a href="/2026/03/28/os17-zi-fu-she-bei-qu-dong/">
+                    <div class="card-image">
+                        
+                        
+                        <img src="/medias/featureimages/21.png" class="responsive-img" alt="OS17-字符设备驱动">
+                        
+                        <span class="card-title">OS17-字符设备驱动</span>
+                    </div>
+                </a>
+                <div class="card-content article-content">
+                    <div class="summary block-with-text">
+                        
+                            
+                        
+                    </div>
+                    <div class="publish-info">
+                            <span class="publish-date">
+                                <i class="far fa-clock fa-fw icon-date"></i>2026-03-28
+                            </span>
+                        <span class="publish-author">
+                            
+                            <i class="fas fa-bookmark fa-fw icon-category"></i>
+                            
+                            <a href="/categories/OS/" class="post-category">
+                                    OS
+                                </a>
+                            
+                            
+                        </span>
+                    </div>
+                </div>
+
+                
+                <div class="card-action article-tags">
+                    
+                    <a href="/tags/linux/">
+                        <span class="chip bg-color">linux</span>
+                    </a>
+                    
+                    <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                        <span class="chip bg-color">操作系统</span>
+                    </a>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+        
+        <div class="article col s12 m6" data-aos="fade-up">
+            <div class="article-badge right-badge text-color">
+                下一篇&nbsp;<i class="fas fa-chevron-right"></i>
+            </div>
+            <div class="card">
+                <a href="/2026/03/28/os16-wen-jian-miao-shu-fu-yu-xi-tong-diao-yong-ceng/">
+                    <div class="card-image">
+                        
+                        
+                        <img src="/medias/featureimages/6.png" class="responsive-img" alt="OS16-文件描述符与系统调用层">
+                        
+                        <span class="card-title">OS16-文件描述符与系统调用层</span>
+                    </div>
+                </a>
+                <div class="card-content article-content">
+                    <div class="summary block-with-text">
+                        
+                            
+                        
+                    </div>
+                    <div class="publish-info">
+                            <span class="publish-date">
+                                <i class="far fa-clock fa-fw icon-date"></i>2026-03-28
+                            </span>
+                        <span class="publish-author">
+                            
+                            <i class="fas fa-bookmark fa-fw icon-category"></i>
+                            
+                            <a href="/categories/OS/" class="post-category">
+                                    OS
+                                </a>
+                            
+                            
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="card-action article-tags">
+                    
+                    <a href="/tags/linux/">
+                        <span class="chip bg-color">linux</span>
+                    </a>
+                    
+                    <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                        <span class="chip bg-color">操作系统</span>
+                    </a>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+    </div>
+</article>
+
+</div>
+
+
+
+<!-- 代码块功能依赖 -->
+<script type="text/javascript" src="/libs/codeBlock/codeBlockFuction.js"></script>
+
+
+
+<!-- 代码语言 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeLang.js"></script>
+
+
+<!-- 代码块复制 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeCopy.js"></script>
+
+
+<!-- 代码块收缩 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeShrink.js"></script>
+
+
+
+    </div>
+    <div id="toc-aside" class="expanded col l3 hide-on-med-and-down">
+        <div class="toc-widget card" style="background-color: white;">
+            <div class="toc-title"><i class="far fa-list-alt"></i>&nbsp;&nbsp;目录</div>
+            <div id="toc-content"></div>
+        </div>
+    </div>
+</div>
+
+<!-- TOC 悬浮按钮. -->
+
+<div id="floating-toc-btn" class="hide-on-med-and-down">
+    <a class="btn-floating btn-large bg-color">
+        <i class="fas fa-list-ul"></i>
+    </a>
+</div>
+
+
+<script src="/libs/tocbot/tocbot.min.js"></script>
+<script>
+    $(function () {
+        tocbot.init({
+            tocSelector: '#toc-content',
+            contentSelector: '#articleContent',
+            headingsOffset: -($(window).height() * 0.4 - 45),
+            collapseDepth: Number('0'),
+            headingSelector: 'h2, h3, h4'
+        });
+
+        // Set scroll toc fixed.
+        let tocHeight = parseInt($(window).height() * 0.4 - 64);
+        let $tocWidget = $('.toc-widget');
+        $(window).scroll(function () {
+            let scroll = $(window).scrollTop();
+            /* add post toc fixed. */
+            if (scroll > tocHeight) {
+                $tocWidget.addClass('toc-fixed');
+            } else {
+                $tocWidget.removeClass('toc-fixed');
+            }
+        });
+
+        
+        /* 修复文章卡片 div 的宽度. */
+        let fixPostCardWidth = function (srcId, targetId) {
+            let srcDiv = $('#' + srcId);
+            if (srcDiv.length === 0) {
+                return;
+            }
+
+            let w = srcDiv.width();
+            if (w >= 450) {
+                w = w + 21;
+            } else if (w >= 350 && w < 450) {
+                w = w + 18;
+            } else if (w >= 300 && w < 350) {
+                w = w + 16;
+            } else {
+                w = w + 14;
+            }
+            $('#' + targetId).width(w);
+        };
+
+        // 切换TOC目录展开收缩的相关操作.
+        const expandedClass = 'expanded';
+        let $tocAside = $('#toc-aside');
+        let $mainContent = $('#main-content');
+        $('#floating-toc-btn .btn-floating').click(function () {
+            if ($tocAside.hasClass(expandedClass)) {
+                $tocAside.removeClass(expandedClass).hide();
+                $mainContent.removeClass('l9');
+            } else {
+                $tocAside.addClass(expandedClass).show();
+                $mainContent.addClass('l9');
+            }
+            fixPostCardWidth('artDetail', 'prenext-posts');
+        });
+        
+    });
+</script>
+
+    
+
+</main>
+
+
+
+
+    <footer class="page-footer" style="background: linear-gradient(to right, #ff5f6d, #ffc371); color: #fff;">
+    <div class="container" style="text-align: center; padding: 5px;">
+      <p>Copyright © 2024 - 2025 <a href="https://404djl.github.io" style="color: #fff; text-decoration: underline;">404djl</a> | Powered by <a href="https://hexo.io" target="_blank" style="color: #fff; text-decoration: underline;">Hexo</a> | Theme by <a href="https://github.com/blinkfox/hexo-theme-matery" target="_blank" style="color: #fff; text-decoration: underline;">Matery</a></p>
+      <p>
+        <p>📚 站点总字数: <span id="site-word-count"></span> 字</p> |
+        <span id="runtime"></span>
+      </p>
+    </div>
+    <div class="footer-contact" style="background: linear-gradient(to right, #ff5f6d, #ffc371); color: #fff;">
+        <a href="javascript:void(0);" class="tooltipped" target="_blank" data-tooltip="邮箱：3490002122@qq.com" data-position="top" data-delay="50">
+          <i class="fas fa-envelope"></i>
+        </a>
+        <a href="https://github.com/404djl" class="tooltipped" target="_blank" data-tooltip="GitHub：404djl" data-position="top" data-delay="50">
+          <i class="fab fa-github"></i>
+        </a>
+        <a href="javascript:void(0);" class="tooltipped" data-tooltip="微信：djl123456404" data-position="top" data-delay="50">
+          <i class="fab fa-weixin"></i>
+        </a>
+    </div>
+</footer>
+
+
+
+
+<script>
+    const blogStartDate = new Date("2024-12-16T00:00:00Z"); // 修改为你的博客起始日期
+  
+    function updateRuntime() {
+      const now = new Date();
+      const diff = now - blogStartDate;
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((diff / (1000 * 60)) % 60);
+      const seconds = Math.floor((diff / 1000) % 60);
+  
+      const runtimeText = `本站已安全运行 ${days} 天 ${hours} 小时 ${minutes} 分钟 ${seconds} 秒`;
+      document.getElementById("runtime").innerText = runtimeText;
+    }
+  
+    updateRuntime();
+    setInterval(updateRuntime, 1000);
+  </script>
+  
+  <script>
+    fetch('/index.html')
+      .then(response => response.text())
+      .then(html => {
+        const wordCountRegex = /<meta name="wordCount" content="(\d+)">/;
+        const match = wordCountRegex.exec(html);
+        if (match) {
+          document.getElementById('site-word-count').innerText = match[1];
+        }
+      });
+  </script>
+  
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var tooltips = document.querySelectorAll('.tooltipped');
+      M.Tooltip.init(tooltips);
+    });
+  </script>
+  
+
+    <!-- 搜索遮罩框 -->
+<div id="searchModal" class="modal">
+    <div class="modal-content">
+        <div class="search-header">
+            <span class="title"><i class="fas fa-search"></i>&nbsp;&nbsp;搜索</span>
+            <input type="search" id="searchInput" name="s" placeholder="请输入搜索的关键字"
+                   class="search-input">
+        </div>
+        <div id="searchResult"></div>
+    </div>
+</div>
+
+<script type="text/javascript">
+$(function () {
+    var searchFunc = function (path, search_id, content_id) {
+        'use strict';
+        $.ajax({
+            url: path,
+            dataType: "xml",
+            success: function (xmlResponse) {
+                // get the contents from search data
+                var datas = $("entry", xmlResponse).map(function () {
+                    return {
+                        title: $("title", this).text(),
+                        content: $("content", this).text(),
+                        url: $("url", this).text()
+                    };
+                }).get();
+                var $input = document.getElementById(search_id);
+                var $resultContent = document.getElementById(content_id);
+                $input.addEventListener('input', function () {
+                    var str = '<ul class=\"search-result-list\">';
+                    var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+                    $resultContent.innerHTML = "";
+                    if (this.value.trim().length <= 0) {
+                        return;
+                    }
+                    // perform local searching
+                    datas.forEach(function (data) {
+                        var isMatch = true;
+                        var data_title = data.title.trim().toLowerCase();
+                        var data_content = data.content.trim().replace(/<[^>]+>/g, "").toLowerCase();
+                        var data_url = data.url;
+                        data_url = data_url.indexOf('/') === 0 ? data.url : '/' + data_url;
+                        var index_title = -1;
+                        var index_content = -1;
+                        var first_occur = -1;
+                        // only match artiles with not empty titles and contents
+                        if (data_title !== '' && data_content !== '') {
+                            keywords.forEach(function (keyword, i) {
+                                index_title = data_title.indexOf(keyword);
+                                index_content = data_content.indexOf(keyword);
+                                if (index_title < 0 && index_content < 0) {
+                                    isMatch = false;
+                                } else {
+                                    if (index_content < 0) {
+                                        index_content = 0;
+                                    }
+                                    if (i === 0) {
+                                        first_occur = index_content;
+                                    }
+                                }
+                            });
+                        }
+                        // show search results
+                        if (isMatch) {
+                            str += "<li><a href='" + data_url + "' class='search-result-title'>" + data_title + "</a>";
+                            var content = data.content.trim().replace(/<[^>]+>/g, "");
+                            if (first_occur >= 0) {
+                                // cut out 100 characters
+                                var start = first_occur - 20;
+                                var end = first_occur + 80;
+                                if (start < 0) {
+                                    start = 0;
+                                }
+                                if (start === 0) {
+                                    end = 100;
+                                }
+                                if (end > content.length) {
+                                    end = content.length;
+                                }
+                                var match_content = content.substr(start, end);
+                                // highlight all keywords
+                                keywords.forEach(function (keyword) {
+                                    var regS = new RegExp(keyword, "gi");
+                                    match_content = match_content.replace(regS, "<em class=\"search-keyword\">" + keyword + "</em>");
+                                });
+
+                                str += "<p class=\"search-result\">" + match_content + "...</p>"
+                            }
+                            str += "</li>";
+                        }
+                    });
+                    str += "</ul>";
+                    $resultContent.innerHTML = str;
+                });
+            }
+        });
+    };
+
+    searchFunc('/search.xml', 'searchInput', 'searchResult');
+});
+</script>
+
+    <!-- 白天和黑夜主题 -->
+<div class="stars-con">
+    <div id="stars"></div>
+    <div id="stars2"></div>
+    <div id="stars3"></div>  
+</div>
+
+<script>
+    function switchNightMode() {
+        $('<div class="Cuteen_DarkSky"><div class="Cuteen_DarkPlanet"></div></div>').appendTo($('body')),
+        setTimeout(function () {
+            $('body').hasClass('DarkMode') 
+            ? ($('body').removeClass('DarkMode'), localStorage.setItem('isDark', '0'), $('#sum-moon-icon').removeClass("fa-sun").addClass('fa-moon')) 
+            : ($('body').addClass('DarkMode'), localStorage.setItem('isDark', '1'), $('#sum-moon-icon').addClass("fa-sun").removeClass('fa-moon')),
+            
+            setTimeout(function () {
+            $('.Cuteen_DarkSky').fadeOut(1e3, function () {
+                $(this).remove()
+            })
+            }, 2e3)
+        })
+    }
+</script>
+
+    <!-- 回到顶部按钮 -->
+<div id="backTop" class="top-scroll">
+    <a class="btn-floating btn-large waves-effect waves-light" href="#!">
+        <i class="fas fa-arrow-up"></i>
+    </a>
+</div>
+
+
+    <script src="/libs/materialize/materialize.min.js"></script>
+    <script src="/libs/masonry/masonry.pkgd.min.js"></script>
+    <script src="/libs/aos/aos.js"></script>
+    <script src="/libs/scrollprogress/scrollProgress.min.js"></script>
+    <script src="/libs/lightGallery/js/lightgallery-all.min.js"></script>
+    <script src="/js/matery.js"></script>
+
+    
+
+    
+    
+    
+
+    <!-- 雪花特效 -->
+     
+        <script type="text/javascript">
+            // 只在桌面版网页启用特效
+            var windowWidth = $(window).width();
+            if (windowWidth > 768) {
+                document.write('<script type="text/javascript" src="/libs/others/snow.js"><\/script>');
+            }
+        </script>
+    
+
+    <!-- 鼠标星星特效 -->
+    
+
+     
+        <script src="https://ssl.captcha.qq.com/TCaptcha.js"></script>
+        <script src="/libs/others/TencentCaptcha.js"></script>
+        <button id="TencentCaptcha" data-appid="xxxxxxxxxx" data-cbfn="callback" type="button" hidden></button>
+    
+
+    <!-- Baidu Analytics -->
+
+    <!-- Baidu Push -->
+
+<script>
+    (function () {
+        var bp = document.createElement('script');
+        var curProtocol = window.location.protocol.split(':')[0];
+        if (curProtocol === 'https') {
+            bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+        } else {
+            bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+        }
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(bp, s);
+    })();
+</script>
+
+    
+    <script src="/libs/others/clicklove.js" async="async"></script>
+    
+    
+    <script async src="/libs/others/busuanzi.pure.mini.js"></script>
+    
+
+    
+
+    
+
+    <!--腾讯兔小巢-->
+    
+    
+
+    
+
+    
+
+    
+    <script src="/libs/instantpage/instantpage.js" type="module"></script>
+    
+
+</body>
+
+</html>

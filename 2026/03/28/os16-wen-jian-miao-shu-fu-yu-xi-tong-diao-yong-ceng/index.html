@@ -1,0 +1,2033 @@
+<!DOCTYPE HTML>
+<html lang="zh-CN">
+
+
+<head>
+    <meta charset="utf-8">
+    <meta name="keywords" content="OS16-文件描述符与系统调用层, 404djlのblog">
+    <meta name="description" content="第16节：文件描述符与系统调用层学习目标
+理解”一切皆文件”抽象的统一接口设计
+掌握文件描述符表（进程级）与全局文件表（内核级）的两层结构
+深入分析 file.c 中 filealloc/filedup/fileclose/fileread">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="renderer" content="webkit|ie-stand|ie-comp">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="referrer" content="no-referrer-when-downgrade">
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+
+
+    <title>OS16-文件描述符与系统调用层 | 404djlのblog</title>
+    <link rel="icon" type="image/gif" href="/icons8-github.gif">
+    
+    <style>
+        body{
+            background-image: url(https://pic1.imgdb.cn/item/69b9682b1eedde6824938321.jpg);
+            background-repeat:no-repeat;
+            background-size: 100% 100%;
+            background-attachment:fixed;
+        }
+    </style>
+
+
+
+    <!-- bg-cover style     -->
+
+
+
+<link rel="stylesheet" type="text/css" href="/libs/awesome/css/all.min.css">
+<link rel="stylesheet" type="text/css" href="/libs/materialize/materialize.min.css">
+<link rel="stylesheet" type="text/css" href="/libs/aos/aos.css">
+<link rel="stylesheet" type="text/css" href="/libs/animate/animate.min.css">
+<link rel="stylesheet" type="text/css" href="/libs/lightGallery/css/lightgallery.min.css">
+<link rel="stylesheet" type="text/css" href="/css/matery.css">
+<link rel="stylesheet" type="text/css" href="/css/my.css">
+<link rel="stylesheet" type="text/css" href="/css/dark.css" media="none" onload="if(media!='all')media='all'">
+
+
+
+
+    <link rel="stylesheet" href="/libs/tocbot/tocbot.css">
+    <link rel="stylesheet" href="/css/post.css">
+
+
+
+
+    
+        <link rel="stylesheet" type="text/css" href="/css/reward.css">
+    
+
+
+
+    <script src="/libs/jquery/jquery-3.6.0.min.js"></script>
+
+<meta name="generator" content="Hexo 4.2.0">
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+<link rel="alternate" href="/atom.xml" title="404djlのblog" type="application/atom+xml">
+<link rel="stylesheet" href="/css/prism-tomorrow.css" type="text/css">
+<link rel="stylesheet" href="/css/prism-line-numbers.css" type="text/css">
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+</head>
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+
+
+
+<body>
+    <header class="navbar-fixed">
+    <nav id="headNav" class="bg-color nav-transparent">
+        <div id="navContainer" class="nav-wrapper container">
+            <div class="brand-logo">
+                <a href="/" class="waves-effect waves-light">
+                    
+                    <img src="/icons8-github.gif" class="logo-img" alt="LOGO">
+                    
+                    <span class="logo-span">404djlのblog</span>
+                </a>
+            </div>
+            
+
+<a href="#" data-target="mobile-nav" class="sidenav-trigger button-collapse"><i class="fas fa-bars"></i></a>
+<ul class="right nav-menu">
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/" class="waves-effect waves-light">
+      
+      <i class="fas fa-home" style="zoom: 0.6;"></i>
+      
+      <span>首页</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/tags" class="waves-effect waves-light">
+      
+      <i class="fas fa-tags" style="zoom: 0.6;"></i>
+      
+      <span>标签</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/categories" class="waves-effect waves-light">
+      
+      <i class="fas fa-bookmark" style="zoom: 0.6;"></i>
+      
+      <span>分类</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/archives" class="waves-effect waves-light">
+      
+      <i class="fas fa-archive" style="zoom: 0.6;"></i>
+      
+      <span>归档</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/about" class="waves-effect waves-light">
+      
+      <i class="fas fa-user-circle" style="zoom: 0.6;"></i>
+      
+      <span>关于</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/contact" class="waves-effect waves-light">
+      
+      <i class="fas fa-comments" style="zoom: 0.6;"></i>
+      
+      <span>留言板</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/friends" class="waves-effect waves-light">
+      
+      <i class="fas fa-address-book" style="zoom: 0.6;"></i>
+      
+      <span>友情链接</span>
+    </a>
+    
+  </li>
+  
+  <li>
+    <a href="#searchModal" class="modal-trigger waves-effect waves-light">
+      <i id="searchIcon" class="fas fa-search" title="搜索" style="zoom: 0.85;"></i>
+    </a>
+  </li>
+  <li>
+    <a href="javascript:;" class="waves-effect waves-light" onclick="switchNightMode()" title="深色/浅色模式" >
+      <i id="sum-moon-icon" class="fas fa-sun" style="zoom: 0.85;"></i>
+    </a>
+  </li>
+</ul>
+
+
+<div id="mobile-nav" class="side-nav sidenav">
+
+    <div class="mobile-head bg-color">
+        
+        <img src="/icons8-github.gif" class="logo-img circle responsive-img">
+        
+        <div class="logo-name">404djlのblog</div>
+        <div class="logo-desc">
+            
+            Never really desperate, only the lost of the soul
+            
+        </div>
+    </div>
+
+    <ul class="menu-list mobile-menu-list">
+        
+        <li class="m-nav-item">
+	  
+		<a href="/" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-home"></i>
+			
+			首页
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/tags" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-tags"></i>
+			
+			标签
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/categories" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-bookmark"></i>
+			
+			分类
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/archives" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-archive"></i>
+			
+			归档
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/about" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-user-circle"></i>
+			
+			关于
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/contact" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-comments"></i>
+			
+			留言板
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/friends" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-address-book"></i>
+			
+			友情链接
+		</a>
+          
+        </li>
+        
+        
+        <li><div class="divider"></div></li>
+        <li>
+            <a href="https://github.com/404djl/404djl.github.io" class="waves-effect waves-light" target="_blank">
+                <i class="fab fa-github-square fa-fw"></i>Fork Me
+            </a>
+        </li>
+        
+    </ul>
+</div>
+
+
+        </div>
+
+        
+            <style>
+    .nav-transparent .github-corner {
+        display: none !important;
+    }
+
+    .github-corner {
+        position: absolute;
+        z-index: 10;
+        top: 0;
+        right: 0;
+        border: 0;
+        transform: scale(1.1);
+    }
+
+    .github-corner svg {
+        color: #0f9d58;
+        fill: #fff;
+        height: 64px;
+        width: 64px;
+    }
+
+    .github-corner:hover .octo-arm {
+        animation: a 0.56s ease-in-out;
+    }
+
+    .github-corner .octo-arm {
+        animation: none;
+    }
+
+    @keyframes a {
+        0%,
+        to {
+            transform: rotate(0);
+        }
+        20%,
+        60% {
+            transform: rotate(-25deg);
+        }
+        40%,
+        80% {
+            transform: rotate(10deg);
+        }
+    }
+</style>
+
+<a href="https://github.com/404djl/404djl.github.io" class="github-corner tooltipped hide-on-med-and-down" target="_blank"
+   data-tooltip="Fork Me" data-position="left" data-delay="50">
+    <svg viewBox="0 0 250 250" aria-hidden="true">
+        <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+        <path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2"
+              fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+        <path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z"
+              fill="currentColor" class="octo-body"></path>
+    </svg>
+</a>
+        
+    </nav>
+
+</header>
+
+    
+
+
+
+<div class="bg-cover pd-header post-cover" style="background-image: url('/medias/featureimages/6.png')">
+    <div class="container" style="right: 0px;left: 0px;">
+        <div class="row">
+            <div class="col s12 m12 l12">
+                <div class="brand">
+                    <h1 class="description center-align post-title">OS16-文件描述符与系统调用层</h1>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+<main class="post-container content">
+
+    
+    <div class="row">
+    <div id="main-content" class="col s12 m12 l9">
+        <!-- 文章内容详情 -->
+<div id="artDetail">
+    <div class="card">
+        <div class="card-content article-info">
+            <div class="row tag-cate">
+                <div class="col s7">
+                    
+                    <div class="article-tag">
+                        
+                            <a href="/tags/linux/">
+                                <span class="chip bg-color">linux</span>
+                            </a>
+                        
+                            <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                                <span class="chip bg-color">操作系统</span>
+                            </a>
+                        
+                    </div>
+                    
+                </div>
+                <div class="col s5 right-align">
+                    
+                    <div class="post-cate">
+                        <i class="fas fa-bookmark fa-fw icon-category"></i>
+                        
+                            <a href="/categories/OS/" class="post-category">
+                                OS
+                            </a>
+                        
+                    </div>
+                    
+                </div>
+            </div>
+
+            <div class="post-info">
+                
+                <div class="post-date info-break-policy">
+                    <i class="far fa-calendar-minus fa-fw"></i>发布日期:&nbsp;&nbsp;
+                    2026-03-28
+                </div>
+                
+
+                
+                <div class="post-date info-break-policy">
+                    <i class="far fa-calendar-check fa-fw"></i>更新日期:&nbsp;&nbsp;
+                    2026-03-28
+                </div>
+                
+
+                
+                <div class="info-break-policy">
+                    <i class="far fa-file-word fa-fw"></i>文章字数:&nbsp;&nbsp;
+                    4.9k
+                </div>
+                
+
+                
+                <div class="info-break-policy">
+                    <i class="far fa-clock fa-fw"></i>阅读时长:&nbsp;&nbsp;
+                    23 分
+                </div>
+                
+
+                
+            </div>
+        </div>
+        <hr class="clearfix">
+
+        
+
+        
+
+        <div class="card-content article-card-content">
+            <div id="articleContent">
+                <h1 id="第16节：文件描述符与系统调用层"><a href="#第16节：文件描述符与系统调用层" class="headerlink" title="第16节：文件描述符与系统调用层"></a>第16节：文件描述符与系统调用层</h1><h2 id="学习目标"><a href="#学习目标" class="headerlink" title="学习目标"></a>学习目标</h2><ul>
+<li>理解”一切皆文件”抽象的统一接口设计</li>
+<li>掌握文件描述符表（进程级）与全局文件表（内核级）的两层结构</li>
+<li>深入分析 <code>file.c</code> 中 <code>filealloc/filedup/fileclose/fileread/filewrite</code> 的实现</li>
+<li>理解管道（pipe）环形缓冲区与 sleep/wakeup 的配合</li>
+<li>掌握 <code>sysfile.c</code> 中主要系统调用的参数验证与执行流程</li>
+</ul>
+<p><strong>预计用时</strong>：3～4 小时<br><strong>前置要求</strong>：第14节（日志层）、第15节（inode层）、第12节（锁机制）</p>
+<hr>
+<h2 id="一、”一切皆文件”-的统一抽象"><a href="#一、”一切皆文件”-的统一抽象" class="headerlink" title="一、”一切皆文件” 的统一抽象"></a>一、”一切皆文件” 的统一抽象</h2><p>Unix 最优雅的设计之一：所有 I/O 资源共享同一套接口——<code>read/write/close</code>。</p>
+<pre class="line-numbers language-bash"><code class="language-bash">用户空间                     内核空间
+────────────────────────────────────────────────────────
+  fd<span class="token operator">=</span>3            ──→  proc-<span class="token operator">></span>ofile<span class="token punctuation">[</span>3<span class="token punctuation">]</span>  ──→  struct <span class="token function">file</span>
+                                              │ type<span class="token operator">=</span>FD_PIPE    ──→  struct pipe <span class="token punctuation">(</span>环形缓冲区<span class="token punctuation">)</span>
+                                              │ type<span class="token operator">=</span>FD_INODE   ──→  struct inode <span class="token punctuation">(</span>磁盘文件<span class="token punctuation">)</span>
+                                              │ type<span class="token operator">=</span>FD_DEVICE  ──→  devsw<span class="token punctuation">[</span>major<span class="token punctuation">]</span>.read/write
+                                              └ type<span class="token operator">=</span>FD_NONE    <span class="token punctuation">(</span>未使用<span class="token punctuation">)</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="1-1-两层引用计数"><a href="#1-1-两层引用计数" class="headerlink" title="1.1 两层引用计数"></a>1.1 两层引用计数</h3><p><strong>层次一：进程文件描述符表</strong></p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// kernel/proc.h</span>
+<span class="token keyword">struct</span> proc <span class="token punctuation">{</span>
+    <span class="token keyword">struct</span> file <span class="token operator">*</span>ofile<span class="token punctuation">[</span>NOFILE<span class="token punctuation">]</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 每个进程最多 16 个打开文件</span>
+    <span class="token keyword">struct</span> inode <span class="token operator">*</span>cwd<span class="token punctuation">;</span>            <span class="token comment" spellcheck="true">// 当前工作目录</span>
+    <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>层次二：全局文件表</strong></p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// kernel/file.c</span>
+<span class="token keyword">struct</span> <span class="token punctuation">{</span>
+    <span class="token keyword">struct</span> spinlock lock<span class="token punctuation">;</span>
+    <span class="token keyword">struct</span> file file<span class="token punctuation">[</span>NFILE<span class="token punctuation">]</span><span class="token punctuation">;</span>      <span class="token comment" spellcheck="true">// 系统全局最多 100 个文件对象</span>
+<span class="token punctuation">}</span> ftable<span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="1-2-struct-file-结构体"><a href="#1-2-struct-file-结构体" class="headerlink" title="1.2 struct file 结构体"></a>1.2 struct file 结构体</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// kernel/file.h</span>
+<span class="token keyword">struct</span> file <span class="token punctuation">{</span>
+  <span class="token keyword">enum</span> <span class="token punctuation">{</span> FD_NONE<span class="token punctuation">,</span> FD_PIPE<span class="token punctuation">,</span> FD_INODE<span class="token punctuation">,</span> FD_DEVICE <span class="token punctuation">}</span> type<span class="token punctuation">;</span>
+  <span class="token keyword">int</span> ref<span class="token punctuation">;</span>         <span class="token comment" spellcheck="true">// 引用计数（有多少个 fd 指向此对象）</span>
+  <span class="token keyword">char</span> readable<span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 可读标志</span>
+  <span class="token keyword">char</span> writable<span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 可写标志</span>
+  <span class="token keyword">struct</span> pipe <span class="token operator">*</span>pipe<span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// type=FD_PIPE 时有效</span>
+  <span class="token keyword">struct</span> inode <span class="token operator">*</span>ip<span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// type=FD_INODE / FD_DEVICE 时有效</span>
+  uint off<span class="token punctuation">;</span>           <span class="token comment" spellcheck="true">// 文件读写偏移量（仅 FD_INODE）</span>
+  <span class="token keyword">short</span> major<span class="token punctuation">;</span>        <span class="token comment" spellcheck="true">// 设备主设备号（仅 FD_DEVICE）</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>关键常量（<code>kernel/param.h</code>）</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>常量</th>
+<th>值</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>NOFILE</code></td>
+<td>16</td>
+<td>每进程最多打开文件数</td>
+</tr>
+<tr>
+<td><code>NFILE</code></td>
+<td>100</td>
+<td>全局文件对象总数</td>
+</tr>
+<tr>
+<td><code>NDEV</code></td>
+<td>10</td>
+<td>最大主设备号</td>
+</tr>
+<tr>
+<td><code>MAXPATH</code></td>
+<td>128</td>
+<td>路径名最大长度</td>
+</tr>
+<tr>
+<td><code>MAXARG</code></td>
+<td>32</td>
+<td>exec 最大参数数量</td>
+</tr>
+</tbody></table>
+<p><strong>open flags（<code>kernel/fcntl.h</code>）</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>常量</th>
+<th>值</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>O_RDONLY</code></td>
+<td>0x000</td>
+<td>只读</td>
+</tr>
+<tr>
+<td><code>O_WRONLY</code></td>
+<td>0x001</td>
+<td>只写</td>
+</tr>
+<tr>
+<td><code>O_RDWR</code></td>
+<td>0x002</td>
+<td>读写</td>
+</tr>
+<tr>
+<td><code>O_CREATE</code></td>
+<td>0x200</td>
+<td>不存在则创建</td>
+</tr>
+<tr>
+<td><code>O_TRUNC</code></td>
+<td>0x400</td>
+<td>截断为零</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="二、设备抽象：devsw-函数表"><a href="#二、设备抽象：devsw-函数表" class="headerlink" title="二、设备抽象：devsw 函数表"></a>二、设备抽象：devsw 函数表</h2><p>xv6 通过 <code>devsw[]</code> 函数指针表支持字符设备多态：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// kernel/file.h</span>
+<span class="token keyword">struct</span> devsw <span class="token punctuation">{</span>
+  <span class="token keyword">int</span> <span class="token punctuation">(</span><span class="token operator">*</span>read<span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">,</span> uint64<span class="token punctuation">,</span> <span class="token keyword">int</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 读函数指针</span>
+  <span class="token keyword">int</span> <span class="token punctuation">(</span><span class="token operator">*</span>write<span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">,</span> uint64<span class="token punctuation">,</span> <span class="token keyword">int</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 写函数指针</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token keyword">extern</span> <span class="token keyword">struct</span> devsw devsw<span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+
+<span class="token macro property">#<span class="token directive keyword">define</span> CONSOLE 1   </span><span class="token comment" spellcheck="true">// console 的主设备号为 1</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>控制台驱动在 <code>consoleinit()</code> 中注册：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// kernel/console.c（第17节详细分析）</span>
+devsw<span class="token punctuation">[</span>CONSOLE<span class="token punctuation">]</span><span class="token punctuation">.</span>read  <span class="token operator">=</span> consoleread<span class="token punctuation">;</span>
+devsw<span class="token punctuation">[</span>CONSOLE<span class="token punctuation">]</span><span class="token punctuation">.</span>write <span class="token operator">=</span> consolewrite<span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<p>当对设备文件调用 <code>fileread()</code> 时，会通过 <code>devsw[f-&gt;major].read</code> 分发到对应驱动——这就是”一切皆文件”实现多态的核心机制。</p>
+<hr>
+<h2 id="三、file-c-源码精读"><a href="#三、file-c-源码精读" class="headerlink" title="三、file.c 源码精读"></a>三、file.c 源码精读</h2><h3 id="3-1-filealloc-—-分配全局文件对象"><a href="#3-1-filealloc-—-分配全局文件对象" class="headerlink" title="3.1 filealloc — 分配全局文件对象"></a>3.1 filealloc — 分配全局文件对象</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">struct</span> file<span class="token operator">*</span>
+<span class="token function">filealloc</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">struct</span> file <span class="token operator">*</span>f<span class="token punctuation">;</span>
+
+  <span class="token function">acquire</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>ftable<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>          <span class="token comment" spellcheck="true">// 加全局锁，保护文件表</span>
+  <span class="token keyword">for</span><span class="token punctuation">(</span>f <span class="token operator">=</span> ftable<span class="token punctuation">.</span>file<span class="token punctuation">;</span> f <span class="token operator">&lt;</span> ftable<span class="token punctuation">.</span>file <span class="token operator">+</span> NFILE<span class="token punctuation">;</span> f<span class="token operator">++</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>f<span class="token operator">-></span>ref <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">{</span>              <span class="token comment" spellcheck="true">// 找到 ref==0 的空闲槽位</span>
+      f<span class="token operator">-></span>ref <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>                 <span class="token comment" spellcheck="true">// 初始引用计数为 1</span>
+      <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>ftable<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">return</span> f<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+  <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>ftable<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>                       <span class="token comment" spellcheck="true">// 全部占满，返回 NULL</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>注意</strong>：<code>filealloc</code> 只分配 <code>struct file</code>，不初始化 <code>type/readable/writable/ip</code> 等字段，调用者负责填写。</p>
+<h3 id="3-2-filedup-—-增加引用计数"><a href="#3-2-filedup-—-增加引用计数" class="headerlink" title="3.2 filedup — 增加引用计数"></a>3.2 filedup — 增加引用计数</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">struct</span> file<span class="token operator">*</span>
+<span class="token function">filedup</span><span class="token punctuation">(</span><span class="token keyword">struct</span> file <span class="token operator">*</span>f<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token function">acquire</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>ftable<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>f<span class="token operator">-></span>ref <span class="token operator">&lt;</span> <span class="token number">1</span><span class="token punctuation">)</span>
+    <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"filedup"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  f<span class="token operator">-></span>ref<span class="token operator">++</span><span class="token punctuation">;</span>               <span class="token comment" spellcheck="true">// 原子性地递增引用计数</span>
+  <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>ftable<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">return</span> f<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><code>dup()</code> 系统调用和 <code>fork()</code> 都会调用 <code>filedup</code>，确保多个 fd 共享同一个 <code>struct file</code> 时不会提前释放。</p>
+<h3 id="3-3-fileclose-—-释放引用计数"><a href="#3-3-fileclose-—-释放引用计数" class="headerlink" title="3.3 fileclose — 释放引用计数"></a>3.3 fileclose — 释放引用计数</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span>
+<span class="token function">fileclose</span><span class="token punctuation">(</span><span class="token keyword">struct</span> file <span class="token operator">*</span>f<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">struct</span> file ff<span class="token punctuation">;</span>
+
+  <span class="token function">acquire</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>ftable<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>f<span class="token operator">-></span>ref <span class="token operator">&lt;</span> <span class="token number">1</span><span class="token punctuation">)</span>
+    <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"fileclose"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">--</span>f<span class="token operator">-></span>ref <span class="token operator">></span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">{</span>          <span class="token comment" spellcheck="true">// 还有其他引用者，仅减计数</span>
+    <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>ftable<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token comment" spellcheck="true">// ref 降到 0，才真正关闭</span>
+  ff <span class="token operator">=</span> <span class="token operator">*</span>f<span class="token punctuation">;</span>                   <span class="token comment" spellcheck="true">// 拷贝一份，用于锁外清理</span>
+  f<span class="token operator">-></span>ref <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  f<span class="token operator">-></span>type <span class="token operator">=</span> FD_NONE<span class="token punctuation">;</span>         <span class="token comment" spellcheck="true">// 标记为空闲</span>
+  <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>ftable<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span>ff<span class="token punctuation">.</span>type <span class="token operator">==</span> FD_PIPE<span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token function">pipeclose</span><span class="token punctuation">(</span>ff<span class="token punctuation">.</span>pipe<span class="token punctuation">,</span> ff<span class="token punctuation">.</span>writable<span class="token punctuation">)</span><span class="token punctuation">;</span>         <span class="token comment" spellcheck="true">// 关闭管道端</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span><span class="token punctuation">(</span>ff<span class="token punctuation">.</span>type <span class="token operator">==</span> FD_INODE <span class="token operator">||</span> ff<span class="token punctuation">.</span>type <span class="token operator">==</span> FD_DEVICE<span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token function">begin_op</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">iput</span><span class="token punctuation">(</span>ff<span class="token punctuation">.</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>             <span class="token comment" spellcheck="true">// 释放 inode 引用（可能触发磁盘 inode 释放）</span>
+    <span class="token function">end_op</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>设计模式</strong>：先在锁内完成”标记释放”，再在锁外执行耗时操作（如 <code>iput</code>），避免持锁期间死锁。</p>
+<h3 id="3-4-fileread-—-统一读接口"><a href="#3-4-fileread-—-统一读接口" class="headerlink" title="3.4 fileread — 统一读接口"></a>3.4 fileread — 统一读接口</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">int</span>
+<span class="token function">fileread</span><span class="token punctuation">(</span><span class="token keyword">struct</span> file <span class="token operator">*</span>f<span class="token punctuation">,</span> uint64 addr<span class="token punctuation">,</span> <span class="token keyword">int</span> n<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">int</span> r <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span>f<span class="token operator">-></span>readable <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span>       <span class="token comment" spellcheck="true">// 权限检查</span>
+    <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span>f<span class="token operator">-></span>type <span class="token operator">==</span> FD_PIPE<span class="token punctuation">)</span><span class="token punctuation">{</span>
+    r <span class="token operator">=</span> <span class="token function">piperead</span><span class="token punctuation">(</span>f<span class="token operator">-></span>pipe<span class="token punctuation">,</span> addr<span class="token punctuation">,</span> n<span class="token punctuation">)</span><span class="token punctuation">;</span>           <span class="token comment" spellcheck="true">// 管道读</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span><span class="token punctuation">(</span>f<span class="token operator">-></span>type <span class="token operator">==</span> FD_DEVICE<span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>f<span class="token operator">-></span>major <span class="token operator">&lt;</span> <span class="token number">0</span> <span class="token operator">||</span> f<span class="token operator">-></span>major <span class="token operator">>=</span> NDEV <span class="token operator">||</span> <span class="token operator">!</span>devsw<span class="token punctuation">[</span>f<span class="token operator">-></span>major<span class="token punctuation">]</span><span class="token punctuation">.</span>read<span class="token punctuation">)</span>
+      <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+    r <span class="token operator">=</span> devsw<span class="token punctuation">[</span>f<span class="token operator">-></span>major<span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token function">read</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> addr<span class="token punctuation">,</span> n<span class="token punctuation">)</span><span class="token punctuation">;</span>     <span class="token comment" spellcheck="true">// 设备读（通过函数指针）</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span><span class="token punctuation">(</span>f<span class="token operator">-></span>type <span class="token operator">==</span> FD_INODE<span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token function">ilock</span><span class="token punctuation">(</span>f<span class="token operator">-></span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span>r <span class="token operator">=</span> <span class="token function">readi</span><span class="token punctuation">(</span>f<span class="token operator">-></span>ip<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> addr<span class="token punctuation">,</span> f<span class="token operator">-></span>off<span class="token punctuation">,</span> n<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">></span> <span class="token number">0</span><span class="token punctuation">)</span>
+      f<span class="token operator">-></span>off <span class="token operator">+</span><span class="token operator">=</span> r<span class="token punctuation">;</span>            <span class="token comment" spellcheck="true">// 更新文件偏移量</span>
+    <span class="token function">iunlock</span><span class="token punctuation">(</span>f<span class="token operator">-></span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"fileread"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token keyword">return</span> r<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="3-5-filewrite-—-统一写接口（含分批写）"><a href="#3-5-filewrite-—-统一写接口（含分批写）" class="headerlink" title="3.5 filewrite — 统一写接口（含分批写）"></a>3.5 filewrite — 统一写接口（含分批写）</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">int</span>
+<span class="token function">filewrite</span><span class="token punctuation">(</span><span class="token keyword">struct</span> file <span class="token operator">*</span>f<span class="token punctuation">,</span> uint64 addr<span class="token punctuation">,</span> <span class="token keyword">int</span> n<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">int</span> r<span class="token punctuation">,</span> ret <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span>f<span class="token operator">-></span>writable <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span>f<span class="token operator">-></span>type <span class="token operator">==</span> FD_PIPE<span class="token punctuation">)</span><span class="token punctuation">{</span>
+    ret <span class="token operator">=</span> <span class="token function">pipewrite</span><span class="token punctuation">(</span>f<span class="token operator">-></span>pipe<span class="token punctuation">,</span> addr<span class="token punctuation">,</span> n<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span><span class="token punctuation">(</span>f<span class="token operator">-></span>type <span class="token operator">==</span> FD_DEVICE<span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>f<span class="token operator">-></span>major <span class="token operator">&lt;</span> <span class="token number">0</span> <span class="token operator">||</span> f<span class="token operator">-></span>major <span class="token operator">>=</span> NDEV <span class="token operator">||</span> <span class="token operator">!</span>devsw<span class="token punctuation">[</span>f<span class="token operator">-></span>major<span class="token punctuation">]</span><span class="token punctuation">.</span>write<span class="token punctuation">)</span>
+      <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+    ret <span class="token operator">=</span> devsw<span class="token punctuation">[</span>f<span class="token operator">-></span>major<span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token function">write</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> addr<span class="token punctuation">,</span> n<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span><span class="token punctuation">(</span>f<span class="token operator">-></span>type <span class="token operator">==</span> FD_INODE<span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// 分批写，防止单次 log 事务超出 MAXOPBLOCKS</span>
+    <span class="token comment" spellcheck="true">// max = 每批最大字节数:</span>
+    <span class="token comment" spellcheck="true">//   MAXOPBLOCKS=10, 减去 inode块/间接块/分配块/2块余量 = (10-1-1-2)/2 * 1024 = 3072 字节</span>
+    <span class="token keyword">int</span> max <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>MAXOPBLOCKS<span class="token number">-1</span><span class="token operator">-</span><span class="token number">1</span><span class="token operator">-</span><span class="token number">2</span><span class="token punctuation">)</span> <span class="token operator">/</span> <span class="token number">2</span><span class="token punctuation">)</span> <span class="token operator">*</span> BSIZE<span class="token punctuation">;</span>
+    <span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    <span class="token keyword">while</span><span class="token punctuation">(</span>i <span class="token operator">&lt;</span> n<span class="token punctuation">)</span><span class="token punctuation">{</span>
+      <span class="token keyword">int</span> n1 <span class="token operator">=</span> n <span class="token operator">-</span> i<span class="token punctuation">;</span>
+      <span class="token keyword">if</span><span class="token punctuation">(</span>n1 <span class="token operator">></span> max<span class="token punctuation">)</span>
+        n1 <span class="token operator">=</span> max<span class="token punctuation">;</span>
+
+      <span class="token function">begin_op</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>               <span class="token comment" spellcheck="true">// 开启 log 事务</span>
+      <span class="token function">ilock</span><span class="token punctuation">(</span>f<span class="token operator">-></span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span>r <span class="token operator">=</span> <span class="token function">writei</span><span class="token punctuation">(</span>f<span class="token operator">-></span>ip<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> addr <span class="token operator">+</span> i<span class="token punctuation">,</span> f<span class="token operator">-></span>off<span class="token punctuation">,</span> n1<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">></span> <span class="token number">0</span><span class="token punctuation">)</span>
+        f<span class="token operator">-></span>off <span class="token operator">+</span><span class="token operator">=</span> r<span class="token punctuation">;</span>
+      <span class="token function">iunlock</span><span class="token punctuation">(</span>f<span class="token operator">-></span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token function">end_op</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>                 <span class="token comment" spellcheck="true">// 提交 log 事务</span>
+
+      <span class="token keyword">if</span><span class="token punctuation">(</span>r <span class="token operator">&lt;</span> <span class="token number">0</span><span class="token punctuation">)</span>
+        <span class="token keyword">break</span><span class="token punctuation">;</span>
+      <span class="token keyword">if</span><span class="token punctuation">(</span>r <span class="token operator">!=</span> n1<span class="token punctuation">)</span>
+        <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"short filewrite"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      i <span class="token operator">+</span><span class="token operator">=</span> r<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    ret <span class="token operator">=</span> <span class="token punctuation">(</span>i <span class="token operator">==</span> n <span class="token operator">?</span> n <span class="token punctuation">:</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"filewrite"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token keyword">return</span> ret<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>分批写的必要性</strong>：写磁盘文件时，每次 <code>writei</code> 可能触发块分配、更新 inode、更新间接块等多个日志操作。若一次写入太大（超出 <code>MAXOPBLOCKS</code> 限制），会导致 <code>log_write</code> panic。所以每批最多写 3072 字节（3块），确保在日志容量内完成。</p>
+<hr>
+<h2 id="四、管道（pipe）深度解析"><a href="#四、管道（pipe）深度解析" class="headerlink" title="四、管道（pipe）深度解析"></a>四、管道（pipe）深度解析</h2><h3 id="4-1-数据结构"><a href="#4-1-数据结构" class="headerlink" title="4.1 数据结构"></a>4.1 数据结构</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// kernel/pipe.c</span>
+<span class="token macro property">#<span class="token directive keyword">define</span> PIPESIZE 512</span>
+
+<span class="token keyword">struct</span> pipe <span class="token punctuation">{</span>
+  <span class="token keyword">struct</span> spinlock lock<span class="token punctuation">;</span>
+  <span class="token keyword">char</span> data<span class="token punctuation">[</span>PIPESIZE<span class="token punctuation">]</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 512 字节环形缓冲区</span>
+  uint nread<span class="token punctuation">;</span>            <span class="token comment" spellcheck="true">// 已读总字节数（单调递增）</span>
+  uint nwrite<span class="token punctuation">;</span>           <span class="token comment" spellcheck="true">// 已写总字节数（单调递增）</span>
+  <span class="token keyword">int</span> readopen<span class="token punctuation">;</span>          <span class="token comment" spellcheck="true">// 读端是否仍打开</span>
+  <span class="token keyword">int</span> writeopen<span class="token punctuation">;</span>         <span class="token comment" spellcheck="true">// 写端是否仍打开</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>环形缓冲区设计</strong>：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">data<span class="token punctuation">[</span>PIPESIZE<span class="token punctuation">]</span> 数组：
+
+索引:   0   1   2   <span class="token punctuation">..</span>.  511
+        ↑               ↑
+   nread%512         nwrite%512
+
+缓冲区满：nwrite <span class="token operator">==</span> nread + PIPESIZE  <span class="token punctuation">(</span>差值 <span class="token operator">=</span> 512<span class="token punctuation">)</span>
+缓冲区空：nwrite <span class="token operator">==</span> nread             <span class="token punctuation">(</span>差值 <span class="token operator">=</span> 0<span class="token punctuation">)</span>
+
+当前数据量：nwrite - nread
+空闲空间：  PIPESIZE - <span class="token punctuation">(</span>nwrite - nread<span class="token punctuation">)</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>无需清零字节，<code>nread</code> 和 <code>nwrite</code> 单调递增，取模 <code>PIPESIZE</code> 做下标，天然处理绕回。</p>
+<h3 id="4-2-pipealloc-—-创建管道"><a href="#4-2-pipealloc-—-创建管道" class="headerlink" title="4.2 pipealloc — 创建管道"></a>4.2 pipealloc — 创建管道</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">int</span>
+<span class="token function">pipealloc</span><span class="token punctuation">(</span><span class="token keyword">struct</span> file <span class="token operator">*</span><span class="token operator">*</span>f0<span class="token punctuation">,</span> <span class="token keyword">struct</span> file <span class="token operator">*</span><span class="token operator">*</span>f1<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">struct</span> pipe <span class="token operator">*</span>pi<span class="token punctuation">;</span>
+
+  pi <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  <span class="token operator">*</span>f0 <span class="token operator">=</span> <span class="token operator">*</span>f1 <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token operator">*</span>f0 <span class="token operator">=</span> <span class="token function">filealloc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span> <span class="token operator">||</span> <span class="token punctuation">(</span><span class="token operator">*</span>f1 <span class="token operator">=</span> <span class="token function">filealloc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span>
+    <span class="token keyword">goto</span> bad<span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span>pi <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">struct</span> pipe<span class="token operator">*</span><span class="token punctuation">)</span><span class="token function">kalloc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span>   <span class="token comment" spellcheck="true">// 分配一页内存存放 pipe 结构</span>
+    <span class="token keyword">goto</span> bad<span class="token punctuation">;</span>
+
+  pi<span class="token operator">-></span>readopen <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+  pi<span class="token operator">-></span>writeopen <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+  pi<span class="token operator">-></span>nwrite <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  pi<span class="token operator">-></span>nread <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  <span class="token function">initlock</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>pi<span class="token operator">-></span>lock<span class="token punctuation">,</span> <span class="token string">"pipe"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token punctuation">(</span><span class="token operator">*</span>f0<span class="token punctuation">)</span><span class="token operator">-></span>type <span class="token operator">=</span> FD_PIPE<span class="token punctuation">;</span>
+  <span class="token punctuation">(</span><span class="token operator">*</span>f0<span class="token punctuation">)</span><span class="token operator">-></span>readable <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// f0 是读端</span>
+  <span class="token punctuation">(</span><span class="token operator">*</span>f0<span class="token punctuation">)</span><span class="token operator">-></span>writable <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  <span class="token punctuation">(</span><span class="token operator">*</span>f0<span class="token punctuation">)</span><span class="token operator">-></span>pipe <span class="token operator">=</span> pi<span class="token punctuation">;</span>
+
+  <span class="token punctuation">(</span><span class="token operator">*</span>f1<span class="token punctuation">)</span><span class="token operator">-></span>type <span class="token operator">=</span> FD_PIPE<span class="token punctuation">;</span>
+  <span class="token punctuation">(</span><span class="token operator">*</span>f1<span class="token punctuation">)</span><span class="token operator">-></span>readable <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  <span class="token punctuation">(</span><span class="token operator">*</span>f1<span class="token punctuation">)</span><span class="token operator">-></span>writable <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// f1 是写端</span>
+  <span class="token punctuation">(</span><span class="token operator">*</span>f1<span class="token punctuation">)</span><span class="token operator">-></span>pipe <span class="token operator">=</span> pi<span class="token punctuation">;</span>
+  <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+
+ bad<span class="token punctuation">:</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>pi<span class="token punctuation">)</span>  <span class="token function">kfree</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token keyword">char</span><span class="token operator">*</span><span class="token punctuation">)</span>pi<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">*</span>f0<span class="token punctuation">)</span> <span class="token function">fileclose</span><span class="token punctuation">(</span><span class="token operator">*</span>f0<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">*</span>f1<span class="token punctuation">)</span> <span class="token function">fileclose</span><span class="token punctuation">(</span><span class="token operator">*</span>f1<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>一个管道对应两个 <code>struct file</code>：读端 <code>f0</code> 和写端 <code>f1</code>，共享同一个 <code>struct pipe</code>。</p>
+<h3 id="4-3-pipewrite-—-写管道"><a href="#4-3-pipewrite-—-写管道" class="headerlink" title="4.3 pipewrite — 写管道"></a>4.3 pipewrite — 写管道</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">int</span>
+<span class="token function">pipewrite</span><span class="token punctuation">(</span><span class="token keyword">struct</span> pipe <span class="token operator">*</span>pi<span class="token punctuation">,</span> uint64 addr<span class="token punctuation">,</span> <span class="token keyword">int</span> n<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">int</span> i<span class="token punctuation">;</span>
+  <span class="token keyword">char</span> ch<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> proc <span class="token operator">*</span>pr <span class="token operator">=</span> <span class="token function">myproc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token function">acquire</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>pi<span class="token operator">-></span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">for</span><span class="token punctuation">(</span>i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> n<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// 缓冲区满 → sleep 等待读者消费</span>
+    <span class="token keyword">while</span><span class="token punctuation">(</span>pi<span class="token operator">-></span>nwrite <span class="token operator">==</span> pi<span class="token operator">-></span>nread <span class="token operator">+</span> PIPESIZE<span class="token punctuation">)</span><span class="token punctuation">{</span>
+      <span class="token keyword">if</span><span class="token punctuation">(</span>pi<span class="token operator">-></span>readopen <span class="token operator">==</span> <span class="token number">0</span> <span class="token operator">||</span> pr<span class="token operator">-></span>killed<span class="token punctuation">)</span><span class="token punctuation">{</span>
+        <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>pi<span class="token operator">-></span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>           <span class="token comment" spellcheck="true">// 读端已关闭或进程被杀死</span>
+      <span class="token punctuation">}</span>
+      <span class="token function">wakeup</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>pi<span class="token operator">-></span>nread<span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 唤醒等待读的进程</span>
+      <span class="token function">sleep</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>pi<span class="token operator">-></span>nwrite<span class="token punctuation">,</span> <span class="token operator">&amp;</span>pi<span class="token operator">-></span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 在 nwrite 上睡眠</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment" spellcheck="true">// 从用户空间复制1字节到缓冲区</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">copyin</span><span class="token punctuation">(</span>pr<span class="token operator">-></span>pagetable<span class="token punctuation">,</span> <span class="token operator">&amp;</span>ch<span class="token punctuation">,</span> addr <span class="token operator">+</span> i<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span>
+      <span class="token keyword">break</span><span class="token punctuation">;</span>
+    pi<span class="token operator">-></span>data<span class="token punctuation">[</span>pi<span class="token operator">-></span>nwrite<span class="token operator">++</span> <span class="token operator">%</span> PIPESIZE<span class="token punctuation">]</span> <span class="token operator">=</span> ch<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token function">wakeup</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>pi<span class="token operator">-></span>nread<span class="token punctuation">)</span><span class="token punctuation">;</span>        <span class="token comment" spellcheck="true">// 通知等待读者</span>
+  <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>pi<span class="token operator">-></span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">return</span> i<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="4-4-piperead-—-读管道"><a href="#4-4-piperead-—-读管道" class="headerlink" title="4.4 piperead — 读管道"></a>4.4 piperead — 读管道</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">int</span>
+<span class="token function">piperead</span><span class="token punctuation">(</span><span class="token keyword">struct</span> pipe <span class="token operator">*</span>pi<span class="token punctuation">,</span> uint64 addr<span class="token punctuation">,</span> <span class="token keyword">int</span> n<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">int</span> i<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> proc <span class="token operator">*</span>pr <span class="token operator">=</span> <span class="token function">myproc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">char</span> ch<span class="token punctuation">;</span>
+
+  <span class="token function">acquire</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>pi<span class="token operator">-></span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment" spellcheck="true">// 缓冲区空且写端仍打开 → sleep 等待</span>
+  <span class="token keyword">while</span><span class="token punctuation">(</span>pi<span class="token operator">-></span>nread <span class="token operator">==</span> pi<span class="token operator">-></span>nwrite <span class="token operator">&amp;&amp;</span> pi<span class="token operator">-></span>writeopen<span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>pr<span class="token operator">-></span>killed<span class="token punctuation">)</span><span class="token punctuation">{</span>
+      <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>pi<span class="token operator">-></span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token function">sleep</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>pi<span class="token operator">-></span>nread<span class="token punctuation">,</span> <span class="token operator">&amp;</span>pi<span class="token operator">-></span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 在 nread 上睡眠</span>
+  <span class="token punctuation">}</span>
+  <span class="token comment" spellcheck="true">// 读尽可能多的字节（最多 n 字节）</span>
+  <span class="token keyword">for</span><span class="token punctuation">(</span>i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> n<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>pi<span class="token operator">-></span>nread <span class="token operator">==</span> pi<span class="token operator">-></span>nwrite<span class="token punctuation">)</span>
+      <span class="token keyword">break</span><span class="token punctuation">;</span>
+    ch <span class="token operator">=</span> pi<span class="token operator">-></span>data<span class="token punctuation">[</span>pi<span class="token operator">-></span>nread<span class="token operator">++</span> <span class="token operator">%</span> PIPESIZE<span class="token punctuation">]</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">copyout</span><span class="token punctuation">(</span>pr<span class="token operator">-></span>pagetable<span class="token punctuation">,</span> addr <span class="token operator">+</span> i<span class="token punctuation">,</span> <span class="token operator">&amp;</span>ch<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span>
+      <span class="token keyword">break</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token function">wakeup</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>pi<span class="token operator">-></span>nwrite<span class="token punctuation">)</span><span class="token punctuation">;</span>     <span class="token comment" spellcheck="true">// 通知等待的写者</span>
+  <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>pi<span class="token operator">-></span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">return</span> i<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>sleep/wakeup 配对关系</strong>：</p>
+<pre><code>写者 sleep 在 &amp;pi-&gt;nwrite   ←→  读者 wakeup(&amp;pi-&gt;nwrite)
+读者 sleep 在 &amp;pi-&gt;nread    ←→  写者 wakeup(&amp;pi-&gt;nread)
+</code></pre>
+<h3 id="4-5-pipeclose-—-关闭管道端"><a href="#4-5-pipeclose-—-关闭管道端" class="headerlink" title="4.5 pipeclose — 关闭管道端"></a>4.5 pipeclose — 关闭管道端</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span>
+<span class="token function">pipeclose</span><span class="token punctuation">(</span><span class="token keyword">struct</span> pipe <span class="token operator">*</span>pi<span class="token punctuation">,</span> <span class="token keyword">int</span> writable<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token function">acquire</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>pi<span class="token operator">-></span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>writable<span class="token punctuation">)</span><span class="token punctuation">{</span>
+    pi<span class="token operator">-></span>writeopen <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    <span class="token function">wakeup</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>pi<span class="token operator">-></span>nread<span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 唤醒读者，使其发现写端已关</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    pi<span class="token operator">-></span>readopen <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    <span class="token function">wakeup</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>pi<span class="token operator">-></span>nwrite<span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 唤醒写者，使其返回 -1</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>pi<span class="token operator">-></span>readopen <span class="token operator">==</span> <span class="token number">0</span> <span class="token operator">&amp;&amp;</span> pi<span class="token operator">-></span>writeopen <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>pi<span class="token operator">-></span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">kfree</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token keyword">char</span><span class="token operator">*</span><span class="token punctuation">)</span>pi<span class="token punctuation">)</span><span class="token punctuation">;</span>      <span class="token comment" spellcheck="true">// 两端都关闭，释放内存</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span>
+    <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>pi<span class="token operator">-></span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>关闭语义</strong>：当写端关闭后，读者从阻塞中醒来，发现 <code>pi-&gt;writeopen == 0</code> 且缓冲区中仍有数据，则继续读完剩余数据；数据读完后，<code>nread == nwrite &amp;&amp; !writeopen</code>，退出循环返回 0（EOF）。</p>
+<hr>
+<h2 id="五、sysfile-c-系统调用层精读"><a href="#五、sysfile-c-系统调用层精读" class="headerlink" title="五、sysfile.c 系统调用层精读"></a>五、sysfile.c 系统调用层精读</h2><p>系统调用层承担两个职责：（1）安全地从用户空间提取参数；（2）调用内核内部函数完成操作。</p>
+<h3 id="5-1-辅助函数-argfd-fdalloc"><a href="#5-1-辅助函数-argfd-fdalloc" class="headerlink" title="5.1 辅助函数 argfd / fdalloc"></a>5.1 辅助函数 argfd / fdalloc</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// 从系统调用第 n 个参数提取文件描述符及对应 file 指针</span>
+<span class="token keyword">static</span> <span class="token keyword">int</span>
+<span class="token function">argfd</span><span class="token punctuation">(</span><span class="token keyword">int</span> n<span class="token punctuation">,</span> <span class="token keyword">int</span> <span class="token operator">*</span>pfd<span class="token punctuation">,</span> <span class="token keyword">struct</span> file <span class="token operator">*</span><span class="token operator">*</span>pf<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">int</span> fd<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> file <span class="token operator">*</span>f<span class="token punctuation">;</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">argint</span><span class="token punctuation">(</span>n<span class="token punctuation">,</span> <span class="token operator">&amp;</span>fd<span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span><span class="token punctuation">)</span>              <span class="token comment" spellcheck="true">// 读取第 n 个整型参数</span>
+    <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+  <span class="token comment" spellcheck="true">// 边界检查：fd 范围有效, 且进程的 ofile[fd] 不为空</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>fd <span class="token operator">&lt;</span> <span class="token number">0</span> <span class="token operator">||</span> fd <span class="token operator">>=</span> NOFILE <span class="token operator">||</span> <span class="token punctuation">(</span>f<span class="token operator">=</span><span class="token function">myproc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">-></span>ofile<span class="token punctuation">[</span>fd<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>pfd<span class="token punctuation">)</span> <span class="token operator">*</span>pfd <span class="token operator">=</span> fd<span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>pf<span class="token punctuation">)</span>  <span class="token operator">*</span>pf  <span class="token operator">=</span> f<span class="token punctuation">;</span>
+  <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment" spellcheck="true">// 在进程 ofile[] 中找第一个空闲槽位，注册 file 指针</span>
+<span class="token keyword">static</span> <span class="token keyword">int</span>
+<span class="token function">fdalloc</span><span class="token punctuation">(</span><span class="token keyword">struct</span> file <span class="token operator">*</span>f<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">int</span> fd<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> proc <span class="token operator">*</span>p <span class="token operator">=</span> <span class="token function">myproc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">for</span><span class="token punctuation">(</span>fd <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> fd <span class="token operator">&lt;</span> NOFILE<span class="token punctuation">;</span> fd<span class="token operator">++</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>p<span class="token operator">-></span>ofile<span class="token punctuation">[</span>fd<span class="token punctuation">]</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+      p<span class="token operator">-></span>ofile<span class="token punctuation">[</span>fd<span class="token punctuation">]</span> <span class="token operator">=</span> f<span class="token punctuation">;</span>
+      <span class="token keyword">return</span> fd<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 进程打开文件数已达上限 NOFILE=16</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="5-2-sys-open-—-打开-创建文件"><a href="#5-2-sys-open-—-打开-创建文件" class="headerlink" title="5.2 sys_open — 打开/创建文件"></a>5.2 sys_open — 打开/创建文件</h3><p><code>sys_open</code> 是最复杂的系统调用，涵盖参数解析 → 路径查找/创建 → 分配内核对象 → 返回 fd 的完整流程：</p>
+<pre class="line-numbers language-c"><code class="language-c">uint64
+<span class="token function">sys_open</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">char</span> path<span class="token punctuation">[</span>MAXPATH<span class="token punctuation">]</span><span class="token punctuation">;</span>
+  <span class="token keyword">int</span> fd<span class="token punctuation">,</span> omode<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> file <span class="token operator">*</span>f<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> inode <span class="token operator">*</span>ip<span class="token punctuation">;</span>
+  <span class="token keyword">int</span> n<span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// 1. 参数提取：路径字符串 + 打开模式</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span>n <span class="token operator">=</span> <span class="token function">argstr</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> path<span class="token punctuation">,</span> MAXPATH<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span> <span class="token operator">||</span> <span class="token function">argint</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token operator">&amp;</span>omode<span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+
+  <span class="token function">begin_op</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 开启日志事务</span>
+
+  <span class="token comment" spellcheck="true">// 2. 路径解析: 创建 or 查找</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>omode <span class="token operator">&amp;</span> O_CREATE<span class="token punctuation">)</span><span class="token punctuation">{</span>
+    ip <span class="token operator">=</span> <span class="token function">create</span><span class="token punctuation">(</span>path<span class="token punctuation">,</span> T_FILE<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 内部调用 nameiparent + ialloc + dirlink</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>ip <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">{</span> <span class="token function">end_op</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span>ip <span class="token operator">=</span> <span class="token function">namei</span><span class="token punctuation">(</span>path<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">{</span> <span class="token function">end_op</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+    <span class="token function">ilock</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment" spellcheck="true">// 目录只允许 O_RDONLY 打开</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>ip<span class="token operator">-></span>type <span class="token operator">==</span> T_DIR <span class="token operator">&amp;&amp;</span> omode <span class="token operator">!=</span> O_RDONLY<span class="token punctuation">)</span><span class="token punctuation">{</span>
+      <span class="token function">iunlockput</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token function">end_op</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token comment" spellcheck="true">// 3. 设备号合法性检查</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>ip<span class="token operator">-></span>type <span class="token operator">==</span> T_DEVICE <span class="token operator">&amp;&amp;</span> <span class="token punctuation">(</span>ip<span class="token operator">-></span>major <span class="token operator">&lt;</span> <span class="token number">0</span> <span class="token operator">||</span> ip<span class="token operator">-></span>major <span class="token operator">>=</span> NDEV<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token function">iunlockput</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token function">end_op</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token comment" spellcheck="true">// 4. 分配 struct file + fd</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span>f <span class="token operator">=</span> <span class="token function">filealloc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span> <span class="token operator">||</span> <span class="token punctuation">(</span>fd <span class="token operator">=</span> <span class="token function">fdalloc</span><span class="token punctuation">(</span>f<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>f<span class="token punctuation">)</span> <span class="token function">fileclose</span><span class="token punctuation">(</span>f<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">iunlockput</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token function">end_op</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token comment" spellcheck="true">// 5. 初始化 struct file 字段</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>ip<span class="token operator">-></span>type <span class="token operator">==</span> T_DEVICE<span class="token punctuation">)</span><span class="token punctuation">{</span>
+    f<span class="token operator">-></span>type <span class="token operator">=</span> FD_DEVICE<span class="token punctuation">;</span>
+    f<span class="token operator">-></span>major <span class="token operator">=</span> ip<span class="token operator">-></span>major<span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 记录主设备号用于 devsw 分发</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    f<span class="token operator">-></span>type <span class="token operator">=</span> FD_INODE<span class="token punctuation">;</span>
+    f<span class="token operator">-></span>off <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>             <span class="token comment" spellcheck="true">// 文件偏移从 0 开始</span>
+  <span class="token punctuation">}</span>
+  f<span class="token operator">-></span>ip <span class="token operator">=</span> ip<span class="token punctuation">;</span>
+  f<span class="token operator">-></span>readable <span class="token operator">=</span> <span class="token operator">!</span><span class="token punctuation">(</span>omode <span class="token operator">&amp;</span> O_WRONLY<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  f<span class="token operator">-></span>writable <span class="token operator">=</span> <span class="token punctuation">(</span>omode <span class="token operator">&amp;</span> O_WRONLY<span class="token punctuation">)</span> <span class="token operator">||</span> <span class="token punctuation">(</span>omode <span class="token operator">&amp;</span> O_RDWR<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// 6. O_TRUNC：截断文件内容</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span>omode <span class="token operator">&amp;</span> O_TRUNC<span class="token punctuation">)</span> <span class="token operator">&amp;&amp;</span> ip<span class="token operator">-></span>type <span class="token operator">==</span> T_FILE<span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token function">itrunc</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token function">iunlock</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token function">end_op</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 提交日志事务</span>
+
+  <span class="token keyword">return</span> fd<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>sys_open 调用链图</strong>：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">sys_open
+  ├── argstr / argint           提取参数
+  ├── begin_op                  开启日志事务
+  ├── create<span class="token punctuation">(</span>path, T_FILE<span class="token punctuation">)</span>      <span class="token punctuation">(</span>O_CREATE 情况<span class="token punctuation">)</span>
+  │   ├── nameiparent           找父目录 inode
+  │   ├── dirlookup             检查是否已存在
+  │   ├── ialloc                分配磁盘 inode
+  │   ├── ilock / iupdate       初始化 inode
+  │   └── dirlink               在父目录添加目录项
+  ├── namei<span class="token punctuation">(</span>path<span class="token punctuation">)</span>               <span class="token punctuation">(</span>普通 <span class="token function">open</span> 情况<span class="token punctuation">)</span>
+  ├── filealloc                 从 ftable 分配 struct <span class="token function">file</span>
+  ├── fdalloc                   在 proc-<span class="token operator">></span>ofile<span class="token punctuation">[</span><span class="token punctuation">]</span> 分配 fd
+  ├── itrunc                    <span class="token punctuation">(</span>O_TRUNC 情况<span class="token punctuation">)</span>
+  ├── iunlock / end_op          提交日志事务
+  └── <span class="token keyword">return</span> fd
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="5-3-sys-read-sys-write-sys-close"><a href="#5-3-sys-read-sys-write-sys-close" class="headerlink" title="5.3 sys_read / sys_write / sys_close"></a>5.3 sys_read / sys_write / sys_close</h3><p>这三个调用相对简单，是对 <code>file.c</code> 函数的薄包装：</p>
+<pre class="line-numbers language-c"><code class="language-c">uint64
+<span class="token function">sys_read</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">struct</span> file <span class="token operator">*</span>f<span class="token punctuation">;</span>
+  <span class="token keyword">int</span> n<span class="token punctuation">;</span>
+  uint64 p<span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// 参数：fd(0), buf_addr(1), n_bytes(2)</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">argfd</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token operator">&amp;</span>f<span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span> <span class="token operator">||</span> <span class="token function">argint</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">,</span> <span class="token operator">&amp;</span>n<span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span> <span class="token operator">||</span> <span class="token function">argaddr</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token operator">&amp;</span>p<span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+  <span class="token keyword">return</span> <span class="token function">fileread</span><span class="token punctuation">(</span>f<span class="token punctuation">,</span> p<span class="token punctuation">,</span> n<span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 直接委托给 fileread</span>
+<span class="token punctuation">}</span>
+
+uint64
+<span class="token function">sys_write</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">struct</span> file <span class="token operator">*</span>f<span class="token punctuation">;</span>
+  <span class="token keyword">int</span> n<span class="token punctuation">;</span>
+  uint64 p<span class="token punctuation">;</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">argfd</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token operator">&amp;</span>f<span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span> <span class="token operator">||</span> <span class="token function">argint</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">,</span> <span class="token operator">&amp;</span>n<span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span> <span class="token operator">||</span> <span class="token function">argaddr</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token operator">&amp;</span>p<span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+  <span class="token keyword">return</span> <span class="token function">filewrite</span><span class="token punctuation">(</span>f<span class="token punctuation">,</span> p<span class="token punctuation">,</span> n<span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 直接委托给 filewrite</span>
+<span class="token punctuation">}</span>
+
+uint64
+<span class="token function">sys_close</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">int</span> fd<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> file <span class="token operator">*</span>f<span class="token punctuation">;</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">argfd</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> <span class="token operator">&amp;</span>fd<span class="token punctuation">,</span> <span class="token operator">&amp;</span>f<span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+  <span class="token function">myproc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">-></span>ofile<span class="token punctuation">[</span>fd<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>     <span class="token comment" spellcheck="true">// 从进程 fd 表中移除</span>
+  <span class="token function">fileclose</span><span class="token punctuation">(</span>f<span class="token punctuation">)</span><span class="token punctuation">;</span>                <span class="token comment" spellcheck="true">// 减引用计数（可能真正关闭）</span>
+  <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="5-4-sys-dup"><a href="#5-4-sys-dup" class="headerlink" title="5.4 sys_dup"></a>5.4 sys_dup</h3><pre class="line-numbers language-c"><code class="language-c">uint64
+<span class="token function">sys_dup</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">struct</span> file <span class="token operator">*</span>f<span class="token punctuation">;</span>
+  <span class="token keyword">int</span> fd<span class="token punctuation">;</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">argfd</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token operator">&amp;</span>f<span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span>fd<span class="token operator">=</span><span class="token function">fdalloc</span><span class="token punctuation">(</span>f<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span><span class="token punctuation">)</span>    <span class="token comment" spellcheck="true">// 新 fd 指向同一 struct file</span>
+    <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+  <span class="token function">filedup</span><span class="token punctuation">(</span>f<span class="token punctuation">)</span><span class="token punctuation">;</span>                <span class="token comment" spellcheck="true">// 增加 ref 计数</span>
+  <span class="token keyword">return</span> fd<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><code>dup(oldfd)</code> 后两个 fd 共享 <code>struct file</code>（包括<strong>共享 <code>off</code> 偏移量</strong>），这是 shell 中 <code>2&gt;&amp;1</code> 重定向的实现基础。</p>
+<h3 id="5-5-sys-link-sys-unlink-—-硬链接"><a href="#5-5-sys-link-sys-unlink-—-硬链接" class="headerlink" title="5.5 sys_link / sys_unlink — 硬链接"></a>5.5 sys_link / sys_unlink — 硬链接</h3><p><strong>sys_link</strong>：让 <code>new</code> 路径成为 <code>old</code> 文件的另一个硬链接。</p>
+<pre class="line-numbers language-c"><code class="language-c">uint64
+<span class="token function">sys_link</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">char</span> name<span class="token punctuation">[</span>DIRSIZ<span class="token punctuation">]</span><span class="token punctuation">,</span> new<span class="token punctuation">[</span>MAXPATH<span class="token punctuation">]</span><span class="token punctuation">,</span> old<span class="token punctuation">[</span>MAXPATH<span class="token punctuation">]</span><span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> inode <span class="token operator">*</span>dp<span class="token punctuation">,</span> <span class="token operator">*</span>ip<span class="token punctuation">;</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">argstr</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> old<span class="token punctuation">,</span> MAXPATH<span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span> <span class="token operator">||</span> <span class="token function">argstr</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> new<span class="token punctuation">,</span> MAXPATH<span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+
+  <span class="token function">begin_op</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span>ip <span class="token operator">=</span> <span class="token function">namei</span><span class="token punctuation">(</span>old<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">{</span> <span class="token function">end_op</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+
+  <span class="token function">ilock</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>ip<span class="token operator">-></span>type <span class="token operator">==</span> T_DIR<span class="token punctuation">)</span><span class="token punctuation">{</span>           <span class="token comment" spellcheck="true">// 不允许对目录建硬链接</span>
+    <span class="token function">iunlockput</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token function">end_op</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+
+  ip<span class="token operator">-></span>nlink<span class="token operator">++</span><span class="token punctuation">;</span>                     <span class="token comment" spellcheck="true">// 磁盘 inode 的 nlink 加 1</span>
+  <span class="token function">iupdate</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>                     <span class="token comment" spellcheck="true">// 写回磁盘</span>
+  <span class="token function">iunlock</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span>dp <span class="token operator">=</span> <span class="token function">nameiparent</span><span class="token punctuation">(</span>new<span class="token punctuation">,</span> name<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token keyword">goto</span> bad<span class="token punctuation">;</span>
+  <span class="token function">ilock</span><span class="token punctuation">(</span>dp<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>dp<span class="token operator">-></span>dev <span class="token operator">!=</span> ip<span class="token operator">-></span>dev <span class="token operator">||</span> <span class="token function">dirlink</span><span class="token punctuation">(</span>dp<span class="token punctuation">,</span> name<span class="token punctuation">,</span> ip<span class="token operator">-></span>inum<span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token function">iunlockput</span><span class="token punctuation">(</span>dp<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token keyword">goto</span> bad<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token function">iunlockput</span><span class="token punctuation">(</span>dp<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token function">iput</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token function">end_op</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>sys_unlink</strong>：删除目录项，若 <code>nlink</code> 降为 0 且无进程打开该文件，则释放 inode 和数据块。</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// 核心逻辑（省略参数解析）</span>
+ip<span class="token operator">-></span>nlink<span class="token operator">--</span><span class="token punctuation">;</span>
+<span class="token function">iupdate</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>          <span class="token comment" spellcheck="true">// 写回磁盘的 nlink 变化</span>
+<span class="token comment" spellcheck="true">// 目录项置零（inum=0）即删除</span>
+<span class="token function">memset</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>de<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>de<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token function">writei</span><span class="token punctuation">(</span>dp<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token punctuation">(</span>uint64<span class="token punctuation">)</span><span class="token operator">&amp;</span>de<span class="token punctuation">,</span> off<span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>de<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="5-6-create-—-内部文件-目录创建"><a href="#5-6-create-—-内部文件-目录创建" class="headerlink" title="5.6 create — 内部文件/目录创建"></a>5.6 create — 内部文件/目录创建</h3><p><code>create</code> 是 <code>sys_open(O_CREATE)</code>, <code>sys_mkdir</code>, <code>sys_mknod</code> 共享的内部辅助函数：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">static</span> <span class="token keyword">struct</span> inode<span class="token operator">*</span>
+<span class="token function">create</span><span class="token punctuation">(</span><span class="token keyword">char</span> <span class="token operator">*</span>path<span class="token punctuation">,</span> <span class="token keyword">short</span> type<span class="token punctuation">,</span> <span class="token keyword">short</span> major<span class="token punctuation">,</span> <span class="token keyword">short</span> minor<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">struct</span> inode <span class="token operator">*</span>ip<span class="token punctuation">,</span> <span class="token operator">*</span>dp<span class="token punctuation">;</span>
+  <span class="token keyword">char</span> name<span class="token punctuation">[</span>DIRSIZ<span class="token punctuation">]</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span>dp <span class="token operator">=</span> <span class="token function">nameiparent</span><span class="token punctuation">(</span>path<span class="token punctuation">,</span> name<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+
+  <span class="token function">ilock</span><span class="token punctuation">(</span>dp<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// 幂等性：若已存在且是 T_FILE，直接返回（open O_CREATE 的语义）</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span>ip <span class="token operator">=</span> <span class="token function">dirlookup</span><span class="token punctuation">(</span>dp<span class="token punctuation">,</span> name<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token function">iunlockput</span><span class="token punctuation">(</span>dp<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">ilock</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>type <span class="token operator">==</span> T_FILE <span class="token operator">&amp;&amp;</span> <span class="token punctuation">(</span>ip<span class="token operator">-></span>type <span class="token operator">==</span> T_FILE <span class="token operator">||</span> ip<span class="token operator">-></span>type <span class="token operator">==</span> T_DEVICE<span class="token punctuation">)</span><span class="token punctuation">)</span>
+      <span class="token keyword">return</span> ip<span class="token punctuation">;</span>       <span class="token comment" spellcheck="true">// 文件已存在，视为成功（不截断，O_TRUNC 之后处理）</span>
+    <span class="token function">iunlockput</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token comment" spellcheck="true">// 分配新 inode</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span>ip <span class="token operator">=</span> <span class="token function">ialloc</span><span class="token punctuation">(</span>dp<span class="token operator">-></span>dev<span class="token punctuation">,</span> type<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span>
+    <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"create: ialloc"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token function">ilock</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  ip<span class="token operator">-></span>major <span class="token operator">=</span> major<span class="token punctuation">;</span>
+  ip<span class="token operator">-></span>minor <span class="token operator">=</span> minor<span class="token punctuation">;</span>
+  ip<span class="token operator">-></span>nlink <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+  <span class="token function">iupdate</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span>type <span class="token operator">==</span> T_DIR<span class="token punctuation">)</span><span class="token punctuation">{</span>
+    dp<span class="token operator">-></span>nlink<span class="token operator">++</span><span class="token punctuation">;</span>       <span class="token comment" spellcheck="true">// 子目录 ".." 指向父目录，父目录 nlink 增加</span>
+    <span class="token function">iupdate</span><span class="token punctuation">(</span>dp<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">dirlink</span><span class="token punctuation">(</span>ip<span class="token punctuation">,</span> <span class="token string">"."</span><span class="token punctuation">,</span> ip<span class="token operator">-></span>inum<span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span> <span class="token operator">||</span> <span class="token function">dirlink</span><span class="token punctuation">(</span>ip<span class="token punctuation">,</span> <span class="token string">".."</span><span class="token punctuation">,</span> dp<span class="token operator">-></span>inum<span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span><span class="token punctuation">)</span>
+      <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"create dots"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">dirlink</span><span class="token punctuation">(</span>dp<span class="token punctuation">,</span> name<span class="token punctuation">,</span> ip<span class="token operator">-></span>inum<span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span><span class="token punctuation">)</span>
+    <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"create: dirlink"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token function">iunlockput</span><span class="token punctuation">(</span>dp<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">return</span> ip<span class="token punctuation">;</span>           <span class="token comment" spellcheck="true">// 返回时 ip 仍持有锁，由调用者解锁</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="5-7-sys-pipe"><a href="#5-7-sys-pipe" class="headerlink" title="5.7 sys_pipe"></a>5.7 sys_pipe</h3><pre class="line-numbers language-c"><code class="language-c">uint64
+<span class="token function">sys_pipe</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  uint64 fdarray<span class="token punctuation">;</span>     <span class="token comment" spellcheck="true">// 用户空间存放 [fd0, fd1] 的数组地址</span>
+  <span class="token keyword">struct</span> file <span class="token operator">*</span>rf<span class="token punctuation">,</span> <span class="token operator">*</span>wf<span class="token punctuation">;</span>
+  <span class="token keyword">int</span> fd0<span class="token punctuation">,</span> fd1<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> proc <span class="token operator">*</span>p <span class="token operator">=</span> <span class="token function">myproc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">argaddr</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> <span class="token operator">&amp;</span>fdarray<span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">pipealloc</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>rf<span class="token punctuation">,</span> <span class="token operator">&amp;</span>wf<span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span><span class="token punctuation">)</span>     <span class="token comment" spellcheck="true">// 创建管道，分配两个 struct file</span>
+    <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+
+  fd0 <span class="token operator">=</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span>fd0 <span class="token operator">=</span> <span class="token function">fdalloc</span><span class="token punctuation">(</span>rf<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span> <span class="token operator">||</span> <span class="token punctuation">(</span>fd1 <span class="token operator">=</span> <span class="token function">fdalloc</span><span class="token punctuation">(</span>wf<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// 回滚：释放已分配的 fd 和 struct file</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>fd0 <span class="token operator">>=</span> <span class="token number">0</span><span class="token punctuation">)</span> p<span class="token operator">-></span>ofile<span class="token punctuation">[</span>fd0<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    <span class="token function">fileclose</span><span class="token punctuation">(</span>rf<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">fileclose</span><span class="token punctuation">(</span>wf<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token comment" spellcheck="true">// 将 [fd0, fd1] 写回用户空间数组</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">copyout</span><span class="token punctuation">(</span>p<span class="token operator">-></span>pagetable<span class="token punctuation">,</span> fdarray<span class="token punctuation">,</span>               <span class="token punctuation">(</span><span class="token keyword">char</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token operator">&amp;</span>fd0<span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>fd0<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span> <span class="token operator">||</span>
+     <span class="token function">copyout</span><span class="token punctuation">(</span>p<span class="token operator">-></span>pagetable<span class="token punctuation">,</span> fdarray<span class="token operator">+</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span>fd0<span class="token punctuation">)</span><span class="token punctuation">,</span>   <span class="token punctuation">(</span><span class="token keyword">char</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token operator">&amp;</span>fd1<span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>fd1<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+    p<span class="token operator">-></span>ofile<span class="token punctuation">[</span>fd0<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    p<span class="token operator">-></span>ofile<span class="token punctuation">[</span>fd1<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    <span class="token function">fileclose</span><span class="token punctuation">(</span>rf<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">fileclose</span><span class="token punctuation">(</span>wf<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="5-8-sys-chdir"><a href="#5-8-sys-chdir" class="headerlink" title="5.8 sys_chdir"></a>5.8 sys_chdir</h3><pre class="line-numbers language-c"><code class="language-c">uint64
+<span class="token function">sys_chdir</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">char</span> path<span class="token punctuation">[</span>MAXPATH<span class="token punctuation">]</span><span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> inode <span class="token operator">*</span>ip<span class="token punctuation">;</span>
+  <span class="token keyword">struct</span> proc <span class="token operator">*</span>p <span class="token operator">=</span> <span class="token function">myproc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token function">begin_op</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">argstr</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> path<span class="token punctuation">,</span> MAXPATH<span class="token punctuation">)</span> <span class="token operator">&lt;</span> <span class="token number">0</span> <span class="token operator">||</span> <span class="token punctuation">(</span>ip <span class="token operator">=</span> <span class="token function">namei</span><span class="token punctuation">(</span>path<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">{</span>
+    <span class="token function">end_op</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token function">ilock</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>ip<span class="token operator">-></span>type <span class="token operator">!=</span> T_DIR<span class="token punctuation">)</span><span class="token punctuation">{</span>           <span class="token comment" spellcheck="true">// 必须是目录</span>
+    <span class="token function">iunlockput</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token function">end_op</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token function">iunlock</span><span class="token punctuation">(</span>ip<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token function">iput</span><span class="token punctuation">(</span>p<span class="token operator">-></span>cwd<span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 释放旧的工作目录</span>
+  <span class="token function">end_op</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  p<span class="token operator">-></span>cwd <span class="token operator">=</span> ip<span class="token punctuation">;</span>     <span class="token comment" spellcheck="true">// 更新进程的当前工作目录</span>
+  <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<hr>
+<h2 id="六、完整数据流：write-fd-buf-n-系统调用路径"><a href="#六、完整数据流：write-fd-buf-n-系统调用路径" class="headerlink" title="六、完整数据流：write(fd, buf, n) 系统调用路径"></a>六、完整数据流：write(fd, buf, n) 系统调用路径</h2><p>以向普通文件写入数据为例，展示从用户空间到磁盘的完整路径：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">用户程序
+  write<span class="token punctuation">(</span>fd, buf, n<span class="token punctuation">)</span>
+        │ ecall
+        ↓
+  usertrap<span class="token punctuation">(</span><span class="token punctuation">)</span> → syscall<span class="token punctuation">(</span><span class="token punctuation">)</span> → sys_write<span class="token punctuation">(</span><span class="token punctuation">)</span>
+        │ argfd<span class="token punctuation">(</span>0,0,<span class="token operator">&amp;</span>f<span class="token punctuation">)</span>  argaddr<span class="token punctuation">(</span>1,<span class="token operator">&amp;</span>p<span class="token punctuation">)</span>  argint<span class="token punctuation">(</span>2,<span class="token operator">&amp;</span>n<span class="token punctuation">)</span>
+        ↓
+  filewrite<span class="token punctuation">(</span>f, addr, n<span class="token punctuation">)</span>
+        │ f-<span class="token operator">></span>type <span class="token operator">==</span> FD_INODE
+        │ 分批（每批 ≤ 3072 字节）
+        ↓
+  begin_op<span class="token punctuation">(</span><span class="token punctuation">)</span>                  ← 开启日志事务
+  ilock<span class="token punctuation">(</span>f-<span class="token operator">></span>ip<span class="token punctuation">)</span>
+  writei<span class="token punctuation">(</span>f-<span class="token operator">></span>ip, 1, addr+i, f-<span class="token operator">></span>off, n1<span class="token punctuation">)</span>
+        │ bmap<span class="token punctuation">(</span>ip, blockno<span class="token punctuation">)</span>   ← 找到/分配数据块号
+        │ bread<span class="token punctuation">(</span>dev, blockno<span class="token punctuation">)</span> ← 读入 buf cache
+        │ copyin<span class="token punctuation">(</span>pagetable, buf, addr, n1<span class="token punctuation">)</span> ← 用户→内核复制
+        │ log_write<span class="token punctuation">(</span>bp<span class="token punctuation">)</span>       ← 标记该块为<span class="token string">"脏"</span>，加入 log
+        │ brelse<span class="token punctuation">(</span>bp<span class="token punctuation">)</span>
+        │ f-<span class="token operator">></span>off +<span class="token operator">=</span> n1
+  iunlock<span class="token punctuation">(</span>f-<span class="token operator">></span>ip<span class="token punctuation">)</span>
+  end_op<span class="token punctuation">(</span><span class="token punctuation">)</span>                    ← 提交日志（写 log header → 写 log 数据 → 写 checksum）
+        │
+        ↓
+  磁盘（VirtIO DMA 写入）
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>参与层次</strong>：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">系统调用层  sysfile.c    sys_write  — 参数校验
+文件对象层  file.c       filewrite  — 类型分发 + 分批逻辑
+日志层      log.c        begin_op/end_op/log_write  — 崩溃一致性
+Inode层     fs.c         writei/bmap  — 块地址映射
+块缓存层    bio.c        bread/bwrite/brelse  — LRU 缓存
+磁盘驱动    virtio_disk.c  — DMA 传输
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<hr>
+<h2 id="七、fork-时的文件描述符继承"><a href="#七、fork-时的文件描述符继承" class="headerlink" title="七、fork 时的文件描述符继承"></a>七、fork 时的文件描述符继承</h2><p><code>fork()</code> 在 <code>kernel/proc.c</code> 中处理：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// 复制父进程的文件描述符表</span>
+<span class="token keyword">for</span><span class="token punctuation">(</span>i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> NOFILE<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>p<span class="token operator">-></span>ofile<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span>
+    np<span class="token operator">-></span>ofile<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token function">filedup</span><span class="token punctuation">(</span>p<span class="token operator">-></span>ofile<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 共享 struct file，ref 加 1</span>
+np<span class="token operator">-></span>cwd <span class="token operator">=</span> <span class="token function">idup</span><span class="token punctuation">(</span>p<span class="token operator">-></span>cwd<span class="token punctuation">)</span><span class="token punctuation">;</span>                    <span class="token comment" spellcheck="true">// 共享工作目录 inode</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>fork 后的引用结构</strong>：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">父进程 ofile<span class="token punctuation">[</span>1<span class="token punctuation">]</span> ──┐
+                  ├──→ struct <span class="token function">file</span> <span class="token punctuation">{</span> ref<span class="token operator">=</span>2, FD_INODE, off<span class="token operator">=</span>100 <span class="token punctuation">}</span>
+子进程 ofile<span class="token punctuation">[</span>1<span class="token punctuation">]</span> ──┘         │
+                          struct inode <span class="token punctuation">{</span> ref<span class="token operator">=</span>1, <span class="token punctuation">..</span>. <span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<p>父子进程共享同一个 <code>struct file</code> 对象（包括 <code>off</code>），这确保了在 shell 管道中，父子进程对同一文件的读写位置是同步的。</p>
+<hr>
+<h2 id="八、动手实验"><a href="#八、动手实验" class="headerlink" title="八、动手实验"></a>八、动手实验</h2><h3 id="实验一：观察文件描述符分配"><a href="#实验一：观察文件描述符分配" class="headerlink" title="实验一：观察文件描述符分配"></a>实验一：观察文件描述符分配</h3><p>在 xv6 shell 中验证 fd 从 0 开始最小分配：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// user/fdtest.c (自行创建)</span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"kernel/types.h"</span></span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"kernel/stat.h"</span></span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"user/user.h"</span></span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"kernel/fcntl.h"</span></span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">int</span> fd1 <span class="token operator">=</span> <span class="token function">open</span><span class="token punctuation">(</span><span class="token string">"/README"</span><span class="token punctuation">,</span> O_RDONLY<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">int</span> fd2 <span class="token operator">=</span> <span class="token function">open</span><span class="token punctuation">(</span><span class="token string">"/README"</span><span class="token punctuation">,</span> O_RDONLY<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"fd1=%d fd2=%d\n"</span><span class="token punctuation">,</span> fd1<span class="token punctuation">,</span> fd2<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 预期: fd1=3, fd2=4</span>
+
+    <span class="token function">close</span><span class="token punctuation">(</span>fd1<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">int</span> fd3 <span class="token operator">=</span> <span class="token function">open</span><span class="token punctuation">(</span><span class="token string">"/README"</span><span class="token punctuation">,</span> O_RDONLY<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"fd3=%d\n"</span><span class="token punctuation">,</span> fd3<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 预期: fd3=3 (重用已释放的最小 fd)</span>
+
+    <span class="token function">close</span><span class="token punctuation">(</span>fd2<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">close</span><span class="token punctuation">(</span>fd3<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">exit</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="实验二：管道读写验证"><a href="#实验二：管道读写验证" class="headerlink" title="实验二：管道读写验证"></a>实验二：管道读写验证</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// user/pipetest.c (自行创建)</span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"kernel/types.h"</span></span>
+<span class="token macro property">#<span class="token directive keyword">include</span> <span class="token string">"user/user.h"</span></span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">int</span> p<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+    <span class="token function">pipe</span><span class="token punctuation">(</span>p<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// p[0]=读端, p[1]=写端</span>
+
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">fork</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token comment" spellcheck="true">// 子进程：写管道</span>
+        <span class="token function">close</span><span class="token punctuation">(</span>p<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">char</span> <span class="token operator">*</span>msg <span class="token operator">=</span> <span class="token string">"hello from child\n"</span><span class="token punctuation">;</span>
+        <span class="token function">write</span><span class="token punctuation">(</span>p<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">,</span> msg<span class="token punctuation">,</span> <span class="token function">strlen</span><span class="token punctuation">(</span>msg<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token function">close</span><span class="token punctuation">(</span>p<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token function">exit</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+        <span class="token comment" spellcheck="true">// 父进程：读管道</span>
+        <span class="token function">close</span><span class="token punctuation">(</span>p<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">char</span> buf<span class="token punctuation">[</span><span class="token number">64</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+        <span class="token keyword">int</span> n <span class="token operator">=</span> <span class="token function">read</span><span class="token punctuation">(</span>p<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> buf<span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>buf<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        buf<span class="token punctuation">[</span>n<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"parent got: %s"</span><span class="token punctuation">,</span> buf<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token function">close</span><span class="token punctuation">(</span>p<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token function">wait</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token function">exit</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="实验三：硬链接验证"><a href="#实验三：硬链接验证" class="headerlink" title="实验三：硬链接验证"></a>实验三：硬链接验证</h3><pre class="line-numbers language-sh"><code class="language-sh"># 在 xv6 shell 中
+$ echo hello > /tmp/a
+$ ln /tmp/a /tmp/b         # 创建硬链接
+$ cat /tmp/b               # 输出: hello
+$ rm /tmp/a                # 删除 a (nlink: 2→1)
+$ cat /tmp/b               # 数据仍可访问
+$ rm /tmp/b                # 删除 b (nlink: 1→0, inode 释放)
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>验证要点</strong>：<code>nlink</code> 降为 0 且无进程打开时，<code>iput</code> 才调用 <code>itrunc</code> 释放数据块。</p>
+<h3 id="实验四：追踪-sys-open-的-log-事务"><a href="#实验四：追踪-sys-open-的-log-事务" class="headerlink" title="实验四：追踪 sys_open 的 log 事务"></a>实验四：追踪 sys_open 的 log 事务</h3><p>在 <code>kernel/log.c</code> 的 <code>commit()</code> 函数中添加打印：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">static</span> <span class="token keyword">void</span>
+<span class="token function">commit</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>n <span class="token operator">></span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"commit: writing %d blocks\n"</span><span class="token punctuation">,</span> log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>n<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 添加这行</span>
+    <span class="token function">write_log</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">write_head</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">install_trans</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>n <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    <span class="token function">write_head</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>重新编译后，执行 <code>echo hello &gt; /test</code> 会看到类似输出：</p>
+<pre><code>commit: writing 3 blocks
+</code></pre>
+<p>说明一次文件创建+写入触发了 3 个块的日志提交（inode 块、目录块、数据块）。</p>
+<h3 id="实验五：观察管道在缓冲区满时的阻塞"><a href="#实验五：观察管道在缓冲区满时的阻塞" class="headerlink" title="实验五：观察管道在缓冲区满时的阻塞"></a>实验五：观察管道在缓冲区满时的阻塞</h3><p>分析 <code>pipewrite</code> 中的 while 循环：当 <code>nwrite - nread == 512</code> 时，写者 sleep，直到读者消费数据。用 <code>ps</code> 或调试输出可以观察到进程状态变化（运行→睡眠→运行）。</p>
+<hr>
+<h2 id="九、本节小结"><a href="#九、本节小结" class="headerlink" title="九、本节小结"></a>九、本节小结</h2><table>
+<thead>
+<tr>
+<th>组件</th>
+<th>位置</th>
+<th>核心作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>struct file</code></td>
+<td><code>kernel/file.h</code></td>
+<td>内核文件对象，持有 type/ref/off/ip</td>
+</tr>
+<tr>
+<td><code>ftable</code></td>
+<td><code>kernel/file.c</code></td>
+<td>全局文件表（最多 100 个）</td>
+</tr>
+<tr>
+<td><code>proc-&gt;ofile[]</code></td>
+<td><code>kernel/proc.h</code></td>
+<td>进程 fd 表（最多 16 个）</td>
+</tr>
+<tr>
+<td><code>filealloc/filedup/fileclose</code></td>
+<td><code>kernel/file.c</code></td>
+<td>引用计数管理</td>
+</tr>
+<tr>
+<td><code>fileread/filewrite</code></td>
+<td><code>kernel/file.c</code></td>
+<td>统一读写，按 type 分发</td>
+</tr>
+<tr>
+<td><code>devsw[]</code></td>
+<td><code>kernel/file.c</code></td>
+<td>设备函数指针表（多态）</td>
+</tr>
+<tr>
+<td><code>struct pipe</code></td>
+<td><code>kernel/pipe.c</code></td>
+<td>512 字节环形缓冲区 + sleep/wakeup</td>
+</tr>
+<tr>
+<td><code>pipealloc/read/write/close</code></td>
+<td><code>kernel/pipe.c</code></td>
+<td>管道生命周期</td>
+</tr>
+<tr>
+<td><code>argfd / fdalloc</code></td>
+<td><code>kernel/sysfile.c</code></td>
+<td>参数提取辅助</td>
+</tr>
+<tr>
+<td><code>sys_open</code></td>
+<td><code>kernel/sysfile.c</code></td>
+<td>最复杂的文件系统调用</td>
+</tr>
+<tr>
+<td><code>create()</code></td>
+<td><code>kernel/sysfile.c</code></td>
+<td>内部辅助：创建文件/目录/设备</td>
+</tr>
+<tr>
+<td><code>sys_link/unlink</code></td>
+<td><code>kernel/sysfile.c</code></td>
+<td>硬链接管理</td>
+</tr>
+</tbody></table>
+<p><strong>核心设计原则</strong>：</p>
+<ol>
+<li><strong>两层抽象</strong>：进程 fd 表（轻量整数）+ 全局文件表（含状态）</li>
+<li><strong>多态分发</strong>：<code>fileread/filewrite</code> 屏蔽底层差异，通过 <code>type</code> 或 <code>devsw</code> 分发</li>
+<li><strong>引用计数</strong>：<code>struct file</code> 的 <code>ref</code> 计数确保 fork/dup 后安全共享</li>
+<li><strong>日志保护</strong>：文件写入封装在 <code>begin_op/end_op</code> 中，保证崩溃一致性</li>
+<li><strong>睡眠等待</strong>：管道用 <code>sleep/wakeup</code> 实现背压（backpressure），避免忙等</li>
+</ol>
+<hr>
+<h2 id="十、下一节预告"><a href="#十、下一节预告" class="headerlink" title="十、下一节预告"></a>十、下一节预告</h2><p><strong>第17节：字符设备驱动（UART与Console）</strong></p>
+<p>本节建立了 <code>devsw[CONSOLE]</code> 的接口，但没有深入驱动内部。下一节将分析：</p>
+<ul>
+<li><code>kernel/uart.c</code>：UART 硬件初始化、中断驱动的收发、<code>uartputc/uartgetc</code></li>
+<li><code>kernel/console.c</code>：行编辑（退格、Ctrl-D）、<code>consoleread/consolewrite</code></li>
+<li><code>kernel/printf.c</code>：内核 <code>printf</code> 和 <code>panic</code> 如何输出</li>
+<li>中断处理与 I/O 多路复用：从硬件中断到 shell 的完整键盘输入路径hexo</li>
+</ul>
+
+                
+            </div>
+            <hr/>
+
+            
+
+    <div class="reprint" id="reprint-statement">
+        
+            <div class="reprint__author">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-user">
+                        文章作者:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    <a href="/about" rel="external nofollow noreferrer">404djl</a>
+                </span>
+            </div>
+            <div class="reprint__type">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-link">
+                        文章链接:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    <a href="https://404djl.github.io/2026/03/28/os16-wen-jian-miao-shu-fu-yu-xi-tong-diao-yong-ceng/">https://404djl.github.io/2026/03/28/os16-wen-jian-miao-shu-fu-yu-xi-tong-diao-yong-ceng/</a>
+                </span>
+            </div>
+            <div class="reprint__notice">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-copyright">
+                        版权声明:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    本博客所有文章除特別声明外，均采用
+                    <a href="https://creativecommons.org/licenses/by/4.0/deed.zh" rel="external nofollow noreferrer" target="_blank">CC BY 4.0</a>
+                    许可协议。转载请注明来源
+                    <a href="/about" target="_blank">404djl</a>
+                    !
+                </span>
+            </div>
+        
+    </div>
+
+    <script async defer>
+      document.addEventListener("copy", function (e) {
+        let toastHTML = '<span>复制成功，请遵循本文的转载规则</span><button class="btn-flat toast-action" onclick="navToReprintStatement()" style="font-size: smaller">查看</a>';
+        M.toast({html: toastHTML})
+      });
+
+      function navToReprintStatement() {
+        $("html, body").animate({scrollTop: $("#reprint-statement").offset().top - 80}, 800);
+      }
+    </script>
+
+
+
+            <div class="tag_share" style="display: block;">
+                <div class="post-meta__tag-list" style="display: inline-block;">
+                    
+                        <div class="article-tag">
+                            
+                                <a href="/tags/linux/">
+                                    <span class="chip bg-color">linux</span>
+                                </a>
+                            
+                                <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                                    <span class="chip bg-color">操作系统</span>
+                                </a>
+                            
+                        </div>
+                    
+                </div>
+                <div class="post_share" style="zoom: 80%; width: fit-content; display: inline-block; float: right; margin: -0.15rem 0;">
+                    <link rel="stylesheet" type="text/css" href="/libs/share/css/share.min.css">
+<div id="article-share">
+
+    
+    <div class="social-share" data-sites="twitter,facebook,google,qq,qzone,wechat,weibo,douban,linkedin" data-wechat-qrcode-helper="<p>微信扫一扫即可分享！</p>"></div>
+    <script src="/libs/share/js/social-share.min.js"></script>
+    
+
+    
+
+</div>
+
+                </div>
+            </div>
+            
+                <div id="reward">
+    <a href="#rewardModal" class="reward-link modal-trigger btn-floating btn-medium waves-effect waves-light red">赏</a>
+
+    <!-- Modal Structure -->
+    <div id="rewardModal" class="modal">
+        <div class="modal-content">
+            <a class="close modal-close"><i class="fas fa-times"></i></a>
+            <h4 class="reward-title">你的赏识是我前进的动力</h4>
+            <div class="reward-content">
+                <div class="reward-tabs">
+                    <ul class="tabs row">
+                        <li class="tab col s6 alipay-tab waves-effect waves-light"><a href="#alipay">支付宝</a></li>
+                        <li class="tab col s6 wechat-tab waves-effect waves-light"><a href="#wechat">微 信</a></li>
+                    </ul>
+                    <div id="alipay">
+                        <img src="/medias/reward/alipay.jpg" class="reward-img" alt="支付宝打赏二维码">
+                    </div>
+                    <div id="wechat">
+                        <img src="/medias/reward/wechat.png" class="reward-img" alt="微信打赏二维码">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(function () {
+        $('.tabs').tabs();
+    });
+</script>
+
+            
+        </div>
+    </div>
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+<article id="prenext-posts" class="prev-next articles">
+    <div class="row article-row">
+        
+        <div class="article col s12 m6" data-aos="fade-up">
+            <div class="article-badge left-badge text-color">
+                <i class="fas fa-chevron-left"></i>&nbsp;上一篇</div>
+            <div class="card">
+                <a href="/2026/03/28/os17-zi-fu-she-bei-qu-dong/">
+                    <div class="card-image">
+                        
+                        
+                        <img src="/medias/featureimages/21.png" class="responsive-img" alt="OS17-字符设备驱动">
+                        
+                        <span class="card-title">OS17-字符设备驱动</span>
+                    </div>
+                </a>
+                <div class="card-content article-content">
+                    <div class="summary block-with-text">
+                        
+                            
+                        
+                    </div>
+                    <div class="publish-info">
+                        <span class="publish-date">
+                            <i class="far fa-clock fa-fw icon-date"></i>2026-03-28
+                        </span>
+                        <span class="publish-author">
+                            
+                            <i class="fas fa-bookmark fa-fw icon-category"></i>
+                            
+                            <a href="/categories/OS/" class="post-category">
+                                    OS
+                                </a>
+                            
+                            
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="card-action article-tags">
+                    
+                    <a href="/tags/linux/">
+                        <span class="chip bg-color">linux</span>
+                    </a>
+                    
+                    <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                        <span class="chip bg-color">操作系统</span>
+                    </a>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+        
+        <div class="article col s12 m6" data-aos="fade-up">
+            <div class="article-badge right-badge text-color">
+                下一篇&nbsp;<i class="fas fa-chevron-right"></i>
+            </div>
+            <div class="card">
+                <a href="/2026/03/28/os13-ci-pan-qu-dong-yu-kuai-huan-cun/">
+                    <div class="card-image">
+                        
+                        
+                        <img src="/medias/featureimages/30.png" class="responsive-img" alt="OS13-磁盘驱动与块缓存">
+                        
+                        <span class="card-title">OS13-磁盘驱动与块缓存</span>
+                    </div>
+                </a>
+                <div class="card-content article-content">
+                    <div class="summary block-with-text">
+                        
+                            
+                        
+                    </div>
+                    <div class="publish-info">
+                            <span class="publish-date">
+                                <i class="far fa-clock fa-fw icon-date"></i>2026-03-28
+                            </span>
+                        <span class="publish-author">
+                            
+                            <i class="fas fa-bookmark fa-fw icon-category"></i>
+                            
+                            <a href="/categories/OS/" class="post-category">
+                                    OS
+                                </a>
+                            
+                            
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="card-action article-tags">
+                    
+                    <a href="/tags/linux/">
+                        <span class="chip bg-color">linux</span>
+                    </a>
+                    
+                    <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                        <span class="chip bg-color">操作系统</span>
+                    </a>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+    </div>
+</article>
+
+</div>
+
+
+
+<!-- 代码块功能依赖 -->
+<script type="text/javascript" src="/libs/codeBlock/codeBlockFuction.js"></script>
+
+
+
+<!-- 代码语言 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeLang.js"></script>
+
+
+<!-- 代码块复制 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeCopy.js"></script>
+
+
+<!-- 代码块收缩 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeShrink.js"></script>
+
+
+
+    </div>
+    <div id="toc-aside" class="expanded col l3 hide-on-med-and-down">
+        <div class="toc-widget card" style="background-color: white;">
+            <div class="toc-title"><i class="far fa-list-alt"></i>&nbsp;&nbsp;目录</div>
+            <div id="toc-content"></div>
+        </div>
+    </div>
+</div>
+
+<!-- TOC 悬浮按钮. -->
+
+<div id="floating-toc-btn" class="hide-on-med-and-down">
+    <a class="btn-floating btn-large bg-color">
+        <i class="fas fa-list-ul"></i>
+    </a>
+</div>
+
+
+<script src="/libs/tocbot/tocbot.min.js"></script>
+<script>
+    $(function () {
+        tocbot.init({
+            tocSelector: '#toc-content',
+            contentSelector: '#articleContent',
+            headingsOffset: -($(window).height() * 0.4 - 45),
+            collapseDepth: Number('0'),
+            headingSelector: 'h2, h3, h4'
+        });
+
+        // Set scroll toc fixed.
+        let tocHeight = parseInt($(window).height() * 0.4 - 64);
+        let $tocWidget = $('.toc-widget');
+        $(window).scroll(function () {
+            let scroll = $(window).scrollTop();
+            /* add post toc fixed. */
+            if (scroll > tocHeight) {
+                $tocWidget.addClass('toc-fixed');
+            } else {
+                $tocWidget.removeClass('toc-fixed');
+            }
+        });
+
+        
+        /* 修复文章卡片 div 的宽度. */
+        let fixPostCardWidth = function (srcId, targetId) {
+            let srcDiv = $('#' + srcId);
+            if (srcDiv.length === 0) {
+                return;
+            }
+
+            let w = srcDiv.width();
+            if (w >= 450) {
+                w = w + 21;
+            } else if (w >= 350 && w < 450) {
+                w = w + 18;
+            } else if (w >= 300 && w < 350) {
+                w = w + 16;
+            } else {
+                w = w + 14;
+            }
+            $('#' + targetId).width(w);
+        };
+
+        // 切换TOC目录展开收缩的相关操作.
+        const expandedClass = 'expanded';
+        let $tocAside = $('#toc-aside');
+        let $mainContent = $('#main-content');
+        $('#floating-toc-btn .btn-floating').click(function () {
+            if ($tocAside.hasClass(expandedClass)) {
+                $tocAside.removeClass(expandedClass).hide();
+                $mainContent.removeClass('l9');
+            } else {
+                $tocAside.addClass(expandedClass).show();
+                $mainContent.addClass('l9');
+            }
+            fixPostCardWidth('artDetail', 'prenext-posts');
+        });
+        
+    });
+</script>
+
+    
+
+</main>
+
+
+
+
+    <footer class="page-footer" style="background: linear-gradient(to right, #ff5f6d, #ffc371); color: #fff;">
+    <div class="container" style="text-align: center; padding: 5px;">
+      <p>Copyright © 2024 - 2025 <a href="https://404djl.github.io" style="color: #fff; text-decoration: underline;">404djl</a> | Powered by <a href="https://hexo.io" target="_blank" style="color: #fff; text-decoration: underline;">Hexo</a> | Theme by <a href="https://github.com/blinkfox/hexo-theme-matery" target="_blank" style="color: #fff; text-decoration: underline;">Matery</a></p>
+      <p>
+        <p>📚 站点总字数: <span id="site-word-count"></span> 字</p> |
+        <span id="runtime"></span>
+      </p>
+    </div>
+    <div class="footer-contact" style="background: linear-gradient(to right, #ff5f6d, #ffc371); color: #fff;">
+        <a href="javascript:void(0);" class="tooltipped" target="_blank" data-tooltip="邮箱：3490002122@qq.com" data-position="top" data-delay="50">
+          <i class="fas fa-envelope"></i>
+        </a>
+        <a href="https://github.com/404djl" class="tooltipped" target="_blank" data-tooltip="GitHub：404djl" data-position="top" data-delay="50">
+          <i class="fab fa-github"></i>
+        </a>
+        <a href="javascript:void(0);" class="tooltipped" data-tooltip="微信：djl123456404" data-position="top" data-delay="50">
+          <i class="fab fa-weixin"></i>
+        </a>
+    </div>
+</footer>
+
+
+
+
+<script>
+    const blogStartDate = new Date("2024-12-16T00:00:00Z"); // 修改为你的博客起始日期
+  
+    function updateRuntime() {
+      const now = new Date();
+      const diff = now - blogStartDate;
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((diff / (1000 * 60)) % 60);
+      const seconds = Math.floor((diff / 1000) % 60);
+  
+      const runtimeText = `本站已安全运行 ${days} 天 ${hours} 小时 ${minutes} 分钟 ${seconds} 秒`;
+      document.getElementById("runtime").innerText = runtimeText;
+    }
+  
+    updateRuntime();
+    setInterval(updateRuntime, 1000);
+  </script>
+  
+  <script>
+    fetch('/index.html')
+      .then(response => response.text())
+      .then(html => {
+        const wordCountRegex = /<meta name="wordCount" content="(\d+)">/;
+        const match = wordCountRegex.exec(html);
+        if (match) {
+          document.getElementById('site-word-count').innerText = match[1];
+        }
+      });
+  </script>
+  
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var tooltips = document.querySelectorAll('.tooltipped');
+      M.Tooltip.init(tooltips);
+    });
+  </script>
+  
+
+    <!-- 搜索遮罩框 -->
+<div id="searchModal" class="modal">
+    <div class="modal-content">
+        <div class="search-header">
+            <span class="title"><i class="fas fa-search"></i>&nbsp;&nbsp;搜索</span>
+            <input type="search" id="searchInput" name="s" placeholder="请输入搜索的关键字"
+                   class="search-input">
+        </div>
+        <div id="searchResult"></div>
+    </div>
+</div>
+
+<script type="text/javascript">
+$(function () {
+    var searchFunc = function (path, search_id, content_id) {
+        'use strict';
+        $.ajax({
+            url: path,
+            dataType: "xml",
+            success: function (xmlResponse) {
+                // get the contents from search data
+                var datas = $("entry", xmlResponse).map(function () {
+                    return {
+                        title: $("title", this).text(),
+                        content: $("content", this).text(),
+                        url: $("url", this).text()
+                    };
+                }).get();
+                var $input = document.getElementById(search_id);
+                var $resultContent = document.getElementById(content_id);
+                $input.addEventListener('input', function () {
+                    var str = '<ul class=\"search-result-list\">';
+                    var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+                    $resultContent.innerHTML = "";
+                    if (this.value.trim().length <= 0) {
+                        return;
+                    }
+                    // perform local searching
+                    datas.forEach(function (data) {
+                        var isMatch = true;
+                        var data_title = data.title.trim().toLowerCase();
+                        var data_content = data.content.trim().replace(/<[^>]+>/g, "").toLowerCase();
+                        var data_url = data.url;
+                        data_url = data_url.indexOf('/') === 0 ? data.url : '/' + data_url;
+                        var index_title = -1;
+                        var index_content = -1;
+                        var first_occur = -1;
+                        // only match artiles with not empty titles and contents
+                        if (data_title !== '' && data_content !== '') {
+                            keywords.forEach(function (keyword, i) {
+                                index_title = data_title.indexOf(keyword);
+                                index_content = data_content.indexOf(keyword);
+                                if (index_title < 0 && index_content < 0) {
+                                    isMatch = false;
+                                } else {
+                                    if (index_content < 0) {
+                                        index_content = 0;
+                                    }
+                                    if (i === 0) {
+                                        first_occur = index_content;
+                                    }
+                                }
+                            });
+                        }
+                        // show search results
+                        if (isMatch) {
+                            str += "<li><a href='" + data_url + "' class='search-result-title'>" + data_title + "</a>";
+                            var content = data.content.trim().replace(/<[^>]+>/g, "");
+                            if (first_occur >= 0) {
+                                // cut out 100 characters
+                                var start = first_occur - 20;
+                                var end = first_occur + 80;
+                                if (start < 0) {
+                                    start = 0;
+                                }
+                                if (start === 0) {
+                                    end = 100;
+                                }
+                                if (end > content.length) {
+                                    end = content.length;
+                                }
+                                var match_content = content.substr(start, end);
+                                // highlight all keywords
+                                keywords.forEach(function (keyword) {
+                                    var regS = new RegExp(keyword, "gi");
+                                    match_content = match_content.replace(regS, "<em class=\"search-keyword\">" + keyword + "</em>");
+                                });
+
+                                str += "<p class=\"search-result\">" + match_content + "...</p>"
+                            }
+                            str += "</li>";
+                        }
+                    });
+                    str += "</ul>";
+                    $resultContent.innerHTML = str;
+                });
+            }
+        });
+    };
+
+    searchFunc('/search.xml', 'searchInput', 'searchResult');
+});
+</script>
+
+    <!-- 白天和黑夜主题 -->
+<div class="stars-con">
+    <div id="stars"></div>
+    <div id="stars2"></div>
+    <div id="stars3"></div>  
+</div>
+
+<script>
+    function switchNightMode() {
+        $('<div class="Cuteen_DarkSky"><div class="Cuteen_DarkPlanet"></div></div>').appendTo($('body')),
+        setTimeout(function () {
+            $('body').hasClass('DarkMode') 
+            ? ($('body').removeClass('DarkMode'), localStorage.setItem('isDark', '0'), $('#sum-moon-icon').removeClass("fa-sun").addClass('fa-moon')) 
+            : ($('body').addClass('DarkMode'), localStorage.setItem('isDark', '1'), $('#sum-moon-icon').addClass("fa-sun").removeClass('fa-moon')),
+            
+            setTimeout(function () {
+            $('.Cuteen_DarkSky').fadeOut(1e3, function () {
+                $(this).remove()
+            })
+            }, 2e3)
+        })
+    }
+</script>
+
+    <!-- 回到顶部按钮 -->
+<div id="backTop" class="top-scroll">
+    <a class="btn-floating btn-large waves-effect waves-light" href="#!">
+        <i class="fas fa-arrow-up"></i>
+    </a>
+</div>
+
+
+    <script src="/libs/materialize/materialize.min.js"></script>
+    <script src="/libs/masonry/masonry.pkgd.min.js"></script>
+    <script src="/libs/aos/aos.js"></script>
+    <script src="/libs/scrollprogress/scrollProgress.min.js"></script>
+    <script src="/libs/lightGallery/js/lightgallery-all.min.js"></script>
+    <script src="/js/matery.js"></script>
+
+    
+
+    
+    
+    
+
+    <!-- 雪花特效 -->
+     
+        <script type="text/javascript">
+            // 只在桌面版网页启用特效
+            var windowWidth = $(window).width();
+            if (windowWidth > 768) {
+                document.write('<script type="text/javascript" src="/libs/others/snow.js"><\/script>');
+            }
+        </script>
+    
+
+    <!-- 鼠标星星特效 -->
+    
+
+     
+        <script src="https://ssl.captcha.qq.com/TCaptcha.js"></script>
+        <script src="/libs/others/TencentCaptcha.js"></script>
+        <button id="TencentCaptcha" data-appid="xxxxxxxxxx" data-cbfn="callback" type="button" hidden></button>
+    
+
+    <!-- Baidu Analytics -->
+
+    <!-- Baidu Push -->
+
+<script>
+    (function () {
+        var bp = document.createElement('script');
+        var curProtocol = window.location.protocol.split(':')[0];
+        if (curProtocol === 'https') {
+            bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+        } else {
+            bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+        }
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(bp, s);
+    })();
+</script>
+
+    
+    <script src="/libs/others/clicklove.js" async="async"></script>
+    
+    
+    <script async src="/libs/others/busuanzi.pure.mini.js"></script>
+    
+
+    
+
+    
+
+    <!--腾讯兔小巢-->
+    
+    
+
+    
+
+    
+
+    
+    <script src="/libs/instantpage/instantpage.js" type="module"></script>
+    
+
+</body>
+
+</html>

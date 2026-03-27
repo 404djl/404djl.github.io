@@ -1,0 +1,1740 @@
+<!DOCTYPE HTML>
+<html lang="zh-CN">
+
+
+<head>
+    <meta charset="utf-8">
+    <meta name="keywords" content="OS14-日志层与崩溃恢复, 404djlのblog">
+    <meta name="description" content="第 14 节：日志层与崩溃恢复
+学习目标：理解文件系统崩溃一致性（crash consistency）问题的本质；掌握 Write-Ahead Logging（WAL）的核心思想；深入分析 xv6 日志层的全部代码（log.c，235 行）">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="renderer" content="webkit|ie-stand|ie-comp">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="referrer" content="no-referrer-when-downgrade">
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+
+
+    <title>OS14-日志层与崩溃恢复 | 404djlのblog</title>
+    <link rel="icon" type="image/gif" href="/icons8-github.gif">
+    
+    <style>
+        body{
+            background-image: url(https://pic1.imgdb.cn/item/69b9682b1eedde6824938321.jpg);
+            background-repeat:no-repeat;
+            background-size: 100% 100%;
+            background-attachment:fixed;
+        }
+    </style>
+
+
+
+    <!-- bg-cover style     -->
+
+
+
+<link rel="stylesheet" type="text/css" href="/libs/awesome/css/all.min.css">
+<link rel="stylesheet" type="text/css" href="/libs/materialize/materialize.min.css">
+<link rel="stylesheet" type="text/css" href="/libs/aos/aos.css">
+<link rel="stylesheet" type="text/css" href="/libs/animate/animate.min.css">
+<link rel="stylesheet" type="text/css" href="/libs/lightGallery/css/lightgallery.min.css">
+<link rel="stylesheet" type="text/css" href="/css/matery.css">
+<link rel="stylesheet" type="text/css" href="/css/my.css">
+<link rel="stylesheet" type="text/css" href="/css/dark.css" media="none" onload="if(media!='all')media='all'">
+
+
+
+
+    <link rel="stylesheet" href="/libs/tocbot/tocbot.css">
+    <link rel="stylesheet" href="/css/post.css">
+
+
+
+
+    
+        <link rel="stylesheet" type="text/css" href="/css/reward.css">
+    
+
+
+
+    <script src="/libs/jquery/jquery-3.6.0.min.js"></script>
+
+<meta name="generator" content="Hexo 4.2.0">
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+<link rel="alternate" href="/atom.xml" title="404djlのblog" type="application/atom+xml">
+<link rel="stylesheet" href="/css/prism-tomorrow.css" type="text/css">
+<link rel="stylesheet" href="/css/prism-line-numbers.css" type="text/css">
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+</head>
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+
+
+
+<body>
+    <header class="navbar-fixed">
+    <nav id="headNav" class="bg-color nav-transparent">
+        <div id="navContainer" class="nav-wrapper container">
+            <div class="brand-logo">
+                <a href="/" class="waves-effect waves-light">
+                    
+                    <img src="/icons8-github.gif" class="logo-img" alt="LOGO">
+                    
+                    <span class="logo-span">404djlのblog</span>
+                </a>
+            </div>
+            
+
+<a href="#" data-target="mobile-nav" class="sidenav-trigger button-collapse"><i class="fas fa-bars"></i></a>
+<ul class="right nav-menu">
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/" class="waves-effect waves-light">
+      
+      <i class="fas fa-home" style="zoom: 0.6;"></i>
+      
+      <span>首页</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/tags" class="waves-effect waves-light">
+      
+      <i class="fas fa-tags" style="zoom: 0.6;"></i>
+      
+      <span>标签</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/categories" class="waves-effect waves-light">
+      
+      <i class="fas fa-bookmark" style="zoom: 0.6;"></i>
+      
+      <span>分类</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/archives" class="waves-effect waves-light">
+      
+      <i class="fas fa-archive" style="zoom: 0.6;"></i>
+      
+      <span>归档</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/about" class="waves-effect waves-light">
+      
+      <i class="fas fa-user-circle" style="zoom: 0.6;"></i>
+      
+      <span>关于</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/contact" class="waves-effect waves-light">
+      
+      <i class="fas fa-comments" style="zoom: 0.6;"></i>
+      
+      <span>留言板</span>
+    </a>
+    
+  </li>
+  
+  <li class="hide-on-med-and-down nav-item">
+    
+    <a href="/friends" class="waves-effect waves-light">
+      
+      <i class="fas fa-address-book" style="zoom: 0.6;"></i>
+      
+      <span>友情链接</span>
+    </a>
+    
+  </li>
+  
+  <li>
+    <a href="#searchModal" class="modal-trigger waves-effect waves-light">
+      <i id="searchIcon" class="fas fa-search" title="搜索" style="zoom: 0.85;"></i>
+    </a>
+  </li>
+  <li>
+    <a href="javascript:;" class="waves-effect waves-light" onclick="switchNightMode()" title="深色/浅色模式" >
+      <i id="sum-moon-icon" class="fas fa-sun" style="zoom: 0.85;"></i>
+    </a>
+  </li>
+</ul>
+
+
+<div id="mobile-nav" class="side-nav sidenav">
+
+    <div class="mobile-head bg-color">
+        
+        <img src="/icons8-github.gif" class="logo-img circle responsive-img">
+        
+        <div class="logo-name">404djlのblog</div>
+        <div class="logo-desc">
+            
+            Never really desperate, only the lost of the soul
+            
+        </div>
+    </div>
+
+    <ul class="menu-list mobile-menu-list">
+        
+        <li class="m-nav-item">
+	  
+		<a href="/" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-home"></i>
+			
+			首页
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/tags" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-tags"></i>
+			
+			标签
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/categories" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-bookmark"></i>
+			
+			分类
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/archives" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-archive"></i>
+			
+			归档
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/about" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-user-circle"></i>
+			
+			关于
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/contact" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-comments"></i>
+			
+			留言板
+		</a>
+          
+        </li>
+        
+        <li class="m-nav-item">
+	  
+		<a href="/friends" class="waves-effect waves-light">
+			
+			    <i class="fa-fw fas fa-address-book"></i>
+			
+			友情链接
+		</a>
+          
+        </li>
+        
+        
+        <li><div class="divider"></div></li>
+        <li>
+            <a href="https://github.com/404djl/404djl.github.io" class="waves-effect waves-light" target="_blank">
+                <i class="fab fa-github-square fa-fw"></i>Fork Me
+            </a>
+        </li>
+        
+    </ul>
+</div>
+
+
+        </div>
+
+        
+            <style>
+    .nav-transparent .github-corner {
+        display: none !important;
+    }
+
+    .github-corner {
+        position: absolute;
+        z-index: 10;
+        top: 0;
+        right: 0;
+        border: 0;
+        transform: scale(1.1);
+    }
+
+    .github-corner svg {
+        color: #0f9d58;
+        fill: #fff;
+        height: 64px;
+        width: 64px;
+    }
+
+    .github-corner:hover .octo-arm {
+        animation: a 0.56s ease-in-out;
+    }
+
+    .github-corner .octo-arm {
+        animation: none;
+    }
+
+    @keyframes a {
+        0%,
+        to {
+            transform: rotate(0);
+        }
+        20%,
+        60% {
+            transform: rotate(-25deg);
+        }
+        40%,
+        80% {
+            transform: rotate(10deg);
+        }
+    }
+</style>
+
+<a href="https://github.com/404djl/404djl.github.io" class="github-corner tooltipped hide-on-med-and-down" target="_blank"
+   data-tooltip="Fork Me" data-position="left" data-delay="50">
+    <svg viewBox="0 0 250 250" aria-hidden="true">
+        <path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path>
+        <path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2"
+              fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path>
+        <path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z"
+              fill="currentColor" class="octo-body"></path>
+    </svg>
+</a>
+        
+    </nav>
+
+</header>
+
+    
+
+
+
+<div class="bg-cover pd-header post-cover" style="background-image: url('/medias/featureimages/4.png')">
+    <div class="container" style="right: 0px;left: 0px;">
+        <div class="row">
+            <div class="col s12 m12 l12">
+                <div class="brand">
+                    <h1 class="description center-align post-title">OS14-日志层与崩溃恢复</h1>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+<main class="post-container content">
+
+    
+    <div class="row">
+    <div id="main-content" class="col s12 m12 l9">
+        <!-- 文章内容详情 -->
+<div id="artDetail">
+    <div class="card">
+        <div class="card-content article-info">
+            <div class="row tag-cate">
+                <div class="col s7">
+                    
+                    <div class="article-tag">
+                        
+                            <a href="/tags/linux/">
+                                <span class="chip bg-color">linux</span>
+                            </a>
+                        
+                            <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                                <span class="chip bg-color">操作系统</span>
+                            </a>
+                        
+                    </div>
+                    
+                </div>
+                <div class="col s5 right-align">
+                    
+                    <div class="post-cate">
+                        <i class="fas fa-bookmark fa-fw icon-category"></i>
+                        
+                            <a href="/categories/OS/" class="post-category">
+                                OS
+                            </a>
+                        
+                    </div>
+                    
+                </div>
+            </div>
+
+            <div class="post-info">
+                
+                <div class="post-date info-break-policy">
+                    <i class="far fa-calendar-minus fa-fw"></i>发布日期:&nbsp;&nbsp;
+                    2026-03-18
+                </div>
+                
+
+                
+                <div class="post-date info-break-policy">
+                    <i class="far fa-calendar-check fa-fw"></i>更新日期:&nbsp;&nbsp;
+                    2026-03-28
+                </div>
+                
+
+                
+                <div class="info-break-policy">
+                    <i class="far fa-file-word fa-fw"></i>文章字数:&nbsp;&nbsp;
+                    5.4k
+                </div>
+                
+
+                
+                <div class="info-break-policy">
+                    <i class="far fa-clock fa-fw"></i>阅读时长:&nbsp;&nbsp;
+                    22 分
+                </div>
+                
+
+                
+            </div>
+        </div>
+        <hr class="clearfix">
+
+        
+
+        
+
+        <div class="card-content article-card-content">
+            <div id="articleContent">
+                <h1 id="第-14-节：日志层与崩溃恢复"><a href="#第-14-节：日志层与崩溃恢复" class="headerlink" title="第 14 节：日志层与崩溃恢复"></a>第 14 节：日志层与崩溃恢复</h1><blockquote>
+<p><strong>学习目标</strong>：理解文件系统崩溃一致性（crash consistency）问题的本质；掌握 Write-Ahead Logging（WAL）的核心思想；深入分析 xv6 日志层的全部代码（<code>log.c</code>，235 行）；理解 <code>begin_op/end_op</code> 事务机制、<code>log_write</code> 的日志吸收优化，以及崩溃恢复的完整流程。</p>
+<p><strong>预计用时</strong>：3-4 小时</p>
+<p><strong>前置要求</strong>：完成第 13 节（磁盘驱动与块缓存），理解 <code>bread/bwrite/brelse/bpin/bunpin</code>；完成第 12 节（锁机制），理解 <code>sleep/wakeup</code> 与自旋锁的关系；了解磁盘布局（<code>fs.h</code> 中的 <code>struct superblock</code>）</p>
+</blockquote>
+<hr>
+<h2 id="一、理论：崩溃一致性问题"><a href="#一、理论：崩溃一致性问题" class="headerlink" title="一、理论：崩溃一致性问题"></a>一、理论：崩溃一致性问题</h2><h3 id="1-1-为什么需要日志？"><a href="#1-1-为什么需要日志？" class="headerlink" title="1.1 为什么需要日志？"></a>1.1 为什么需要日志？</h3><p>文件系统经常需要<strong>原子地更新多个磁盘块</strong>。典型示例：创建一个新文件需要：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">① 在 inode 区分配一个新 inode（写 inode 块）
+② 在父目录中添加一条条目（写目录数据块）
+③ 更新 inode 引用计数（nlink）
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<p>这三步写磁盘操作不是原子的——如果在步骤 ① 和 ② 之间系统断电，磁盘上就会出现一个”存在但没有目录条目”的 inode，文件系统元数据不一致，下次挂载时 <code>fsck</code>（文件系统检查工具）需要扫描整个磁盘来修复。</p>
+<p>这类问题统称为<strong>崩溃一致性问题（crash consistency）</strong>：多步写操作的中间状态不应在崩溃重启后持久化。</p>
+<h3 id="1-2-Write-Ahead-Logging（WAL）"><a href="#1-2-Write-Ahead-Logging（WAL）" class="headerlink" title="1.2 Write-Ahead Logging（WAL）"></a>1.2 Write-Ahead Logging（WAL）</h3><p>xv6 使用 <strong>Write-Ahead Logging</strong> 解决此问题，核心规则只有两条：</p>
+<ol>
+<li><strong>先写日志，再写数据</strong>：在实际数据写到磁盘之前，先把”打算写什么”记录到日志</li>
+<li><strong>提交后才安装</strong>：只有日志头（header block）成功写到磁盘后，才将日志数据”安装”到实际位置</li>
+</ol>
+<p>由于日志头的写入是单块操作，磁盘控制器保证单扇区写是原子的（即使中途断电，要么写完要么没写），因此日志头的写入构成了<strong>原子提交点</strong>。</p>
+<p><strong>崩溃恢复逻辑极其简单</strong>：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">重启时检查日志头 lh.n：
+  lh.n <span class="token operator">==</span> 0  → 上次未提交（崩溃在提交前）→ 丢弃日志，什么都不做
+  lh.n  <span class="token operator">></span> 0  → 上次已提交（崩溃在安装时）→ 重新安装（redo），然后清零
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<p><strong>WAL 的幂等性（idempotent）</strong>：无论 <code>install_trans()</code> 执行了多少次，最终结果相同——所以重启后重做已提交的日志是安全的。</p>
+<h3 id="1-3-xv6-日志的磁盘布局"><a href="#1-3-xv6-日志的磁盘布局" class="headerlink" title="1.3 xv6 日志的磁盘布局"></a>1.3 xv6 日志的磁盘布局</h3><p>xv6 的磁盘分区（由 <code>mkfs.c</code> 和 <code>fs.h</code> 定义）：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">磁盘块编号  区域
+─────────────────────────────────────────────────────────
+0           boot block（引导块，不由 xv6 使用）
+1           super block（超级块：文件系统元信息）
+2           log header block（日志头块）          ← 日志区起始
+3<span class="token punctuation">..</span>31       log data blocks（30 个日志数据块）    ← LOGSIZE <span class="token operator">=</span> 30
+32<span class="token punctuation">..</span>57      inode blocks（inode 区）
+58          bitmap block（空闲块位图）
+59<span class="token punctuation">..</span>999     data blocks（数据区）
+─────────────────────────────────────────────────────────
+
+参数（kernel/param.h）：
+  MAXOPBLOCKS <span class="token operator">=</span> 10    单个 FS 系统调用最多写 10 个块
+  LOGSIZE     <span class="token operator">=</span> 30    日志区数据块数（<span class="token operator">=</span> MAXOPBLOCKS × 3）
+  NBUF        <span class="token operator">=</span> 30    块缓存缓冲区个数
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>日志区的内容</strong>：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">块 2（日志头块）：struct logheader <span class="token punctuation">{</span> int n<span class="token punctuation">;</span> int block<span class="token punctuation">[</span>LOGSIZE<span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+  n         <span class="token operator">=</span> 已提交的日志块数（0 表示无未完成事务）
+  block<span class="token punctuation">[</span>0<span class="token punctuation">]</span>  <span class="token operator">=</span> 被修改的第 0 个块的实际目标块号
+  block<span class="token punctuation">[</span>1<span class="token punctuation">]</span>  <span class="token operator">=</span> 被修改的第 1 个块的实际目标块号
+  <span class="token punctuation">..</span>.
+
+块 3（日志数据块 0）：block<span class="token punctuation">[</span>0<span class="token punctuation">]</span> 对应块的修改内容
+块 4（日志数据块 1）：block<span class="token punctuation">[</span>1<span class="token punctuation">]</span> 对应块的修改内容
+  <span class="token punctuation">..</span>.
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<hr>
+<h2 id="二、数据结构：struct-log-和-struct-logheader"><a href="#二、数据结构：struct-log-和-struct-logheader" class="headerlink" title="二、数据结构：struct log 和 struct logheader"></a>二、数据结构：<code>struct log</code> 和 <code>struct logheader</code></h2><pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// kernel/log.c</span>
+
+<span class="token comment" spellcheck="true">// 日志头：同时存在于磁盘（块 2）和内存（log.lh）</span>
+<span class="token keyword">struct</span> logheader <span class="token punctuation">{</span>
+  <span class="token keyword">int</span> n<span class="token punctuation">;</span>                 <span class="token comment" spellcheck="true">// 当前日志中的块数（内存中动态追踪；磁盘上是原子提交点）</span>
+  <span class="token keyword">int</span> block<span class="token punctuation">[</span>LOGSIZE<span class="token punctuation">]</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 各日志槽对应的实际目标块号</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token keyword">struct</span> log <span class="token punctuation">{</span>
+  <span class="token keyword">struct</span> spinlock lock<span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 保护以下所有字段</span>
+
+  <span class="token keyword">int</span> start<span class="token punctuation">;</span>             <span class="token comment" spellcheck="true">// 日志区第一个日志块的块号（= sb.logstart = 2）</span>
+  <span class="token keyword">int</span> size<span class="token punctuation">;</span>              <span class="token comment" spellcheck="true">// 日志区大小（块数，= sb.nlog = 30）</span>
+  <span class="token keyword">int</span> dev<span class="token punctuation">;</span>               <span class="token comment" spellcheck="true">// 设备号</span>
+
+  <span class="token keyword">int</span> outstanding<span class="token punctuation">;</span>       <span class="token comment" spellcheck="true">// 当前正在执行中的 FS 系统调用数（每个 begin_op +1，end_op -1）</span>
+  <span class="token keyword">int</span> committing<span class="token punctuation">;</span>        <span class="token comment" spellcheck="true">// 是否正在提交（commit() 执行期间为 1）</span>
+
+  <span class="token keyword">struct</span> logheader lh<span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 内存中的日志头（与磁盘日志头同步）</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token keyword">struct</span> log log<span class="token punctuation">;</span>          <span class="token comment" spellcheck="true">// 全局日志对象（只有一个）</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong><code>log.lh.n</code> 的双重含义</strong>：</p>
+<ul>
+<li><strong>内存中</strong>：当前事务期间通过 <code>log_write()</code> 记录的块数（动态增长）</li>
+<li><strong>磁盘上</strong>：已提交并等待安装的块数（提交时写入，安装完成后清零）</li>
+</ul>
+<p>这是 WAL 设计的精妙之处：<code>n &gt; 0</code> 是崩溃恢复的唯一触发条件。</p>
+<hr>
+<h2 id="三、源码精读：日志的生命周期"><a href="#三、源码精读：日志的生命周期" class="headerlink" title="三、源码精读：日志的生命周期"></a>三、源码精读：日志的生命周期</h2><h3 id="3-1-initlog-——启动时初始化与崩溃恢复"><a href="#3-1-initlog-——启动时初始化与崩溃恢复" class="headerlink" title="3.1 initlog()——启动时初始化与崩溃恢复"></a>3.1 <code>initlog()</code>——启动时初始化与崩溃恢复</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">initlog</span><span class="token punctuation">(</span><span class="token keyword">int</span> dev<span class="token punctuation">,</span> <span class="token keyword">struct</span> superblock <span class="token operator">*</span>sb<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span><span class="token keyword">struct</span> logheader<span class="token punctuation">)</span> <span class="token operator">>=</span> BSIZE<span class="token punctuation">)</span>
+    <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"initlog: too big logheader"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment" spellcheck="true">// logheader 必须装进一个块（1024 字节）：</span>
+  <span class="token comment" spellcheck="true">// sizeof(logheader) = 4 + 30×4 = 124 字节，远小于 1024，安全</span>
+
+  <span class="token function">initlock</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>log<span class="token punctuation">.</span>lock<span class="token punctuation">,</span> <span class="token string">"log"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  log<span class="token punctuation">.</span>start <span class="token operator">=</span> sb<span class="token operator">-></span>logstart<span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 日志区起始块号（= 2）</span>
+  log<span class="token punctuation">.</span>size  <span class="token operator">=</span> sb<span class="token operator">-></span>nlog<span class="token punctuation">;</span>       <span class="token comment" spellcheck="true">// 日志区总块数（= 30）</span>
+  log<span class="token punctuation">.</span>dev   <span class="token operator">=</span> dev<span class="token punctuation">;</span>
+
+  <span class="token function">recover_from_log</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// ← 关键：检查上次是否有未完成事务</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><code>initlog()</code> 在 <code>main()</code> → <code>fsinit()</code> → <code>iinit()</code> 中被调用，是文件系统初始化的第一步。</p>
+<h3 id="3-2-recover-from-log-——崩溃恢复"><a href="#3-2-recover-from-log-——崩溃恢复" class="headerlink" title="3.2 recover_from_log()——崩溃恢复"></a>3.2 <code>recover_from_log()</code>——崩溃恢复</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">recover_from_log</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token function">read_head</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>       <span class="token comment" spellcheck="true">// 从磁盘读取日志头到 log.lh</span>
+  <span class="token function">install_trans</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 若 log.lh.n > 0，将日志数据安装到实际位置（redo）</span>
+  log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>n <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  <span class="token function">write_head</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>      <span class="token comment" spellcheck="true">// 将 n=0 写回磁盘，清除日志（表示恢复完成）</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>**<code>read_head()</code>**：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">read_head</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">struct</span> buf <span class="token operator">*</span>buf <span class="token operator">=</span> <span class="token function">bread</span><span class="token punctuation">(</span>log<span class="token punctuation">.</span>dev<span class="token punctuation">,</span> log<span class="token punctuation">.</span>start<span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 读日志头块（块号 2）</span>
+  <span class="token keyword">struct</span> logheader <span class="token operator">*</span>lh <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">struct</span> logheader <span class="token operator">*</span><span class="token punctuation">)</span><span class="token punctuation">(</span>buf<span class="token operator">-></span>data<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>n <span class="token operator">=</span> lh<span class="token operator">-></span>n<span class="token punctuation">;</span>
+  <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>n<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span>
+    log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>block<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> lh<span class="token operator">-></span>block<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">;</span>
+  <span class="token function">brelse</span><span class="token punctuation">(</span>buf<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>**<code>install_trans()</code>**——将日志数据拷贝到实际磁盘位置：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">install_trans</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> tail <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> tail <span class="token operator">&lt;</span> log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>n<span class="token punctuation">;</span> tail<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">struct</span> buf <span class="token operator">*</span>lbuf <span class="token operator">=</span> <span class="token function">bread</span><span class="token punctuation">(</span>log<span class="token punctuation">.</span>dev<span class="token punctuation">,</span> log<span class="token punctuation">.</span>start <span class="token operator">+</span> tail <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment" spellcheck="true">// 读日志数据块（log.start+1 = 块3，log.start+2 = 块4，...）</span>
+
+    <span class="token keyword">struct</span> buf <span class="token operator">*</span>dbuf <span class="token operator">=</span> <span class="token function">bread</span><span class="token punctuation">(</span>log<span class="token punctuation">.</span>dev<span class="token punctuation">,</span> log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>block<span class="token punctuation">[</span>tail<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment" spellcheck="true">// 读目标块（实际应该写入的位置）</span>
+
+    <span class="token function">memmove</span><span class="token punctuation">(</span>dbuf<span class="token operator">-></span>data<span class="token punctuation">,</span> lbuf<span class="token operator">-></span>data<span class="token punctuation">,</span> BSIZE<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 从日志块复制到目标块</span>
+    <span class="token function">bwrite</span><span class="token punctuation">(</span>dbuf<span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 将目标块写到磁盘（安装）</span>
+    <span class="token function">bunpin</span><span class="token punctuation">(</span>dbuf<span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 解除 bpin（允许被 LRU 淘汰）</span>
+    <span class="token function">brelse</span><span class="token punctuation">(</span>lbuf<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">brelse</span><span class="token punctuation">(</span>dbuf<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>崩溃恢复时序分析</strong>：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">场景 A：崩溃在 write_head<span class="token punctuation">(</span><span class="token punctuation">)</span> 之前（提交前）
+  磁盘日志头 lh.n <span class="token operator">==</span> 0 → read_head<span class="token punctuation">(</span><span class="token punctuation">)</span> 后 log.lh.n <span class="token operator">=</span> 0
+  install_trans<span class="token punctuation">(</span><span class="token punctuation">)</span> 什么都不做（循环 0 次）
+  write_head<span class="token punctuation">(</span><span class="token punctuation">)</span> 写 n<span class="token operator">=</span>0（无变化）
+  结论：本次未提交的写操作全部丢弃，文件系统回到上次提交状态 ✓
+
+场景 B：崩溃在 write_head<span class="token punctuation">(</span><span class="token punctuation">)</span> 之后、install_trans<span class="token punctuation">(</span><span class="token punctuation">)</span> 完成之前（提交后安装中）
+  磁盘日志头 lh.n <span class="token operator">></span> 0 → read_head<span class="token punctuation">(</span><span class="token punctuation">)</span> 后 log.lh.n <span class="token operator">></span> 0
+  install_trans<span class="token punctuation">(</span><span class="token punctuation">)</span> 重做所有已提交的写操作（幂等）
+  write_head<span class="token punctuation">(</span><span class="token punctuation">)</span> 写 n<span class="token operator">=</span>0 清除日志
+  结论：已提交的操作全部完成，文件系统达到一致状态 ✓
+
+场景 C：正常关机（完整提交 + 安装后清零）
+  磁盘日志头 lh.n <span class="token operator">==</span> 0 → 同场景 A，什么都不做 ✓
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="3-3-begin-op-——事务开始"><a href="#3-3-begin-op-——事务开始" class="headerlink" title="3.3 begin_op()——事务开始"></a>3.3 <code>begin_op()</code>——事务开始</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">begin_op</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token function">acquire</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>log<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">while</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>log<span class="token punctuation">.</span>committing<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment" spellcheck="true">// 正在提交中，必须等待提交完成再开始新操作</span>
+      <span class="token comment" spellcheck="true">// （避免新操作的写入混入正在提交的事务）</span>
+      <span class="token function">sleep</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>log<span class="token punctuation">,</span> <span class="token operator">&amp;</span>log<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span><span class="token punctuation">(</span>log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>n <span class="token operator">+</span> <span class="token punctuation">(</span>log<span class="token punctuation">.</span>outstanding <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">*</span> MAXOPBLOCKS <span class="token operator">></span> LOGSIZE<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment" spellcheck="true">// 日志空间不足：当前已用 log.lh.n 个槽，</span>
+      <span class="token comment" spellcheck="true">// 加上"已有 outstanding 个操作"+"新操作"各自最多 MAXOPBLOCKS 个块</span>
+      <span class="token comment" spellcheck="true">// 超过了 LOGSIZE(=30) → 等待当前事务提交后腾出空间</span>
+      <span class="token function">sleep</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>log<span class="token punctuation">,</span> <span class="token operator">&amp;</span>log<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+      <span class="token comment" spellcheck="true">// 可以开始新操作</span>
+      log<span class="token punctuation">.</span>outstanding <span class="token operator">+</span><span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+      <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>log<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">break</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong><code>begin_op()</code> 的空间预留逻辑</strong>：</p>
+<pre class="line-numbers language-bash"><code class="language-bash"><span class="token punctuation">(</span>log.lh.n<span class="token punctuation">)</span> + <span class="token punctuation">(</span>log.outstanding + 1<span class="token punctuation">)</span> × MAXOPBLOCKS <span class="token operator">></span> LOGSIZE
+     ↑                  ↑
+已用槽位      <span class="token string">"新操作开始后，已有操作+新操作的最坏用量"</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span></span></code></pre>
+<p>这是一种<strong>悲观预留</strong>：假设每个进行中的系统调用都会用满 <code>MAXOPBLOCKS</code> 个日志槽，提前预留，防止日志溢出。实际上大多数操作用不了那么多槽，但这保证了安全性。</p>
+<p><strong><code>log.committing</code> 标志的作用</strong>：</p>
+<p>提交期间（<code>commit()</code> 执行时），<code>log.committing = 1</code>。此时新的 <code>begin_op()</code> 必须等待，原因是提交本身是一个多步操作（写日志 → 写头 → 安装 → 清零），如果提交中途有新操作混入，新操作的写操作会与提交的日志数据交织，破坏崩溃一致性。</p>
+<h3 id="3-4-end-op-——事务结束，可能触发提交"><a href="#3-4-end-op-——事务结束，可能触发提交" class="headerlink" title="3.4 end_op()——事务结束，可能触发提交"></a>3.4 <code>end_op()</code>——事务结束，可能触发提交</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">end_op</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">int</span> do_commit <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+
+  <span class="token function">acquire</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>log<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  log<span class="token punctuation">.</span>outstanding <span class="token operator">-</span><span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span>log<span class="token punctuation">.</span>committing<span class="token punctuation">)</span>
+    <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"log.committing"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 持有 log.lock 期间不可能处于提交状态</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span>log<span class="token punctuation">.</span>outstanding <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// 最后一个活跃操作结束 → 我来负责提交</span>
+    do_commit <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+    log<span class="token punctuation">.</span>committing <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// 还有其他操作进行中，不提交；但 outstanding 减小了，</span>
+    <span class="token comment" spellcheck="true">// 可能让等待日志空间的 begin_op() 满足条件了，唤醒它们</span>
+    <span class="token function">wakeup</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>log<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>log<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">if</span><span class="token punctuation">(</span>do_commit<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// 在不持任何锁的情况下提交</span>
+    <span class="token comment" spellcheck="true">// （commit() 中会调用 bread/bwrite，可能 sleep，不能持锁 sleep）</span>
+    <span class="token function">commit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">acquire</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>log<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    log<span class="token punctuation">.</span>committing <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    <span class="token function">wakeup</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>log<span class="token punctuation">)</span><span class="token punctuation">;</span>     <span class="token comment" spellcheck="true">// 唤醒因 committing=1 或空间不足而等待的 begin_op()</span>
+    <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>log<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>“最后一个操作提交”的设计</strong>：</p>
+<p>xv6 的日志实现了一种<strong>组提交（group commit）</strong>：多个并发的文件系统系统调用共享同一个事务，直到最后一个调用 <code>end_op()</code> 时才统一提交。这减少了磁盘写操作的次数（多个操作的日志一次性写入），提高了吞吐量。</p>
+<pre class="line-numbers language-bash"><code class="language-bash">时间线示例（3 个并发操作）：
+
+        begin_op→ <span class="token punctuation">..</span>. end_op
+       /                   \
+begin_op→ <span class="token punctuation">..</span>.  end_op       \
+      \              \       \
+       begin_op→ <span class="token punctuation">..</span>.  end_op  → commit<span class="token punctuation">(</span><span class="token punctuation">)</span>（最后一个触发）
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<h3 id="3-5-log-write-——记录修改意图（替代-bwrite）"><a href="#3-5-log-write-——记录修改意图（替代-bwrite）" class="headerlink" title="3.5 log_write()——记录修改意图（替代 bwrite）"></a>3.5 <code>log_write()</code>——记录修改意图（替代 <code>bwrite</code>）</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">log_write</span><span class="token punctuation">(</span><span class="token keyword">struct</span> buf <span class="token operator">*</span>b<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">int</span> i<span class="token punctuation">;</span>
+
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>n <span class="token operator">>=</span> LOGSIZE <span class="token operator">||</span> log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>n <span class="token operator">>=</span> log<span class="token punctuation">.</span>size <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">)</span>
+    <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"too big a transaction"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>log<span class="token punctuation">.</span>outstanding <span class="token operator">&lt;</span> <span class="token number">1</span><span class="token punctuation">)</span>
+    <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"log_write outside of trans"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 必须在 begin_op/end_op 之间调用</span>
+
+  <span class="token function">acquire</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>log<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token comment" spellcheck="true">// 日志吸收（log absorption）：检查该块是否已在本次事务的日志里</span>
+  <span class="token keyword">for</span> <span class="token punctuation">(</span>i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>n<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>block<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">==</span> b<span class="token operator">-></span>blockno<span class="token punctuation">)</span>
+      <span class="token keyword">break</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 已有记录，复用该槽（不额外占用新槽位）</span>
+  <span class="token punctuation">}</span>
+  log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>block<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> b<span class="token operator">-></span>blockno<span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 记录目标块号</span>
+
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>i <span class="token operator">==</span> log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>n<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// 新块（之前没有记录过）</span>
+    <span class="token function">bpin</span><span class="token punctuation">(</span>b<span class="token punctuation">)</span><span class="token punctuation">;</span>        <span class="token comment" spellcheck="true">// 固定缓冲区，防止被 LRU 淘汰（事务提交前必须保留在内存）</span>
+    log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>n<span class="token operator">++</span><span class="token punctuation">;</span>     <span class="token comment" spellcheck="true">// 日志使用量加一</span>
+  <span class="token punctuation">}</span>
+  <span class="token comment" spellcheck="true">// 注意：如果是吸收（i &lt; log.lh.n），不增加 lh.n，也不重复 bpin</span>
+
+  <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>log<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>日志吸收（Log Absorption）</strong>是一个重要优化：</p>
+<p>如果同一个块在一个事务中被多次修改（例如频繁更新的 inode 块），<code>log_write()</code> 只记录一个日志槽，提交时只写一次日志和一次安装，而非多次。这大幅减少磁盘写入量。</p>
+<pre class="line-numbers language-bash"><code class="language-bash">示例：cat <span class="token function">file</span> 期间，inode 的 atime 被更新 3 次
+
+无吸收：日志槽 <span class="token punctuation">[</span>inode_block, inode_block, inode_block<span class="token punctuation">]</span>  → 3 个槽位
+有吸收：日志槽 <span class="token punctuation">[</span>inode_block<span class="token punctuation">]</span>                            → 1 个槽位（只记最终状态）
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong><code>bpin(b)</code> 的必要性</strong>（第 13 节铺垫）：</p>
+<p><code>log_write()</code> 只是”记录意图”，不立即写磁盘。修改后的数据还在 <code>b-&gt;data[]</code> 缓冲区里。如果在 <code>commit()</code> 之前这个缓冲区被 LRU 淘汰并分配给其他块，日志就会丢失这次修改。<code>bpin(b)</code> 使 <code>b-&gt;refcnt &gt; 0</code>，<code>bget()</code> 的 LRU 淘汰路径永不触碰它，直到 <code>install_trans()</code> 中 <code>bunpin(dbuf)</code> 解除固定。</p>
+<h3 id="3-6-commit-——四步提交"><a href="#3-6-commit-——四步提交" class="headerlink" title="3.6 commit()——四步提交"></a>3.6 <code>commit()</code>——四步提交</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">commit</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>n <span class="token operator">></span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token function">write_log</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>     <span class="token comment" spellcheck="true">// 步骤 1：将缓存中修改过的块写到日志区</span>
+    <span class="token function">write_head</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 步骤 2：将日志头写到磁盘 ← 原子提交点</span>
+    <span class="token function">install_trans</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment" spellcheck="true">// 步骤 3：将日志数据安装到实际磁盘位置</span>
+    log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>n <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    <span class="token function">write_head</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 步骤 4：写 n=0 到日志头，表示事务完成（清除日志）</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong><code>write_log()</code>——步骤 1：缓存→日志区</strong>：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">write_log</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> tail <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> tail <span class="token operator">&lt;</span> log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>n<span class="token punctuation">;</span> tail<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">struct</span> buf <span class="token operator">*</span>to   <span class="token operator">=</span> <span class="token function">bread</span><span class="token punctuation">(</span>log<span class="token punctuation">.</span>dev<span class="token punctuation">,</span> log<span class="token punctuation">.</span>start <span class="token operator">+</span> tail <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment" spellcheck="true">// 日志数据区的第 tail 个槽（块 3, 4, 5, ...）</span>
+
+    <span class="token keyword">struct</span> buf <span class="token operator">*</span>from <span class="token operator">=</span> <span class="token function">bread</span><span class="token punctuation">(</span>log<span class="token punctuation">.</span>dev<span class="token punctuation">,</span> log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>block<span class="token punctuation">[</span>tail<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment" spellcheck="true">// 被修改块的缓冲区（已在内存中，bpin 固定，直接 bread 命中缓存）</span>
+
+    <span class="token function">memmove</span><span class="token punctuation">(</span>to<span class="token operator">-></span>data<span class="token punctuation">,</span> from<span class="token operator">-></span>data<span class="token punctuation">,</span> BSIZE<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment" spellcheck="true">// 从修改后的块拷贝到日志槽</span>
+    <span class="token function">bwrite</span><span class="token punctuation">(</span>to<span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment" spellcheck="true">// 将日志槽写到磁盘</span>
+    <span class="token function">brelse</span><span class="token punctuation">(</span>from<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">brelse</span><span class="token punctuation">(</span>to<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong><code>write_head()</code>——步骤 2：原子提交点</strong>：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">write_head</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">struct</span> buf <span class="token operator">*</span>buf <span class="token operator">=</span> <span class="token function">bread</span><span class="token punctuation">(</span>log<span class="token punctuation">.</span>dev<span class="token punctuation">,</span> log<span class="token punctuation">.</span>start<span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 日志头块（块 2）</span>
+  <span class="token keyword">struct</span> logheader <span class="token operator">*</span>hb <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">struct</span> logheader <span class="token operator">*</span><span class="token punctuation">)</span><span class="token punctuation">(</span>buf<span class="token operator">-></span>data<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  hb<span class="token operator">-></span>n <span class="token operator">=</span> log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>n<span class="token punctuation">;</span>
+  <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>n<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span>
+    hb<span class="token operator">-></span>block<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>block<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">;</span>
+  <span class="token function">bwrite</span><span class="token punctuation">(</span>buf<span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// ← 真正的提交点：这一块写成功，事务永久提交</span>
+  <span class="token function">brelse</span><span class="token punctuation">(</span>buf<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>崩溃点分析</strong>：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">提交的 4 个步骤与崩溃恢复：
+
+<span class="token punctuation">[</span>步骤 1<span class="token punctuation">]</span> write_log<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  崩溃位置：日志数据区已写部分块，日志头 n 仍为 0（上次清零的状态）
+  恢复行为：read_head<span class="token punctuation">(</span><span class="token punctuation">)</span> 得到 n<span class="token operator">=</span>0 → install_trans<span class="token punctuation">(</span><span class="token punctuation">)</span> 空操作 → 丢弃 ✓
+
+<span class="token punctuation">[</span>步骤 2<span class="token punctuation">]</span> write_head<span class="token punctuation">(</span><span class="token punctuation">)</span>（原子提交点）
+  此步骤是单块写，磁盘保证原子性
+  崩溃在写入完成前 → n<span class="token operator">=</span>0，同上 ✓
+  崩溃在写入完成后 → n<span class="token operator">></span>0，进入步骤 3-4 的恢复
+
+<span class="token punctuation">[</span>步骤 3<span class="token punctuation">]</span> install_trans<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  崩溃位置：已安装部分块到实际位置，日志头 n 仍为上次 commit 的值
+  恢复行为：read_head<span class="token punctuation">(</span><span class="token punctuation">)</span> 得到 n<span class="token operator">></span>0 → install_trans<span class="token punctuation">(</span><span class="token punctuation">)</span> 重新安装所有块（幂等）✓
+
+<span class="token punctuation">[</span>步骤 4<span class="token punctuation">]</span> write_head<span class="token punctuation">(</span><span class="token punctuation">)</span>（n<span class="token operator">=</span>0，清除日志）
+  崩溃在写入前 → n<span class="token operator">></span>0，同步骤 3 的恢复 ✓
+  崩溃在写入后 → n<span class="token operator">=</span>0，正常状态 ✓
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<hr>
+<h2 id="四、完整事务流程图"><a href="#四、完整事务流程图" class="headerlink" title="四、完整事务流程图"></a>四、完整事务流程图</h2><p>以一次 <code>write(fd, data, n)</code> 系统调用为例，展示从用户程序到磁盘的日志全流程：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">用户程序: write<span class="token punctuation">(</span>fd, data, n<span class="token punctuation">)</span>
+         │
+         ▼
+sys_write<span class="token punctuation">(</span><span class="token punctuation">)</span> → filewrite<span class="token punctuation">(</span><span class="token punctuation">)</span> → writei<span class="token punctuation">(</span><span class="token punctuation">)</span>
+         │
+         ▼
+begin_op<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  acquire<span class="token punctuation">(</span>log.lock<span class="token punctuation">)</span>
+  log.outstanding++
+  release<span class="token punctuation">(</span>log.lock<span class="token punctuation">)</span>
+         │
+         ▼
+<span class="token punctuation">[</span>writei 内部循环写数据块<span class="token punctuation">]</span>
+  bp <span class="token operator">=</span> bread<span class="token punctuation">(</span>dev, blockno<span class="token punctuation">)</span>        ← 读目标块（可能触发磁盘读）
+  memmove<span class="token punctuation">(</span>bp-<span class="token operator">></span>data, src, n<span class="token punctuation">)</span>       ← 在缓冲区中修改数据
+  log_write<span class="token punctuation">(</span>bp<span class="token punctuation">)</span>                   ← 记录<span class="token string">"这个块要写"</span>（加入 lh.block<span class="token punctuation">[</span><span class="token punctuation">]</span>，bpin）
+  brelse<span class="token punctuation">(</span>bp<span class="token punctuation">)</span>                      ← 释放 buf.lock（数据仍在缓冲区内存中）
+         │
+         ▼
+end_op<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  acquire<span class="token punctuation">(</span>log.lock<span class="token punctuation">)</span>
+  log.outstanding--
+  <span class="token punctuation">[</span>若 outstanding <span class="token operator">==</span> 0，设 committing<span class="token operator">=</span>1，do_commit<span class="token operator">=</span>1<span class="token punctuation">]</span>
+  release<span class="token punctuation">(</span>log.lock<span class="token punctuation">)</span>
+         │
+         ▼ <span class="token punctuation">(</span>若 do_commit<span class="token punctuation">)</span>
+commit<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  ┌── write_log<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  │     <span class="token keyword">for</span> each lh.block<span class="token punctuation">[</span>i<span class="token punctuation">]</span>:
+  │       to   <span class="token operator">=</span> bread<span class="token punctuation">(</span>dev, log_slot_i<span class="token punctuation">)</span>    ← 读日志数据槽
+  │       from <span class="token operator">=</span> bread<span class="token punctuation">(</span>dev, lh.block<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span>  ← 读修改块（命中缓存）
+  │       memmove<span class="token punctuation">(</span>to-<span class="token operator">></span>data, from-<span class="token operator">></span>data<span class="token punctuation">)</span>   ← 复制到日志槽
+  │       bwrite<span class="token punctuation">(</span>to<span class="token punctuation">)</span>                       ← 写日志数据到磁盘
+  │       brelse<span class="token punctuation">(</span>from<span class="token punctuation">)</span><span class="token punctuation">;</span> brelse<span class="token punctuation">(</span>to<span class="token punctuation">)</span>
+  │
+  ├── write_head<span class="token punctuation">(</span><span class="token punctuation">)</span>                         ← 原子提交点：写日志头（n <span class="token operator">></span> 0）
+  │
+  ├── install_trans<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  │     <span class="token keyword">for</span> each lh.block<span class="token punctuation">[</span>i<span class="token punctuation">]</span>:
+  │       lbuf <span class="token operator">=</span> bread<span class="token punctuation">(</span>dev, log_slot_i<span class="token punctuation">)</span>   ← 读日志数据槽
+  │       dbuf <span class="token operator">=</span> bread<span class="token punctuation">(</span>dev, lh.block<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span> ← 读目标块
+  │       memmove<span class="token punctuation">(</span>dbuf-<span class="token operator">></span>data, lbuf-<span class="token operator">></span>data<span class="token punctuation">)</span> ← 复制到目标块
+  │       bwrite<span class="token punctuation">(</span>dbuf<span class="token punctuation">)</span>                    ← 写目标块到磁盘
+  │       bunpin<span class="token punctuation">(</span>dbuf<span class="token punctuation">)</span>                    ← 解除 bpin
+  │       brelse<span class="token punctuation">(</span>lbuf<span class="token punctuation">)</span><span class="token punctuation">;</span> brelse<span class="token punctuation">(</span>dbuf<span class="token punctuation">)</span>
+  │
+  └── lh.n <span class="token operator">=</span> 0<span class="token punctuation">;</span> write_head<span class="token punctuation">(</span><span class="token punctuation">)</span>             ← 清除日志（n <span class="token operator">=</span> 0）
+         │
+         ▼
+acquire<span class="token punctuation">(</span>log.lock<span class="token punctuation">)</span><span class="token punctuation">;</span> committing<span class="token operator">=</span>0<span class="token punctuation">;</span> wakeup<span class="token punctuation">(</span><span class="token operator">&amp;</span>log<span class="token punctuation">)</span><span class="token punctuation">;</span> release<span class="token punctuation">(</span>log.lock<span class="token punctuation">)</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p><strong>数据在磁盘上的三次落地</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>写操作</th>
+<th>写入位置</th>
+<th>目的</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>write_log()</code> 中的 <code>bwrite(to)</code></td>
+<td>日志数据区（块 3-31）</td>
+<td>备份修改内容到日志</td>
+</tr>
+<tr>
+<td><code>write_head()</code> 中的 <code>bwrite(buf)</code></td>
+<td>日志头块（块 2）</td>
+<td>原子提交点</td>
+</tr>
+<tr>
+<td><code>install_trans()</code> 中的 <code>bwrite(dbuf)</code></td>
+<td>实际数据位置</td>
+<td>将修改安装到正确位置</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="五、并发事务：group-commit-详解"><a href="#五、并发事务：group-commit-详解" class="headerlink" title="五、并发事务：group commit 详解"></a>五、并发事务：group commit 详解</h2><h3 id="5-1-多个-FS-系统调用共享一个事务"><a href="#5-1-多个-FS-系统调用共享一个事务" class="headerlink" title="5.1 多个 FS 系统调用共享一个事务"></a>5.1 多个 FS 系统调用共享一个事务</h3><pre class="line-numbers language-bash"><code class="language-bash">时间线（3 个并发 FS 系统调用）：
+
+操作 A: begin_op<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">..</span>. log_write<span class="token punctuation">(</span>b1<span class="token punctuation">)</span> <span class="token punctuation">..</span>. log_write<span class="token punctuation">(</span>b2<span class="token punctuation">)</span> <span class="token punctuation">..</span>. end_op<span class="token punctuation">(</span><span class="token punctuation">)</span>
+操作 B:     begin_op<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">..</span>. log_write<span class="token punctuation">(</span>b3<span class="token punctuation">)</span> <span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span> end_op<span class="token punctuation">(</span><span class="token punctuation">)</span>
+操作 C:         begin_op<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">..</span>. log_write<span class="token punctuation">(</span>b4<span class="token punctuation">)</span> <span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span> end_op<span class="token punctuation">(</span><span class="token punctuation">)</span>
+                                                             │
+                        outstanding 减到 0 ─────────────────┘
+                                committing<span class="token operator">=</span>1，commit<span class="token punctuation">(</span><span class="token punctuation">)</span>
+                                write_log<span class="token punctuation">(</span><span class="token punctuation">{</span>b1,b2,b3,b4<span class="token punctuation">}</span><span class="token punctuation">)</span>
+                                write_head<span class="token punctuation">(</span>n<span class="token operator">=</span>4<span class="token punctuation">)</span>
+                                install_trans<span class="token punctuation">(</span><span class="token punctuation">)</span>
+                                write_head<span class="token punctuation">(</span>n<span class="token operator">=</span>0<span class="token punctuation">)</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>这 4 个块在同一次提交中落盘，只产生了：</p>
+<ul>
+<li>4 次日志数据写（<code>write_log</code>）</li>
+<li>1 次日志头写（<code>write_head</code>，提交点）</li>
+<li>4 次安装写（<code>install_trans</code>）</li>
+<li>1 次日志头清零写</li>
+</ul>
+<p>如果 A、B、C 各自独立提交，则需要 3 组上述操作，磁盘写次数大约是 group commit 的 3 倍。</p>
+<h3 id="5-2-日志空间与并发限制"><a href="#5-2-日志空间与并发限制" class="headerlink" title="5.2 日志空间与并发限制"></a>5.2 日志空间与并发限制</h3><pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// begin_op() 中的等待条件：</span>
+log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>n <span class="token operator">+</span> <span class="token punctuation">(</span>log<span class="token punctuation">.</span>outstanding <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">*</span> MAXOPBLOCKS <span class="token operator">></span> LOGSIZE
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p>代入实际数值（LOGSIZE=30，MAXOPBLOCKS=10）：</p>
+<ul>
+<li>若 <code>outstanding=0</code>（无并发）：允许最多 30 块，即 3 个”最大操作”在飞行</li>
+<li>若 <code>outstanding=1</code>：新操作需要 <code>log.lh.n + 2×10 ≤ 30</code> → <code>log.lh.n ≤ 10</code>，已用超过 10 个槽就要等待</li>
+<li>若 <code>outstanding=2</code>：<code>log.lh.n + 3×10 ≤ 30</code> → <code>log.lh.n ≤ 0</code>，根本无法再接受新操作</li>
+</ul>
+<p>这个约束保证了<strong>任何时候日志不会溢出</strong>，代价是在日志接近满时新操作需要等待。</p>
+<h3 id="5-3-log-committing-vs-log-outstanding"><a href="#5-3-log-committing-vs-log-outstanding" class="headerlink" title="5.3 log.committing vs log.outstanding"></a>5.3 <code>log.committing</code> vs <code>log.outstanding</code></h3><table>
+<thead>
+<tr>
+<th>状态变量</th>
+<th>含义</th>
+<th>何时为真</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>log.committing = 1</code></td>
+<td>正在执行 <code>commit()</code>，禁止新事务</td>
+<td>commit() 执行期间</td>
+</tr>
+<tr>
+<td><code>log.outstanding &gt; 0</code></td>
+<td>有 FS 系统调用在 begin/end 之间</td>
+<td>每次 begin_op 到 end_op</td>
+</tr>
+</tbody></table>
+<p>两者共同决定了 <code>begin_op()</code> 是否需要等待：只要二者之一为真，新系统调用必须 sleep。</p>
+<hr>
+<h2 id="六、磁盘布局与实际地址"><a href="#六、磁盘布局与实际地址" class="headerlink" title="六、磁盘布局与实际地址"></a>六、磁盘布局与实际地址</h2><p>用数字具体化日志的磁盘映射（参考 <code>mkfs.c</code>）：</p>
+<pre class="line-numbers language-bash"><code class="language-bash">log.start  <span class="token operator">=</span> sb.logstart <span class="token operator">=</span> 2
+log.size   <span class="token operator">=</span> sb.nlog     <span class="token operator">=</span> LOGSIZE <span class="token operator">=</span> 30
+
+日志头块：  块 2
+日志数据槽：块 3（第 0 槽），块 4（第 1 槽），<span class="token punctuation">..</span>.，块 32（第 29 槽）
+
+示例：log.lh <span class="token operator">=</span> <span class="token punctuation">{</span>n<span class="token operator">=</span>3, block<span class="token operator">=</span><span class="token punctuation">[</span>45, 60, 61<span class="token punctuation">]</span><span class="token punctuation">}</span>
+  → 提交时：
+      write_log<span class="token punctuation">(</span><span class="token punctuation">)</span> 将块 45 的内容写到块 3（日志槽 0）
+                  将块 60 的内容写到块 4（日志槽 1）
+                  将块 61 的内容写到块 5（日志槽 2）
+      write_head<span class="token punctuation">(</span><span class="token punctuation">)</span> 写 <span class="token punctuation">{</span>n<span class="token operator">=</span>3, block<span class="token operator">=</span><span class="token punctuation">[</span>45,60,61<span class="token punctuation">]</span><span class="token punctuation">}</span> 到块 2
+      install_trans<span class="token punctuation">(</span><span class="token punctuation">)</span> 将块 3 的内容写到块 45（安装）
+                      将块 4 的内容写到块 60（安装）
+                      将块 5 的内容写到块 61（安装）
+      write_head<span class="token punctuation">(</span><span class="token punctuation">)</span> 写 <span class="token punctuation">{</span>n<span class="token operator">=</span>0<span class="token punctuation">}</span> 到块 2
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<hr>
+<h2 id="七、动手实验"><a href="#七、动手实验" class="headerlink" title="七、动手实验"></a>七、动手实验</h2><h3 id="实验-1：观察日志的四步提交过程"><a href="#实验-1：观察日志的四步提交过程" class="headerlink" title="实验 1：观察日志的四步提交过程"></a>实验 1：观察日志的四步提交过程</h3><p>在 <code>commit()</code> 的每个步骤中加入 <code>printf</code>，追踪一次文件写入的日志流程：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">commit</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>n <span class="token operator">></span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"commit: step 1 - write_log (n=%d blocks)\n"</span><span class="token punctuation">,</span> log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>n<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">write_log</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"commit: step 2 - write_head (COMMIT POINT)\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">write_head</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"commit: step 3 - install_trans\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">install_trans</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"commit: step 4 - clear log (n=0)\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>n <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    <span class="token function">write_head</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"commit: done\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>同时在 <code>log_write()</code> 中打印：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">log_write</span><span class="token punctuation">(</span><span class="token keyword">struct</span> buf <span class="token operator">*</span>b<span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token comment" spellcheck="true">// ...（原有代码）</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>i <span class="token operator">==</span> log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>n<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"log_write: NEW block %d (slot %d)\n"</span><span class="token punctuation">,</span> b<span class="token operator">-></span>blockno<span class="token punctuation">,</span> i<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"log_write: ABSORB block %d (slot %d)\n"</span><span class="token punctuation">,</span> b<span class="token operator">-></span>blockno<span class="token punctuation">,</span> i<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token comment" spellcheck="true">// ...</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>在 xv6 中运行 <code>echo hello &gt; /tmp/test</code>，观察：</p>
+<ul>
+<li>哪些块被 <code>log_write()</code> 记录？（目录块、inode 块、数据块）</li>
+<li>日志吸收发生了几次？</li>
+<li>四步提交各自触发了几次磁盘 I/O？</li>
+</ul>
+<h3 id="实验-2：理解-write-head-是原子提交点"><a href="#实验-2：理解-write-head-是原子提交点" class="headerlink" title="实验 2：理解 write_head() 是原子提交点"></a>实验 2：理解 <code>write_head()</code> 是原子提交点</h3><p><strong>思考实验</strong>（无需修改代码，用纸笔分析）：</p>
+<p>假设 <code>write_head()</code> 在写到磁盘的中途系统崩溃（断电），分两种情况：</p>
+<p><strong>情况 A</strong>：日志头块（块 2）的写入尚未完成（n 字段还是 0）：</p>
+<ul>
+<li>重启后 <code>read_head()</code> 得到 <code>n = 0</code></li>
+<li><code>install_trans()</code> 不执行（循环 0 次）</li>
+<li><code>write(fd, data, n)</code> 的结果：<strong>数据丢失</strong>（但文件系统一致）</li>
+</ul>
+<p><strong>情况 B</strong>：日志头块的写入已完成（n 已更新）：</p>
+<ul>
+<li>重启后 <code>read_head()</code> 得到正确的 <code>n</code> 和 <code>block[]</code></li>
+<li><code>install_trans()</code> 重新安装所有块</li>
+<li><code>write(fd, data, n)</code> 的结果：<strong>数据完整写入</strong></li>
+</ul>
+<p>结论：用户视角的”数据是否持久”取决于 <code>fsync()</code> 是否被调用（xv6 没有 <code>fsync</code>，所有操作完成后会自动提交）。</p>
+<h3 id="实验-3：模拟崩溃并验证恢复"><a href="#实验-3：模拟崩溃并验证恢复" class="headerlink" title="实验 3：模拟崩溃并验证恢复"></a>实验 3：模拟崩溃并验证恢复</h3><p>在 <code>install_trans()</code> 中模拟中途崩溃（在安装第 1 个块后触发 panic）：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">install_trans</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token keyword">static</span> <span class="token keyword">int</span> panic_once <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 只 panic 一次</span>
+  <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> tail <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> tail <span class="token operator">&lt;</span> log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>n<span class="token punctuation">;</span> tail<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment" spellcheck="true">// ... 原有安装代码 ...</span>
+    <span class="token function">bwrite</span><span class="token punctuation">(</span>dbuf<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">if</span><span class="token punctuation">(</span>panic_once <span class="token operator">&amp;&amp;</span> tail <span class="token operator">==</span> <span class="token number">0</span> <span class="token operator">&amp;&amp;</span> log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>n <span class="token operator">></span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      panic_once <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+      <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"SIMULATED CRASH: mid-install"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment" spellcheck="true">// 模拟崩溃</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<ol>
+<li>运行 xv6，执行 <code>echo hello &gt; test.txt</code>，触发 panic（安装到一半崩溃）</li>
+<li>重启 xv6（<code>make qemu</code>），观察 <code>initlog()</code> 时的恢复输出</li>
+<li>运行 <code>cat test.txt</code>，验证数据是否完整</li>
+</ol>
+<p><strong>预期结果</strong>：因为 <code>write_head()</code> 在 panic 前已完成（n &gt; 0），恢复时会重新 <code>install_trans()</code>，<code>cat test.txt</code> 应该能看到 <code>hello</code>。</p>
+<h3 id="实验-4：分析-begin-op-的等待条件"><a href="#实验-4：分析-begin-op-的等待条件" class="headerlink" title="实验 4：分析 begin_op() 的等待条件"></a>实验 4：分析 <code>begin_op()</code> 的等待条件</h3><p>在 <code>begin_op()</code> 中打印等待原因：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">void</span> <span class="token function">begin_op</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token punctuation">)</span>
+<span class="token punctuation">{</span>
+  <span class="token function">acquire</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>log<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">while</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>log<span class="token punctuation">.</span>committing<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"begin_op: waiting for commit to finish\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token function">sleep</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>log<span class="token punctuation">,</span> <span class="token operator">&amp;</span>log<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span><span class="token punctuation">(</span>log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>n <span class="token operator">+</span> <span class="token punctuation">(</span>log<span class="token punctuation">.</span>outstanding<span class="token operator">+</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token operator">*</span>MAXOPBLOCKS <span class="token operator">></span> LOGSIZE<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"begin_op: waiting for log space (lh.n=%d, outstanding=%d)\n"</span><span class="token punctuation">,</span>
+             log<span class="token punctuation">.</span>lh<span class="token punctuation">.</span>n<span class="token punctuation">,</span> log<span class="token punctuation">.</span>outstanding<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token function">sleep</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>log<span class="token punctuation">,</span> <span class="token operator">&amp;</span>log<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+      log<span class="token punctuation">.</span>outstanding<span class="token operator">++</span><span class="token punctuation">;</span>
+      <span class="token function">release</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>log<span class="token punctuation">.</span>lock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">break</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></span></code></pre>
+<p>运行 <code>usertests</code>（会产生大量并发文件操作），统计：</p>
+<ul>
+<li>“waiting for commit” 和 “waiting for log space” 各出现多少次？</li>
+<li>哪个等待条件更频繁？</li>
+</ul>
+<p><strong>分析</strong>：<code>usertests</code> 有 <code>forktest</code> 等会创建大量进程的测试，这些进程会并发调用文件系统。观察日志空间的竞争情况，理解 group commit 的必要性。</p>
+<h3 id="实验-5：理解-log-write-必须在-begin-op-end-op-之间调用"><a href="#实验-5：理解-log-write-必须在-begin-op-end-op-之间调用" class="headerlink" title="实验 5：理解 log_write 必须在 begin_op/end_op 之间调用"></a>实验 5：理解 <code>log_write</code> 必须在 <code>begin_op/end_op</code> 之间调用</h3><p>临时在 <code>log.c</code> 顶部直接调用 <code>log_write()</code> 而不经过事务：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token comment" spellcheck="true">// 在某个不合适的地方（如 kinit 早期初始化中）调用 log_write</span>
+<span class="token comment" spellcheck="true">// 观察 "log_write outside of trans" 的 panic</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p>或者直接阅读 <code>log_write()</code> 的断言：</p>
+<pre class="line-numbers language-c"><code class="language-c"><span class="token keyword">if</span> <span class="token punctuation">(</span>log<span class="token punctuation">.</span>outstanding <span class="token operator">&lt;</span> <span class="token number">1</span><span class="token punctuation">)</span>
+  <span class="token function">panic</span><span class="token punctuation">(</span><span class="token string">"log_write outside of trans"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span aria-hidden="true" class="line-numbers-rows"><span></span><span></span></span></code></pre>
+<p><strong>思考</strong>：为什么必须在事务内才能调用 <code>log_write()</code>？如果不做这个检查，会有什么后果？（提示：提交时 <code>commit()</code> 假设 <code>lh.block[]</code> 中的所有块都需要写，如果不在事务中，<code>lh.n</code> 不会正确更新，缓冲区也没有 <code>bpin</code>，可能被淘汰）</p>
+<hr>
+<h2 id="八、本节小结"><a href="#八、本节小结" class="headerlink" title="八、本节小结"></a>八、本节小结</h2><table>
+<thead>
+<tr>
+<th>概念</th>
+<th>要点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>崩溃一致性</td>
+<td>多步磁盘写的中间状态不应在崩溃后持久化</td>
+</tr>
+<tr>
+<td>WAL 规则</td>
+<td>先写日志再写数据；日志头是原子提交点</td>
+</tr>
+<tr>
+<td>磁盘布局</td>
+<td>块 2=日志头；块 3-32=日志数据槽；LOGSIZE=30</td>
+</tr>
+<tr>
+<td><code>begin_op</code></td>
+<td><code>outstanding++</code>；等待 committing 或空间不足</td>
+</tr>
+<tr>
+<td><code>end_op</code></td>
+<td><code>outstanding--</code>；最后一个触发 <code>commit()</code></td>
+</tr>
+<tr>
+<td><code>log_write</code></td>
+<td>记录”意图”（块号加入 lh.block[]）+ <code>bpin</code>；<strong>不</strong>立即写磁盘</td>
+</tr>
+<tr>
+<td>日志吸收</td>
+<td>同一块多次 <code>log_write</code> 只占一个槽位（写最终状态）</td>
+</tr>
+<tr>
+<td><code>commit()</code></td>
+<td>4 步：写日志数据 → 写日志头（提交点）→ 安装 → 清零</td>
+</tr>
+<tr>
+<td><code>install_trans</code></td>
+<td>幂等操作：日志→实际位置，可在崩溃后重复执行</td>
+</tr>
+<tr>
+<td>group commit</td>
+<td>多个并发系统调用共享一个事务，减少磁盘写次数</td>
+</tr>
+<tr>
+<td><code>bpin/bunpin</code></td>
+<td><code>log_write</code> 时固定 buf（防 LRU 淘汰）；<code>install_trans</code> 后解除</td>
+</tr>
+<tr>
+<td>崩溃恢复逻辑</td>
+<td><code>n==0</code> → 丢弃；<code>n&gt;0</code> → redo（幂等）</td>
+</tr>
+</tbody></table>
+<p><strong>关键规则</strong>：</p>
+<ol>
+<li>所有文件系统写操作必须在 <code>begin_op/end_op</code> 之间</li>
+<li>修改缓冲区后必须调用 <code>log_write()</code>，而不是 <code>bwrite()</code></li>
+<li><code>log_write()</code> 只记录意图，<code>commit()</code> 才真正落盘</li>
+<li>原子提交点是 <code>write_head()</code>（单块写，磁盘保证原子性）</li>
+</ol>
+<blockquote>
+<p><strong>下一节预告</strong>：第 15 节（Inode 层与目录）将在日志层之上构建文件和目录的磁盘表示，大量使用 <code>bread()</code>、<code>log_write()</code>、<code>begin_op/end_op</code> 来实现原子的 inode 分配、数据块读写和路径解析。</p>
+</blockquote>
+
+                
+            </div>
+            <hr/>
+
+            
+
+    <div class="reprint" id="reprint-statement">
+        
+            <div class="reprint__author">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-user">
+                        文章作者:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    <a href="/about" rel="external nofollow noreferrer">404djl</a>
+                </span>
+            </div>
+            <div class="reprint__type">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-link">
+                        文章链接:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    <a href="https://404djl.github.io/2026/03/18/os14-ri-zhi-ceng-yu-beng-kui-hui-fu/">https://404djl.github.io/2026/03/18/os14-ri-zhi-ceng-yu-beng-kui-hui-fu/</a>
+                </span>
+            </div>
+            <div class="reprint__notice">
+                <span class="reprint-meta" style="font-weight: bold;">
+                    <i class="fas fa-copyright">
+                        版权声明:
+                    </i>
+                </span>
+                <span class="reprint-info">
+                    本博客所有文章除特別声明外，均采用
+                    <a href="https://creativecommons.org/licenses/by/4.0/deed.zh" rel="external nofollow noreferrer" target="_blank">CC BY 4.0</a>
+                    许可协议。转载请注明来源
+                    <a href="/about" target="_blank">404djl</a>
+                    !
+                </span>
+            </div>
+        
+    </div>
+
+    <script async defer>
+      document.addEventListener("copy", function (e) {
+        let toastHTML = '<span>复制成功，请遵循本文的转载规则</span><button class="btn-flat toast-action" onclick="navToReprintStatement()" style="font-size: smaller">查看</a>';
+        M.toast({html: toastHTML})
+      });
+
+      function navToReprintStatement() {
+        $("html, body").animate({scrollTop: $("#reprint-statement").offset().top - 80}, 800);
+      }
+    </script>
+
+
+
+            <div class="tag_share" style="display: block;">
+                <div class="post-meta__tag-list" style="display: inline-block;">
+                    
+                        <div class="article-tag">
+                            
+                                <a href="/tags/linux/">
+                                    <span class="chip bg-color">linux</span>
+                                </a>
+                            
+                                <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                                    <span class="chip bg-color">操作系统</span>
+                                </a>
+                            
+                        </div>
+                    
+                </div>
+                <div class="post_share" style="zoom: 80%; width: fit-content; display: inline-block; float: right; margin: -0.15rem 0;">
+                    <link rel="stylesheet" type="text/css" href="/libs/share/css/share.min.css">
+<div id="article-share">
+
+    
+    <div class="social-share" data-sites="twitter,facebook,google,qq,qzone,wechat,weibo,douban,linkedin" data-wechat-qrcode-helper="<p>微信扫一扫即可分享！</p>"></div>
+    <script src="/libs/share/js/social-share.min.js"></script>
+    
+
+    
+
+</div>
+
+                </div>
+            </div>
+            
+                <div id="reward">
+    <a href="#rewardModal" class="reward-link modal-trigger btn-floating btn-medium waves-effect waves-light red">赏</a>
+
+    <!-- Modal Structure -->
+    <div id="rewardModal" class="modal">
+        <div class="modal-content">
+            <a class="close modal-close"><i class="fas fa-times"></i></a>
+            <h4 class="reward-title">你的赏识是我前进的动力</h4>
+            <div class="reward-content">
+                <div class="reward-tabs">
+                    <ul class="tabs row">
+                        <li class="tab col s6 alipay-tab waves-effect waves-light"><a href="#alipay">支付宝</a></li>
+                        <li class="tab col s6 wechat-tab waves-effect waves-light"><a href="#wechat">微 信</a></li>
+                    </ul>
+                    <div id="alipay">
+                        <img src="/medias/reward/alipay.jpg" class="reward-img" alt="支付宝打赏二维码">
+                    </div>
+                    <div id="wechat">
+                        <img src="/medias/reward/wechat.png" class="reward-img" alt="微信打赏二维码">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(function () {
+        $('.tabs').tabs();
+    });
+</script>
+
+            
+        </div>
+    </div>
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+<article id="prenext-posts" class="prev-next articles">
+    <div class="row article-row">
+        
+        <div class="article col s12 m6" data-aos="fade-up">
+            <div class="article-badge left-badge text-color">
+                <i class="fas fa-chevron-left"></i>&nbsp;上一篇</div>
+            <div class="card">
+                <a href="/2026/03/18/os15-inode-ceng-yu-mu-lu/">
+                    <div class="card-image">
+                        
+                        
+                        <img src="/medias/featureimages/16.png" class="responsive-img" alt="OS15-Inode层与目录">
+                        
+                        <span class="card-title">OS15-Inode层与目录</span>
+                    </div>
+                </a>
+                <div class="card-content article-content">
+                    <div class="summary block-with-text">
+                        
+                            
+                        
+                    </div>
+                    <div class="publish-info">
+                        <span class="publish-date">
+                            <i class="far fa-clock fa-fw icon-date"></i>2026-03-18
+                        </span>
+                        <span class="publish-author">
+                            
+                            <i class="fas fa-bookmark fa-fw icon-category"></i>
+                            
+                            <a href="/categories/OS/" class="post-category">
+                                    OS
+                                </a>
+                            
+                            
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="card-action article-tags">
+                    
+                    <a href="/tags/linux/">
+                        <span class="chip bg-color">linux</span>
+                    </a>
+                    
+                    <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                        <span class="chip bg-color">操作系统</span>
+                    </a>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+        
+        <div class="article col s12 m6" data-aos="fade-up">
+            <div class="article-badge right-badge text-color">
+                下一篇&nbsp;<i class="fas fa-chevron-right"></i>
+            </div>
+            <div class="card">
+                <a href="/2026/02/28/os11-trap-ji-zhi-nei-he-tai-yu-zhong-duan-chu-li/">
+                    <div class="card-image">
+                        
+                        
+                        <img src="/medias/featureimages/35.png" class="responsive-img" alt="OS11-Trap机制（内核态）与中断处理">
+                        
+                        <span class="card-title">OS11-Trap机制（内核态）与中断处理</span>
+                    </div>
+                </a>
+                <div class="card-content article-content">
+                    <div class="summary block-with-text">
+                        
+                            
+                        
+                    </div>
+                    <div class="publish-info">
+                            <span class="publish-date">
+                                <i class="far fa-clock fa-fw icon-date"></i>2026-02-28
+                            </span>
+                        <span class="publish-author">
+                            
+                            <i class="fas fa-user fa-fw"></i>
+                            404djl
+                            
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="card-action article-tags">
+                    
+                    <a href="/tags/linux/">
+                        <span class="chip bg-color">linux</span>
+                    </a>
+                    
+                    <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/">
+                        <span class="chip bg-color">操作系统</span>
+                    </a>
+                    
+                </div>
+                
+            </div>
+        </div>
+        
+    </div>
+</article>
+
+</div>
+
+
+
+<!-- 代码块功能依赖 -->
+<script type="text/javascript" src="/libs/codeBlock/codeBlockFuction.js"></script>
+
+
+
+<!-- 代码语言 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeLang.js"></script>
+
+
+<!-- 代码块复制 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeCopy.js"></script>
+
+
+<!-- 代码块收缩 -->
+
+<script type="text/javascript" src="/libs/codeBlock/codeShrink.js"></script>
+
+
+
+    </div>
+    <div id="toc-aside" class="expanded col l3 hide-on-med-and-down">
+        <div class="toc-widget card" style="background-color: white;">
+            <div class="toc-title"><i class="far fa-list-alt"></i>&nbsp;&nbsp;目录</div>
+            <div id="toc-content"></div>
+        </div>
+    </div>
+</div>
+
+<!-- TOC 悬浮按钮. -->
+
+<div id="floating-toc-btn" class="hide-on-med-and-down">
+    <a class="btn-floating btn-large bg-color">
+        <i class="fas fa-list-ul"></i>
+    </a>
+</div>
+
+
+<script src="/libs/tocbot/tocbot.min.js"></script>
+<script>
+    $(function () {
+        tocbot.init({
+            tocSelector: '#toc-content',
+            contentSelector: '#articleContent',
+            headingsOffset: -($(window).height() * 0.4 - 45),
+            collapseDepth: Number('0'),
+            headingSelector: 'h2, h3, h4'
+        });
+
+        // Set scroll toc fixed.
+        let tocHeight = parseInt($(window).height() * 0.4 - 64);
+        let $tocWidget = $('.toc-widget');
+        $(window).scroll(function () {
+            let scroll = $(window).scrollTop();
+            /* add post toc fixed. */
+            if (scroll > tocHeight) {
+                $tocWidget.addClass('toc-fixed');
+            } else {
+                $tocWidget.removeClass('toc-fixed');
+            }
+        });
+
+        
+        /* 修复文章卡片 div 的宽度. */
+        let fixPostCardWidth = function (srcId, targetId) {
+            let srcDiv = $('#' + srcId);
+            if (srcDiv.length === 0) {
+                return;
+            }
+
+            let w = srcDiv.width();
+            if (w >= 450) {
+                w = w + 21;
+            } else if (w >= 350 && w < 450) {
+                w = w + 18;
+            } else if (w >= 300 && w < 350) {
+                w = w + 16;
+            } else {
+                w = w + 14;
+            }
+            $('#' + targetId).width(w);
+        };
+
+        // 切换TOC目录展开收缩的相关操作.
+        const expandedClass = 'expanded';
+        let $tocAside = $('#toc-aside');
+        let $mainContent = $('#main-content');
+        $('#floating-toc-btn .btn-floating').click(function () {
+            if ($tocAside.hasClass(expandedClass)) {
+                $tocAside.removeClass(expandedClass).hide();
+                $mainContent.removeClass('l9');
+            } else {
+                $tocAside.addClass(expandedClass).show();
+                $mainContent.addClass('l9');
+            }
+            fixPostCardWidth('artDetail', 'prenext-posts');
+        });
+        
+    });
+</script>
+
+    
+
+</main>
+
+
+
+
+    <footer class="page-footer" style="background: linear-gradient(to right, #ff5f6d, #ffc371); color: #fff;">
+    <div class="container" style="text-align: center; padding: 5px;">
+      <p>Copyright © 2024 - 2025 <a href="https://404djl.github.io" style="color: #fff; text-decoration: underline;">404djl</a> | Powered by <a href="https://hexo.io" target="_blank" style="color: #fff; text-decoration: underline;">Hexo</a> | Theme by <a href="https://github.com/blinkfox/hexo-theme-matery" target="_blank" style="color: #fff; text-decoration: underline;">Matery</a></p>
+      <p>
+        <p>📚 站点总字数: <span id="site-word-count"></span> 字</p> |
+        <span id="runtime"></span>
+      </p>
+    </div>
+    <div class="footer-contact" style="background: linear-gradient(to right, #ff5f6d, #ffc371); color: #fff;">
+        <a href="javascript:void(0);" class="tooltipped" target="_blank" data-tooltip="邮箱：3490002122@qq.com" data-position="top" data-delay="50">
+          <i class="fas fa-envelope"></i>
+        </a>
+        <a href="https://github.com/404djl" class="tooltipped" target="_blank" data-tooltip="GitHub：404djl" data-position="top" data-delay="50">
+          <i class="fab fa-github"></i>
+        </a>
+        <a href="javascript:void(0);" class="tooltipped" data-tooltip="微信：djl123456404" data-position="top" data-delay="50">
+          <i class="fab fa-weixin"></i>
+        </a>
+    </div>
+</footer>
+
+
+
+
+<script>
+    const blogStartDate = new Date("2024-12-16T00:00:00Z"); // 修改为你的博客起始日期
+  
+    function updateRuntime() {
+      const now = new Date();
+      const diff = now - blogStartDate;
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const minutes = Math.floor((diff / (1000 * 60)) % 60);
+      const seconds = Math.floor((diff / 1000) % 60);
+  
+      const runtimeText = `本站已安全运行 ${days} 天 ${hours} 小时 ${minutes} 分钟 ${seconds} 秒`;
+      document.getElementById("runtime").innerText = runtimeText;
+    }
+  
+    updateRuntime();
+    setInterval(updateRuntime, 1000);
+  </script>
+  
+  <script>
+    fetch('/index.html')
+      .then(response => response.text())
+      .then(html => {
+        const wordCountRegex = /<meta name="wordCount" content="(\d+)">/;
+        const match = wordCountRegex.exec(html);
+        if (match) {
+          document.getElementById('site-word-count').innerText = match[1];
+        }
+      });
+  </script>
+  
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var tooltips = document.querySelectorAll('.tooltipped');
+      M.Tooltip.init(tooltips);
+    });
+  </script>
+  
+
+    <!-- 搜索遮罩框 -->
+<div id="searchModal" class="modal">
+    <div class="modal-content">
+        <div class="search-header">
+            <span class="title"><i class="fas fa-search"></i>&nbsp;&nbsp;搜索</span>
+            <input type="search" id="searchInput" name="s" placeholder="请输入搜索的关键字"
+                   class="search-input">
+        </div>
+        <div id="searchResult"></div>
+    </div>
+</div>
+
+<script type="text/javascript">
+$(function () {
+    var searchFunc = function (path, search_id, content_id) {
+        'use strict';
+        $.ajax({
+            url: path,
+            dataType: "xml",
+            success: function (xmlResponse) {
+                // get the contents from search data
+                var datas = $("entry", xmlResponse).map(function () {
+                    return {
+                        title: $("title", this).text(),
+                        content: $("content", this).text(),
+                        url: $("url", this).text()
+                    };
+                }).get();
+                var $input = document.getElementById(search_id);
+                var $resultContent = document.getElementById(content_id);
+                $input.addEventListener('input', function () {
+                    var str = '<ul class=\"search-result-list\">';
+                    var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+                    $resultContent.innerHTML = "";
+                    if (this.value.trim().length <= 0) {
+                        return;
+                    }
+                    // perform local searching
+                    datas.forEach(function (data) {
+                        var isMatch = true;
+                        var data_title = data.title.trim().toLowerCase();
+                        var data_content = data.content.trim().replace(/<[^>]+>/g, "").toLowerCase();
+                        var data_url = data.url;
+                        data_url = data_url.indexOf('/') === 0 ? data.url : '/' + data_url;
+                        var index_title = -1;
+                        var index_content = -1;
+                        var first_occur = -1;
+                        // only match artiles with not empty titles and contents
+                        if (data_title !== '' && data_content !== '') {
+                            keywords.forEach(function (keyword, i) {
+                                index_title = data_title.indexOf(keyword);
+                                index_content = data_content.indexOf(keyword);
+                                if (index_title < 0 && index_content < 0) {
+                                    isMatch = false;
+                                } else {
+                                    if (index_content < 0) {
+                                        index_content = 0;
+                                    }
+                                    if (i === 0) {
+                                        first_occur = index_content;
+                                    }
+                                }
+                            });
+                        }
+                        // show search results
+                        if (isMatch) {
+                            str += "<li><a href='" + data_url + "' class='search-result-title'>" + data_title + "</a>";
+                            var content = data.content.trim().replace(/<[^>]+>/g, "");
+                            if (first_occur >= 0) {
+                                // cut out 100 characters
+                                var start = first_occur - 20;
+                                var end = first_occur + 80;
+                                if (start < 0) {
+                                    start = 0;
+                                }
+                                if (start === 0) {
+                                    end = 100;
+                                }
+                                if (end > content.length) {
+                                    end = content.length;
+                                }
+                                var match_content = content.substr(start, end);
+                                // highlight all keywords
+                                keywords.forEach(function (keyword) {
+                                    var regS = new RegExp(keyword, "gi");
+                                    match_content = match_content.replace(regS, "<em class=\"search-keyword\">" + keyword + "</em>");
+                                });
+
+                                str += "<p class=\"search-result\">" + match_content + "...</p>"
+                            }
+                            str += "</li>";
+                        }
+                    });
+                    str += "</ul>";
+                    $resultContent.innerHTML = str;
+                });
+            }
+        });
+    };
+
+    searchFunc('/search.xml', 'searchInput', 'searchResult');
+});
+</script>
+
+    <!-- 白天和黑夜主题 -->
+<div class="stars-con">
+    <div id="stars"></div>
+    <div id="stars2"></div>
+    <div id="stars3"></div>  
+</div>
+
+<script>
+    function switchNightMode() {
+        $('<div class="Cuteen_DarkSky"><div class="Cuteen_DarkPlanet"></div></div>').appendTo($('body')),
+        setTimeout(function () {
+            $('body').hasClass('DarkMode') 
+            ? ($('body').removeClass('DarkMode'), localStorage.setItem('isDark', '0'), $('#sum-moon-icon').removeClass("fa-sun").addClass('fa-moon')) 
+            : ($('body').addClass('DarkMode'), localStorage.setItem('isDark', '1'), $('#sum-moon-icon').addClass("fa-sun").removeClass('fa-moon')),
+            
+            setTimeout(function () {
+            $('.Cuteen_DarkSky').fadeOut(1e3, function () {
+                $(this).remove()
+            })
+            }, 2e3)
+        })
+    }
+</script>
+
+    <!-- 回到顶部按钮 -->
+<div id="backTop" class="top-scroll">
+    <a class="btn-floating btn-large waves-effect waves-light" href="#!">
+        <i class="fas fa-arrow-up"></i>
+    </a>
+</div>
+
+
+    <script src="/libs/materialize/materialize.min.js"></script>
+    <script src="/libs/masonry/masonry.pkgd.min.js"></script>
+    <script src="/libs/aos/aos.js"></script>
+    <script src="/libs/scrollprogress/scrollProgress.min.js"></script>
+    <script src="/libs/lightGallery/js/lightgallery-all.min.js"></script>
+    <script src="/js/matery.js"></script>
+
+    
+
+    
+    
+    
+
+    <!-- 雪花特效 -->
+     
+        <script type="text/javascript">
+            // 只在桌面版网页启用特效
+            var windowWidth = $(window).width();
+            if (windowWidth > 768) {
+                document.write('<script type="text/javascript" src="/libs/others/snow.js"><\/script>');
+            }
+        </script>
+    
+
+    <!-- 鼠标星星特效 -->
+    
+
+     
+        <script src="https://ssl.captcha.qq.com/TCaptcha.js"></script>
+        <script src="/libs/others/TencentCaptcha.js"></script>
+        <button id="TencentCaptcha" data-appid="xxxxxxxxxx" data-cbfn="callback" type="button" hidden></button>
+    
+
+    <!-- Baidu Analytics -->
+
+    <!-- Baidu Push -->
+
+<script>
+    (function () {
+        var bp = document.createElement('script');
+        var curProtocol = window.location.protocol.split(':')[0];
+        if (curProtocol === 'https') {
+            bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+        } else {
+            bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+        }
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(bp, s);
+    })();
+</script>
+
+    
+    <script src="/libs/others/clicklove.js" async="async"></script>
+    
+    
+    <script async src="/libs/others/busuanzi.pure.mini.js"></script>
+    
+
+    
+
+    
+
+    <!--腾讯兔小巢-->
+    
+    
+
+    
+
+    
+
+    
+    <script src="/libs/instantpage/instantpage.js" type="module"></script>
+    
+
+</body>
+
+</html>

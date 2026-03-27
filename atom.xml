@@ -6,7 +6,7 @@
   <link href="https://404djl.github.io/atom.xml" rel="self"/>
   
   <link href="https://404djl.github.io/"/>
-  <updated>2026-03-26T16:14:39.331Z</updated>
+  <updated>2026-03-27T17:13:25.223Z</updated>
   <id>https://404djl.github.io/</id>
   
   <author>
@@ -15,6 +15,247 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>OS17-字符设备驱动</title>
+    <link href="https://404djl.github.io/2026/03/28/os17-zi-fu-she-bei-qu-dong/"/>
+    <id>https://404djl.github.io/2026/03/28/os17-zi-fu-she-bei-qu-dong/</id>
+    <published>2026-03-27T17:12:12.000Z</published>
+    <updated>2026-03-27T17:13:25.223Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
+        
+      
+    
+    
+    
+    <category term="OS" scheme="https://404djl.github.io/categories/OS/"/>
+    
+    
+    <category term="linux" scheme="https://404djl.github.io/tags/linux/"/>
+    
+    <category term="操作系统" scheme="https://404djl.github.io/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>OS16-文件描述符与系统调用层</title>
+    <link href="https://404djl.github.io/2026/03/28/os16-wen-jian-miao-shu-fu-yu-xi-tong-diao-yong-ceng/"/>
+    <id>https://404djl.github.io/2026/03/28/os16-wen-jian-miao-shu-fu-yu-xi-tong-diao-yong-ceng/</id>
+    <published>2026-03-27T17:10:37.000Z</published>
+    <updated>2026-03-27T17:11:46.206Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
+        
+      
+    
+    
+    
+    <category term="OS" scheme="https://404djl.github.io/categories/OS/"/>
+    
+    
+    <category term="linux" scheme="https://404djl.github.io/tags/linux/"/>
+    
+    <category term="操作系统" scheme="https://404djl.github.io/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>OS13-磁盘驱动与块缓存</title>
+    <link href="https://404djl.github.io/2026/03/28/os13-ci-pan-qu-dong-yu-kuai-huan-cun/"/>
+    <id>https://404djl.github.io/2026/03/28/os13-ci-pan-qu-dong-yu-kuai-huan-cun/</id>
+    <published>2026-03-27T17:04:47.000Z</published>
+    <updated>2026-03-27T17:05:45.940Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
+        
+      
+    
+    
+    
+    <category term="OS" scheme="https://404djl.github.io/categories/OS/"/>
+    
+    
+    <category term="linux" scheme="https://404djl.github.io/tags/linux/"/>
+    
+    <category term="操作系统" scheme="https://404djl.github.io/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>OS12-锁机制</title>
+    <link href="https://404djl.github.io/2026/03/28/os12-suo-ji-zhi/"/>
+    <id>https://404djl.github.io/2026/03/28/os12-suo-ji-zhi/</id>
+    <published>2026-03-27T17:03:11.000Z</published>
+    <updated>2026-03-27T17:04:03.958Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
+        
+      
+    
+    
+    
+    <category term="OS" scheme="https://404djl.github.io/categories/OS/"/>
+    
+    
+    <category term="linux" scheme="https://404djl.github.io/tags/linux/"/>
+    
+    <category term="操作系统" scheme="https://404djl.github.io/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>OS10-系统调用实现</title>
+    <link href="https://404djl.github.io/2026/03/28/os10-xi-tong-diao-yong-shi-xian/"/>
+    <id>https://404djl.github.io/2026/03/28/os10-xi-tong-diao-yong-shi-xian/</id>
+    <published>2026-03-27T16:59:42.000Z</published>
+    <updated>2026-03-27T17:00:44.846Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
+        
+      
+    
+    
+    
+    <category term="OS" scheme="https://404djl.github.io/categories/OS/"/>
+    
+    
+    <category term="linux" scheme="https://404djl.github.io/tags/linux/"/>
+    
+    <category term="操作系统" scheme="https://404djl.github.io/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>OS15-Inode层与目录</title>
+    <link href="https://404djl.github.io/2026/03/18/os15-inode-ceng-yu-mu-lu/"/>
+    <id>https://404djl.github.io/2026/03/18/os15-inode-ceng-yu-mu-lu/</id>
+    <published>2026-03-17T17:08:21.000Z</published>
+    <updated>2026-03-27T17:09:29.399Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
+        
+      
+    
+    
+    
+    <category term="OS" scheme="https://404djl.github.io/categories/OS/"/>
+    
+    
+    <category term="linux" scheme="https://404djl.github.io/tags/linux/"/>
+    
+    <category term="操作系统" scheme="https://404djl.github.io/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>OS14-日志层与崩溃恢复</title>
+    <link href="https://404djl.github.io/2026/03/18/os14-ri-zhi-ceng-yu-beng-kui-hui-fu/"/>
+    <id>https://404djl.github.io/2026/03/18/os14-ri-zhi-ceng-yu-beng-kui-hui-fu/</id>
+    <published>2026-03-17T17:06:19.000Z</published>
+    <updated>2026-03-27T17:07:50.121Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
+        
+      
+    
+    
+    
+    <category term="OS" scheme="https://404djl.github.io/categories/OS/"/>
+    
+    
+    <category term="linux" scheme="https://404djl.github.io/tags/linux/"/>
+    
+    <category term="操作系统" scheme="https://404djl.github.io/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>OS11-Trap机制（内核态）与中断处理</title>
+    <link href="https://404djl.github.io/2026/02/28/os11-trap-ji-zhi-nei-he-tai-yu-zhong-duan-chu-li/"/>
+    <id>https://404djl.github.io/2026/02/28/os11-trap-ji-zhi-nei-he-tai-yu-zhong-duan-chu-li/</id>
+    <published>2026-02-27T17:02:17.000Z</published>
+    <updated>2026-03-27T17:02:41.282Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
+        
+      
+    
+    
+    
+    
+    <category term="linux" scheme="https://404djl.github.io/tags/linux/"/>
+    
+    <category term="操作系统" scheme="https://404djl.github.io/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>OS09-Trap机制（用户态）</title>
+    <link href="https://404djl.github.io/2026/02/28/os09-trap-ji-zhi-yong-hu-tai/"/>
+    <id>https://404djl.github.io/2026/02/28/os09-trap-ji-zhi-yong-hu-tai/</id>
+    <published>2026-02-27T16:58:53.000Z</published>
+    <updated>2026-03-27T16:59:12.461Z</updated>
+    
+    
+      
+      
+        
+        
+    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
+        
+      
+    
+    
+    
+    <category term="OS" scheme="https://404djl.github.io/categories/OS/"/>
+    
+    
+    <category term="linux" scheme="https://404djl.github.io/tags/linux/"/>
+    
+    <category term="操作系统" scheme="https://404djl.github.io/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/"/>
+    
+  </entry>
   
   <entry>
     <title>OS08-进程调度与上下文切换</title>
@@ -314,261 +555,6 @@
     <category term="Android" scheme="https://404djl.github.io/tags/Android/"/>
     
     <category term="TEE" scheme="https://404djl.github.io/tags/TEE/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>量子加解密接口SDK的使用</title>
-    <link href="https://404djl.github.io/2025/11/20/liang-zi-jia-jie-mi-jie-kou-sdk-de-shi-yong/"/>
-    <id>https://404djl.github.io/2025/11/20/liang-zi-jia-jie-mi-jie-kou-sdk-de-shi-yong/</id>
-    <published>2025-11-20T06:20:36.000Z</published>
-    <updated>2025-11-21T01:52:37.531Z</updated>
-    
-    
-      
-      
-        
-        
-    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
-        
-      
-    
-    
-    
-    <category term="开发" scheme="https://404djl.github.io/categories/%E5%BC%80%E5%8F%91/"/>
-    
-    
-    <category term="java" scheme="https://404djl.github.io/tags/java/"/>
-    
-    <category term="android" scheme="https://404djl.github.io/tags/android/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>ubuntu20安装docker</title>
-    <link href="https://404djl.github.io/2025/07/29/ubuntu20-an-zhuang-docker/"/>
-    <id>https://404djl.github.io/2025/07/29/ubuntu20-an-zhuang-docker/</id>
-    <published>2025-07-29T02:29:25.000Z</published>
-    <updated>2025-11-21T02:42:24.710Z</updated>
-    
-    
-      
-      
-        
-        
-    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
-        
-      
-    
-    
-    
-    <category term="linux" scheme="https://404djl.github.io/categories/linux/"/>
-    
-    <category term="docker" scheme="https://404djl.github.io/categories/linux/docker/"/>
-    
-    
-    <category term="ubuntu" scheme="https://404djl.github.io/tags/ubuntu/"/>
-    
-    <category term="linux" scheme="https://404djl.github.io/tags/linux/"/>
-    
-    <category term="docker" scheme="https://404djl.github.io/tags/docker/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>protobuf安装及golang使用protobuf</title>
-    <link href="https://404djl.github.io/2025/07/29/protobuf-an-zhuang-ji-golang-shi-yong-protobuf/"/>
-    <id>https://404djl.github.io/2025/07/29/protobuf-an-zhuang-ji-golang-shi-yong-protobuf/</id>
-    <published>2025-07-29T02:11:42.000Z</published>
-    <updated>2025-07-29T02:14:55.064Z</updated>
-    
-    
-      
-      
-        
-        
-    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
-        
-      
-    
-    
-    
-    <category term="Golang" scheme="https://404djl.github.io/categories/Golang/"/>
-    
-    
-    <category term="Go" scheme="https://404djl.github.io/tags/Go/"/>
-    
-    <category term="protobuf" scheme="https://404djl.github.io/tags/protobuf/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>XV6-LAB1</title>
-    <link href="https://404djl.github.io/2025/03/09/xv6-lab1/"/>
-    <id>https://404djl.github.io/2025/03/09/xv6-lab1/</id>
-    <published>2025-03-09T05:51:43.000Z</published>
-    <updated>2025-03-09T05:55:12.111Z</updated>
-    
-    
-      
-      
-        
-        
-    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
-        
-      
-    
-    
-    
-    <category term="LAB" scheme="https://404djl.github.io/categories/LAB/"/>
-    
-    
-    <category term="xv6" scheme="https://404djl.github.io/tags/xv6/"/>
-    
-    <category term="c" scheme="https://404djl.github.io/tags/c/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>Git 常用命令及操作详解</title>
-    <link href="https://404djl.github.io/2025/03/05/git-chang-yong-ming-ling-ji-cao-zuo-xiang-jie/"/>
-    <id>https://404djl.github.io/2025/03/05/git-chang-yong-ming-ling-ji-cao-zuo-xiang-jie/</id>
-    <published>2025-03-05T08:43:03.000Z</published>
-    <updated>2025-03-05T08:57:49.668Z</updated>
-    
-    
-      
-      
-        
-        
-    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
-        
-      
-    
-    
-    
-    <category term="基础知识" scheme="https://404djl.github.io/categories/%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86/"/>
-    
-    
-    <category term="Git" scheme="https://404djl.github.io/tags/Git/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>GCC编译和Makefile</title>
-    <link href="https://404djl.github.io/2025/03/04/gcc-bian-yi-he-makefile/"/>
-    <id>https://404djl.github.io/2025/03/04/gcc-bian-yi-he-makefile/</id>
-    <published>2025-03-04T06:20:36.000Z</published>
-    <updated>2025-11-21T01:52:44.215Z</updated>
-    
-    
-      
-      
-        
-        
-    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
-        
-      
-    
-    
-    
-    <category term="基础知识" scheme="https://404djl.github.io/categories/%E5%9F%BA%E7%A1%80%E7%9F%A5%E8%AF%86/"/>
-    
-    
-    <category term="GCC" scheme="https://404djl.github.io/tags/GCC/"/>
-    
-    <category term="Makefile" scheme="https://404djl.github.io/tags/Makefile/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>03-OLED和中断</title>
-    <link href="https://404djl.github.io/2024/12/19/03-oled-he-zhong-duan/"/>
-    <id>https://404djl.github.io/2024/12/19/03-oled-he-zhong-duan/</id>
-    <published>2024-12-19T06:20:36.000Z</published>
-    <updated>2025-03-05T06:44:02.034Z</updated>
-    
-    
-      
-      
-        
-        
-    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
-        
-      
-    
-    
-    
-    <category term="STM32" scheme="https://404djl.github.io/categories/STM32/"/>
-    
-    
-    <category term="STM32" scheme="https://404djl.github.io/tags/STM32/"/>
-    
-    <category term="OLED" scheme="https://404djl.github.io/tags/OLED/"/>
-    
-    <category term="中断" scheme="https://404djl.github.io/tags/%E4%B8%AD%E6%96%AD/"/>
-    
-    <category term="旋转编码器" scheme="https://404djl.github.io/tags/%E6%97%8B%E8%BD%AC%E7%BC%96%E7%A0%81%E5%99%A8/"/>
-    
-    <category term="对射式红外传感器" scheme="https://404djl.github.io/tags/%E5%AF%B9%E5%B0%84%E5%BC%8F%E7%BA%A2%E5%A4%96%E4%BC%A0%E6%84%9F%E5%99%A8/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>02-GPIO输出和输入</title>
-    <link href="https://404djl.github.io/2024/12/18/02-gpio-shu-chu-he-shu-ru/"/>
-    <id>https://404djl.github.io/2024/12/18/02-gpio-shu-chu-he-shu-ru/</id>
-    <published>2024-12-18T06:47:36.000Z</published>
-    <updated>2025-03-05T06:44:23.433Z</updated>
-    
-    
-      
-      
-        
-        
-    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
-        
-      
-    
-    
-    
-    <category term="STM32" scheme="https://404djl.github.io/categories/STM32/"/>
-    
-    
-    <category term="STM32" scheme="https://404djl.github.io/tags/STM32/"/>
-    
-    <category term="GPIO" scheme="https://404djl.github.io/tags/GPIO/"/>
-    
-    <category term="蜂鸣器" scheme="https://404djl.github.io/tags/%E8%9C%82%E9%B8%A3%E5%99%A8/"/>
-    
-    <category term="光敏传感器" scheme="https://404djl.github.io/tags/%E5%85%89%E6%95%8F%E4%BC%A0%E6%84%9F%E5%99%A8/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>01-STM32介绍和工程环境配置</title>
-    <link href="https://404djl.github.io/2024/12/17/01-stm32-jie-shao-he-gong-cheng-huan-jing-pei-zhi/"/>
-    <id>https://404djl.github.io/2024/12/17/01-stm32-jie-shao-he-gong-cheng-huan-jing-pei-zhi/</id>
-    <published>2024-12-17T14:47:03.000Z</published>
-    <updated>2025-03-05T06:44:48.111Z</updated>
-    
-    
-      
-      
-        
-        
-    <summary type="html">&lt;link rel=&quot;stylesheet&quot; class=&quot;aplayer-secondary-style-marker&quot; href=&quot;/assets/css/APlayer.min.css&quot;&gt;&lt;script src=&quot;/assets/js/APlayer.min.js&quot;</summary>
-        
-      
-    
-    
-    
-    <category term="STM32" scheme="https://404djl.github.io/categories/STM32/"/>
-    
-    
-    <category term="STM32" scheme="https://404djl.github.io/tags/STM32/"/>
-    
-    <category term="环境搭建" scheme="https://404djl.github.io/tags/%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA/"/>
     
   </entry>
   
